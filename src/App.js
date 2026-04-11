@@ -6,6 +6,7 @@ function App() {
     <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
+        <p>Bienvenidos al Sistema de la Escuela Sagrada Familia</p>
         <p>
           Edit <code>src/App.js</code> and save to reload.
         </p>
