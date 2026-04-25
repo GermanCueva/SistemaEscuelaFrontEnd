@@ -7,12 +7,14 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "or": "^0.2.0",
     "react": "^19.2.5",
     "react-daisyui": "^5.0.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.1",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "with": "^7.0.2"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -39,6 +41,7 @@
     ]
   },
   "devDependencies": {
+    "ajv": "^8.20.0",
     "daisyui": "^5.5.19"
   }
 }

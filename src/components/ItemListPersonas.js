@@ -1,36 +1,46 @@
 import ItemPersona from './ItemPersona'
-//import Spinner from './Spinner'
 
-//Recorro los productos y llamo al componente Item
-const ItemListPersona = ( {prods}) => {
-    return ( 
+const ItemListPersona = ({ prods }) => {
+    return (
+        <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                {/* El encabezado siempre debe ir en <thead> */}
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                    <tr>
+                        <th scope="col" className="px-12 py-3">
+                            Apellido
+                        </th>
+                        <th scope="col" className="px-12 py-3">
+                            Nombre
+                        </th>
+                        {/* Agrega una columna extra si el ItemPersona tiene el botón de lupa */}
+                        <th scope="col" className="px-12 py-3 text-center">
+                            Acciones
+                        </th>
+                    </tr>
+                </thead>
 
-      
-      
-      <div>
-
-<table class="px-12 py-3 table-auto width: 100% w-full ">
-<thead class="border=2 text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">  
-<tr  class="px-12 py-3 odd:bg-white odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700">
-
-        <td align="left" class="px-12 py-3"> 
-          <strong>Apellido</strong>
-        </td>
-        <td align="left" class="px-12 py-3"> 
-          <strong>Nombre</strong>
-        </td>
- </tr>
-
-        
-
-        { prods.length ? (prods.map( p =>
-          <ItemPersona apellido={p.apellidos} nombre={p.nombres} />)) : ( <h1>No hay datos</h1> )  
-        }
-            </thead>
+                {/* Los datos siempre deben ir en <tbody> */}
+                <tbody>
+                    {prods.length ? (
+                        prods.map(p => (
+                            <ItemPersona 
+                                key={p.id} // Siempre usa una key única en React
+                                apellido={p.apellidos} 
+                                nombre={p.nombres} 
+                            />
+                        ))
+                    ) : (
+                        <tr>
+                            <td colSpan="3" className="text-center py-10">
+                                <h1 className="text-xl font-bold">No hay datos</h1>
+                            </td>
+                        </tr>
+                    )}
+                </tbody>
             </table>
-
-      </div>
+        </div>
     )
-  }
-  
-  export default ItemListPersona
+}
+
+export default ItemListPersona

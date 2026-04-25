@@ -32,7 +32,7 @@ const ItemListContainerPersona = () => {
     function conFiltro(texto){     
       //   const fetchUserData = () => {
         
-           fetch(`http://localhost:8080/api/personsconfiltro/${texto}`)
+           fetch(`http://localhost:8080/api/personsconfiltro/apellido/${texto}`)
              .then(response => {
                return response.json()
              })
