@@ -11,7 +11,11 @@
     "react": "^19.2.5",
     "react-daisyui": "^5.0.5",
     "react-dom": "^19.2.5",
+<<<<<<< HEAD
     "react-router-dom": "^7.14.1",
+=======
+    "react-router-dom": "^7.14.2",
+>>>>>>> ddebd9f (Login)
     "react-scripts": "5.0.1",
     "web-vitals": "^2.1.4",
     "with": "^7.0.2"
