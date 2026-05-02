@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import ABMPersonas from "./components/ABMPersonas";
+import ItemPersona from "./components/ItemPersona";
 
 // Componentes de ejemplo
 const GestionAlumnos = () => <div>Gestión Académica</div>;
@@ -20,7 +20,7 @@ const Home = () => {
 
   // 🔹 Subtabs SOLO para Personas
   const subTabsPersonas = {
-    abm: <ABMPersonas />,
+    abm: <ItemPersona />,
     gestion: <GestionAlumnos />,
   };
 
