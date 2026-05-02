@@ -25,7 +25,7 @@ const ItemListPersona = ({ prods }) => {
                     {prods.length ? (
                         prods.map(p => (
                             <ItemPersona 
-                                key={p.id} // Siempre usa una key única en React
+                                id_persona={p.id_persona} // Siempre usa una key única en React
                                 apellido={p.apellidos} 
                                 nombre={p.nombres} 
                             />
