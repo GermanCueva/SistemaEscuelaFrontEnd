@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import ItemPersona from "./components/ItemPersona";
+import ItemListContainerPersonas from "./components/ItemListContainerPersonas";
+
 
 // Componentes de ejemplo
 const GestionAlumnos = () => <div>Gestión Académica</div>;
@@ -20,7 +21,7 @@ const Home = () => {
 
   // 🔹 Subtabs SOLO para Personas
   const subTabsPersonas = {
-    abm: <ItemPersona />,
+    abm: <ItemListContainerPersonas />,
     gestion: <GestionAlumnos />,
   };
 

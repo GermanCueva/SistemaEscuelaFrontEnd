@@ -4,6 +4,7 @@ import Login from "./Login"; // archivo login.js ✔
 import Home from "./Home";
 import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import ItemListContainerPersona from './components/ItemListContainerPersonas';
+import ItemPersonaDetail from './components/ItemPersonaDetail';
 import './App.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/Home" element={<Home />} />
+          <Route exact path="/item/:id" element={<ItemPersonaDetail/>}/>  
         </Routes>
       </div>
 
