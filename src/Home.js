@@ -65,6 +65,7 @@ const Home = () => {
         </div>
       )}
 
+
       {/* 🔥 Contenido */}
       <div style={styles.content}>
         {activeTab === "personas" && subTabsPersonas[activeSubTab]}
