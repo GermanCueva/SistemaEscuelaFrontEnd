@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import Spinner from './Spinner';
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom"; //useNavigate
 
 const ItemDetailPersona = () => {
   const [pers, setPers] = useState(null);
   const { id } = useParams();
-  const navigate = useNavigate(); // 👈 Agrega esta línea aquí
+ // const navigate = useNavigate(); // 👈 Agrega esta línea aquí
 
   useEffect(() => {
     fetch(`http://localhost:8080/api/personsconfiltro/${id}`)
@@ -18,6 +18,19 @@ const ItemDetailPersona = () => {
       .catch((err) => console.error("Error:", err));
   }, [id]);
 
+  const [localidades, setLocalidades] = useState([]);
+
+// Ejemplo de cómo cargar los datos al montar el componente
+useEffect(() => {
+    // Aquí llamas a tu API de backend
+    fetch('http://localhost:8080/api/localidades')
+        .then(res => res.json())
+        .then(data => {
+            setLocalidades(data); // Supongamos que data es [{id: 1, nombre: 'Concordia'}, ...]
+        })
+        .catch(err => console.error("Error cargando localidades", err));
+}, []);
+
   // Función para actualizar el estado cuando escribes en los inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,7 +41,8 @@ const ItemDetailPersona = () => {
   };
 
   if (!pers) return <Spinner />;
-
+console.log("ID de la persona:", pers.id_localidad_nacimiento);
+console.log("Lista de localidades:", pers.id_localidad_residencia);
   return (
     <div className="card w-96 bg-base-100 shadow-xl px-6 py-6" style={{ margin: '20px auto' }}>
       <div key={pers.id_persona}>
@@ -132,6 +146,87 @@ const ItemDetailPersona = () => {
             />
           </label>
 
+          <label className="form-control w-full">
+            <span className="label-text font-bold">Localidad de Nacimiento:</span>
+          <select 
+            name="id_localidad_nacimiento" 
+            value={pers.id_localidad_nacimiento || ''} 
+            onChange={handleChange}
+            className="select select-bordered w-full"
+          >
+            <option value="" disabled>Seleccione una localidad</option>
+
+            {localidades.map((loc) => (
+              <option key={loc.id_localidad} value={loc.id_localidad}>
+                {loc.nombre}
+              </option>
+            ))}
+            
+          </select>
+          </label>
+
+
+          <label className="form-control w-full">
+            <span className="label-text font-bold">Localidad de Residencia:</span>
+          <select 
+            name="id_localidad_residencia" 
+            value={pers.id_localidad_residencia || ''} 
+            onChange={handleChange}
+            className="select select-bordered w-full"
+          >
+            <option value="" disabled>Seleccione una localidad</option>
+
+            {localidades.map((loc) => (
+              <option key={loc.id_localidad} value={loc.id_localidad}>
+                {loc.nombre}
+              </option>
+            ))}
+            
+          </select>
+          </label>
+
+          <label className="form-control w-full">
+            <span className="label-text font-bold">Estado:</span>
+            <select
+              name="activo"
+              value={pers.activo || ''}
+              onChange={handleChange}
+              className="select select-bordered w-full"
+              style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+            >
+              <option value="" disabled>Seleccione una opción</option>
+              <option value="S">Activo</option>
+              <option value="N">Inactivo</option>
+            </select>
+          </label>
+
+          <label className="form-control w-full">
+            <span className="label-text font-bold">Es alumno:</span>
+            <select
+              name="alumno"
+              value={pers.es_alumno || ''}
+              onChange={handleChange}
+              className="select select-bordered w-full"
+              style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+            >
+              <option value="" disabled>Seleccione una opción</option>
+              <option value="S">Si</option>
+              <option value="N">No</option>
+            </select>
+          </label>
+
+          <label className="form-control w-full">
+            <span className="label-text font-bold">Usuario:</span>
+            <input 
+              type="usuario"
+              name="usuario"
+              value={pers.usuario || ''} 
+              onChange={handleChange}
+              className="input input-bordered w-full"
+              style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+            />
+          </label>
+
         </div>
 
         <button 
@@ -141,14 +236,6 @@ const ItemDetailPersona = () => {
         >
           Guardar Cambios
         </button>
-
-    <button
-      onClick={() => navigate("/Home")} // 🚩 Navegación programática
-      className="btn btn-primary mt-6"
-      style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white' }}
-    >
-      VOLVER
-    </button>
 
       </div>
    </div> 
