@@ -27,12 +27,15 @@ const ItemListContainerPersona = () => {
 
     const  handleInputChange = ({target}) => {
        setTexto(target.value)
+       conFiltro(target.value);
     }
 
     function conFiltro(texto){     
-      //   const fetchUserData = () => {
-        
+      if(texto === '' || texto === "")
+          fetch(`http://localhost:8080/api/persons`)
+      else
            fetch(`http://localhost:8080/api/personsconfiltro/apellido/${texto}`)
+
              .then(response => {
                return response.json()
              })
@@ -45,10 +48,10 @@ const ItemListContainerPersona = () => {
              })
          }
         
-      const handleSubmit = (e) => {
+  /*    const handleSubmit = (e) => {
         e.preventDefault()
         conFiltro(texto)      
-      }
+      }*/
 
     return (
       <>
@@ -56,7 +59,8 @@ const ItemListContainerPersona = () => {
         <br></br>   
         <div><strong>Listado de Personas</strong></div>
           <br></br>
-        <form onSubmit={handleSubmit}>
+      {/* <form onSubmit={handleSubmit}>*/}
+        <form onChange={handleInputChange}>
         <h3> Filtar por Apellido: <input type="text" id="apellido" name="apellido" value={texto} onChange={handleInputChange}  /> <Button> Filtrar</Button> </h3> 
           <ItemListPersonas prods={prods}/>
           <br></br>  <br></br> 
