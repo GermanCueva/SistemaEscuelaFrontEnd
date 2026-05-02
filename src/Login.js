@@ -2,8 +2,7 @@ import React from 'react';
 import { Formik } from 'formik';
 import { useNavigate } from 'react-router-dom';
 
-
-const Login = () => {
+const Login = ({ onLogin }) => {
   const navigate = useNavigate();
 
   return (
@@ -25,10 +24,11 @@ const Login = () => {
         }}
         onSubmit={(values, { setSubmitting, setErrors }) => {
           setTimeout(() => {
-            
-            // 👉 VALIDACIÓN SIMPLE
+
+            // VALIDACIÓN SIMPLE
             if (values.usuario === "gcueva" && values.password === "123") {
-              navigate('/home'); // redirige
+              onLogin();      // 🔥 activa sesión
+              navigate('/');  // 🔥 va a la app
             } else {
               setErrors({
                 password: 'Usuario o contraseña incorrectos'
@@ -54,7 +54,6 @@ const Login = () => {
             <input
               type="text"
               name="usuario"
-              placeholder="Ej: gcueva"
               onChange={handleChange}
               onBlur={handleBlur}
               value={values.usuario}
@@ -68,7 +67,6 @@ const Login = () => {
             <input
               type="password"
               name="password"
-              placeholder="Ingrese su contraseña"
               onChange={handleChange}
               onBlur={handleBlur}
               value={values.password}
@@ -104,8 +102,7 @@ const styles = {
     gap: '10px'
   },
   input: {
-    padding: '8px',
-    fontSize: '14px'
+    padding: '8px'
   },
   button: {
     padding: '10px',
