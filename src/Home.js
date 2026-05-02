@@ -1,80 +1,70 @@
-import React, { useState } from "react";
-import ItemListContainerPersonas from "./components/ItemListContainerPersonas";
-
-
-// Componentes de ejemplo
-const GestionAlumnos = () => <div>Gestión Académica</div>;
+import React from "react";
+import { Outlet, useNavigate, useLocation } from "react-router-dom";
 
 const Home = () => {
-  const [activeTab, setActiveTab] = useState("inicio");
-  const [activeSubTab, setActiveSubTab] = useState("abm");
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  // 🔹 Tabs principales
+  // 🔹 Tabs principales (ruta + label)
   const tabs = {
-    inicio: "Inicio",
-    personas: "Personas",
-    tutor: "Tutor",
-    gestion: "Gestión",
-    reportes: "Reportes",
-    admin: "Administración",
-  };
-
-  // 🔹 Subtabs SOLO para Personas
-  const subTabsPersonas = {
-    abm: <ItemListContainerPersonas />,
-    gestion: <GestionAlumnos />,
+    "/": "Inicio",
+    "/personas": "Personas",
+    "/tutor": "Tutor",
+    "/gestion": "Gestión",
+    "/reportes": "Reportes",
+    "/admin": "Administración",
   };
 
   return (
     <div style={styles.container}>
-      {/* 🔹 Tabs principales */}
+      {/* 🔹 Tabs principales (SIEMPRE visibles) */}
       <div style={styles.tabHeader}>
-        {Object.keys(tabs).map((key) => (
+        {Object.keys(tabs).map((path) => (
           <button
-            key={key}
-            style={activeTab === key ? styles.activeTab : styles.tab}
-            onClick={() => {
-              setActiveTab(key);
-              setActiveSubTab(null); // reset subtabs
-            }}
+            key={path}
+            style={
+              location.pathname === path ||
+              (path !== "/" && location.pathname.startsWith(path))
+                ? styles.activeTab
+                : styles.tab
+            }
+            onClick={() => navigate(path)}
           >
-            {tabs[key]}
+            {tabs[path]}
           </button>
         ))}
       </div>
 
-      {/* 🔹 Subtabs (solo si es Personas) */}
-      {activeTab === "personas" && (
+      {/* 🔹 Subtabs SOLO para Personas */}
+      {location.pathname.startsWith("/personas") && (
         <div style={styles.subTabHeader}>
-  
-
           <button
-            style={activeSubTab === "abm" ? styles.activeSubTab : styles.subTab}
-            onClick={() => setActiveSubTab("abm")}
+            style={
+              location.pathname === "/personas/abm"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/personas/abm")}
           >
             ABM Personas
           </button>
 
           <button
             style={
-              activeSubTab === "gestion" ? styles.activeSubTab : styles.subTab
+              location.pathname === "/personas/gestion"
+                ? styles.activeSubTab
+                : styles.subTab
             }
-            onClick={() => setActiveSubTab("gestion")}
+            onClick={() => navigate("/personas/gestion")}
           >
             Gestión académica de alumnos
           </button>
         </div>
       )}
 
-
-      {/* 🔥 Contenido */}
+      {/* 🔥 Contenido dinámico */}
       <div style={styles.content}>
-        {activeTab === "personas" && subTabsPersonas[activeSubTab]}
-        {activeTab === "inicio" && <div>Sistema de Gestión de Escuelas</div>}
-        {activeTab === "tutor" && <div>Contenido Tutor</div>}
-        {activeTab === "gestion" && <div>Contenido Gestión</div>}
-        {activeTab === "reportes" && <div>Contenido Reportes</div>}
-        {activeTab === "admin" && <div>Contenido Admin</div>}
+        <Outlet />
       </div>
     </div>
   );
@@ -104,7 +94,6 @@ const styles = {
     border: "1px solid #ccc",
   },
 
-  // 🔹 Subtabs
   subTabHeader: {
     display: "flex",
     marginTop: "10px",

@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import Spinner from './Spinner';
 import { useParams, useNavigate } from "react-router-dom";
-import { Link } from "react-router-dom";
 
 const ItemDetailPersona = () => {
   const [pers, setPers] = useState(null);
