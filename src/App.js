@@ -1,7 +1,7 @@
 import logo from './logoEscuelaTransparente.png';
 import "./App.css";
-import Login from "./login"; // archivo login.js ✔
-import Home from "./home";
+import Login from "./Login"; // archivo login.js ✔
+import Home from "./Home";
 import { Routes, Route, Navigate, BrowserRouter } from "react-router-dom";
 import ItemListContainerPersona from './components/ItemListContainerPersonas';
 import './App.css';
