@@ -60,6 +60,7 @@ function App() {
           <Route path="admin" element={<div>Contenido Admin</div>} />
         </Route>
 
+        {/* fallback */}
         <Route path="*" element={<Navigate to="/" />} />
 
       </Routes>

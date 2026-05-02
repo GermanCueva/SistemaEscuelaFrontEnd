@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
 import Spinner from './Spinner';
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 
 const ItemDetailPersona = () => {
   const [pers, setPers] = useState(null);
   const { id } = useParams();
+  const navigate = useNavigate(); // 👈 Agrega esta línea aquí
 
   useEffect(() => {
     fetch(`http://localhost:8080/api/personsconfiltro/${id}`)
@@ -140,6 +141,15 @@ const ItemDetailPersona = () => {
         >
           Guardar Cambios
         </button>
+
+    <button
+      onClick={() => navigate("/Home")} // 🚩 Navegación programática
+      className="btn btn-primary mt-6"
+      style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white' }}
+    >
+      VOLVER
+    </button>
+
       </div>
    </div> 
   );
