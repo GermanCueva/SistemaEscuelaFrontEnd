@@ -8,6 +8,7 @@
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
     "formik": "^2.4.9",
+    "lucide-react": "^1.14.0",
     "or": "^0.2.0",
     "react": "^19.2.5",
     "react-daisyui": "^5.0.5",
