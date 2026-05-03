@@ -41,18 +41,14 @@ useEffect(() => {
   };
 
   if (!pers) return <Spinner />;
-console.log("ID de la persona:", pers.id_localidad_nacimiento);
-console.log("Lista de localidades:", pers.id_localidad_residencia);
   return (
-    <div className="card w-96 bg-base-100 shadow-xl px-6 py-6" style={{ margin: '20px auto' }}>
+<div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+    <div className="mb-8 border-b pb-4">
+      <h2 className="text-2xl font-bold text-gray-800">Editar Perfil de Persona</h2>
+      <p className="text-gray-500 text-sm">Actualice la información detallada del registro.</p>
+    </div>
       <div key={pers.id_persona}>
-      {/*  <img 
-          className="imagen_detalle" 
-          src={pers.img || 'https://via.placeholder.com/150'} 
-          alt="Imagen" 
-          style={{ width: '100%', marginBottom: '15px' }}
-        />*/}
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex flex-col gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Apellido:</span>
@@ -78,6 +74,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             />
           </label>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Sexo:</span>
             <select
@@ -92,7 +89,8 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
               <option value="2">Femenino</option>
             </select>
           </label>
-
+      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Fecha de Nacimiento:</span>
             <input 
@@ -106,7 +104,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
               style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
             />
           </label>
-
+       </div>
           <label className="form-control w-full">
             <span className="label-text font-bold">Email:</span>
             <input 
@@ -119,6 +117,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             />
           </label>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Recibe Notificaciones por Correo:</span>
             <select
@@ -133,6 +132,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
               <option value="N">No</option>
             </select>
           </label>
+       </div>
 
           <label className="form-control w-full">
             <span className="label-text font-bold">Teléfono:</span>
@@ -146,14 +146,14 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             />
           </label>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Localidad de Nacimiento:</span>
           <select 
             name="id_localidad_nacimiento" 
             value={pers.id_localidad_nacimiento || ''} 
             onChange={handleChange}
-            className="select select-bordered w-full"
-          >
+            className="select select-bordered w-full max-w-xs h-12"          >
             <option value="" disabled>Seleccione una localidad</option>
 
             {localidades.map((loc) => (
@@ -164,7 +164,9 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             
           </select>
           </label>
+       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <label className="form-control w-full">
             <span className="label-text font-bold">Localidad de Residencia:</span>
@@ -172,8 +174,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             name="id_localidad_residencia" 
             value={pers.id_localidad_residencia || ''} 
             onChange={handleChange}
-            className="select select-bordered w-full"
-          >
+            className="select select-bordered w-full max-w-xs h-12"          >
             <option value="" disabled>Seleccione una localidad</option>
 
             {localidades.map((loc) => (
@@ -184,7 +185,9 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             
           </select>
           </label>
+       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Estado:</span>
             <select
@@ -199,7 +202,9 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
               <option value="N">Inactivo</option>
             </select>
           </label>
+       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
             <span className="label-text font-bold">Es alumno:</span>
             <select
@@ -214,6 +219,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
               <option value="N">No</option>
             </select>
           </label>
+       </div>
 
           <label className="form-control w-full">
             <span className="label-text font-bold">Usuario:</span>
@@ -227,8 +233,7 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
             />
           </label>
 
-        </div>
-
+     <div className="flex justify-end mt-8">
         <button 
           onClick={() => console.log("Enviar a la API:", pers)}
           className="btn btn-primary mt-6"
@@ -236,7 +241,10 @@ console.log("Lista de localidades:", pers.id_localidad_residencia);
         >
           Guardar Cambios
         </button>
+      </div>
+        </div>
 
+      </div>
       </div>
    </div> 
   );

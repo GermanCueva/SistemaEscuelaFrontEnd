@@ -22,7 +22,7 @@ const ItemPersona = ({ apellido, nombre, id_persona }) => {
             <td className="px-6 py-2 text-right">
                 <Link to={'/personas/' + id_persona}>
                     <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
-                        <Search size={18} className="mr-2" />
+                        <Search size={20} className="mr-2" />
                     </button>
                 </Link>
             </td>
@@ -30,7 +30,7 @@ const ItemPersona = ({ apellido, nombre, id_persona }) => {
             <td className="px-6 py-2 text-right">
                 <Link to={'/personas/' + id_persona}>
                     <button className="flex items-center bg-red-500 text-white p-2 rounded hover:bg-red-600">
-                        <Trash2 size={18} className="mr-2" />
+                        <Trash2 size={17} className="mr-2" />
                     </button>
                 </Link>
             </td>
