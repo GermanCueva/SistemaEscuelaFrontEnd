@@ -45,13 +45,12 @@ useEffect(() => {
 <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
     <div className="mb-8 border-b pb-4">
       <h2 className="text-2xl font-bold text-gray-800">Editar Perfil de Persona</h2>
-      <p className="text-gray-500 text-sm">Actualice la información detallada del registro.</p>
     </div>
       <div key={pers.id_persona}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex flex-col gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Apellido:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Apellido:</span>
             <input 
               type="text"
               name="apellidos"
@@ -63,7 +62,7 @@ useEffect(() => {
           </label>
 
           <label className="form-control w-full">
-            <span className="label-text font-bold">Nombres:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Nombres:</span>
             <input 
               type="text"
               name="nombres"
@@ -76,7 +75,7 @@ useEffect(() => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Sexo:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Sexo:</span>
             <select
               name="id_sexo"
               value={pers.id_sexo || ''}
@@ -92,7 +91,7 @@ useEffect(() => {
       </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Fecha de Nacimiento:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Fecha de Nacimiento:</span>
             <input 
               type="date"
               name="fecha_nacimiento"
@@ -106,7 +105,7 @@ useEffect(() => {
           </label>
        </div>
           <label className="form-control w-full">
-            <span className="label-text font-bold">Email:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Email:</span>
             <input 
               type="email"
               name="correo_electronico"
@@ -119,7 +118,7 @@ useEffect(() => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Recibe Notificaciones por Correo:</span>
+            <span className="label-text font-bold" style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '100%' }}>Recibe Notificaciones por Correo:</span>
             <select
               name="recibe_notif_x_correo"
               value={pers.recibe_notif_x_correo || ''}
@@ -135,7 +134,7 @@ useEffect(() => {
        </div>
 
           <label className="form-control w-full">
-            <span className="label-text font-bold">Teléfono:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Teléfono:</span>
             <input 
               type="telefono"
               name="telefono"
@@ -148,7 +147,7 @@ useEffect(() => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Localidad de Nacimiento:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Localidad de Nacimiento:</span>
           <select 
             name="id_localidad_nacimiento" 
             value={pers.id_localidad_nacimiento || ''} 
@@ -169,7 +168,7 @@ useEffect(() => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
           <label className="form-control w-full">
-            <span className="label-text font-bold">Localidad de Residencia:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Localidad de Residencia:</span>
           <select 
             name="id_localidad_residencia" 
             value={pers.id_localidad_residencia || ''} 
@@ -189,7 +188,7 @@ useEffect(() => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Estado:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Estado:</span>
             <select
               name="activo"
               value={pers.activo || ''}
@@ -206,7 +205,7 @@ useEffect(() => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Es alumno:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Es alumno:</span>
             <select
               name="alumno"
               value={pers.es_alumno || ''}
@@ -222,7 +221,7 @@ useEffect(() => {
        </div>
 
           <label className="form-control w-full">
-            <span className="label-text font-bold">Usuario:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Usuario:</span>
             <input 
               type="usuario"
               name="usuario"
