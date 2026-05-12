@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import Spinner from './Spinner';
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom"; //useNavigate
 
 const ItemDetailPersona = () => {
   const [pers, setPers] = useState(null);
   const { id } = useParams();
-  const navigate = useNavigate(); // 👈 Agrega esta línea aquí
+ // const navigate = useNavigate(); // 👈 Agrega esta línea aquí
 
   useEffect(() => {
     fetch(`http://localhost:8080/api/personsconfiltro/${id}`)
@@ -18,6 +18,19 @@ const ItemDetailPersona = () => {
       .catch((err) => console.error("Error:", err));
   }, [id]);
 
+  const [localidades, setLocalidades] = useState([]);
+
+// Ejemplo de cómo cargar los datos al montar el componente
+useEffect(() => {
+    // Aquí llamas a tu API de backend
+    fetch('http://localhost:8080/api/localidades')
+        .then(res => res.json())
+        .then(data => {
+            setLocalidades(data); // Supongamos que data es [{id: 1, nombre: 'Concordia'}, ...]
+        })
+        .catch(err => console.error("Error cargando localidades", err));
+}, []);
+
   // Función para actualizar el estado cuando escribes en los inputs
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -28,20 +41,16 @@ const ItemDetailPersona = () => {
   };
 
   if (!pers) return <Spinner />;
-
   return (
-    <div className="card w-96 bg-base-100 shadow-xl px-6 py-6" style={{ margin: '20px auto' }}>
+<div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+    <div className="mb-8 border-b pb-4">
+      <h2 className="text-2xl font-bold text-gray-800">Editar Perfil de Persona</h2>
+    </div>
       <div key={pers.id_persona}>
-      {/*  <img 
-          className="imagen_detalle" 
-          src={pers.img || 'https://via.placeholder.com/150'} 
-          alt="Imagen" 
-          style={{ width: '100%', marginBottom: '15px' }}
-        />*/}
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="flex flex-col gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Apellido:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Apellido:</span>
             <input 
               type="text"
               name="apellidos"
@@ -53,7 +62,7 @@ const ItemDetailPersona = () => {
           </label>
 
           <label className="form-control w-full">
-            <span className="label-text font-bold">Nombres:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Nombres:</span>
             <input 
               type="text"
               name="nombres"
@@ -64,8 +73,9 @@ const ItemDetailPersona = () => {
             />
           </label>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Sexo:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Sexo:</span>
             <select
               name="id_sexo"
               value={pers.id_sexo || ''}
@@ -78,9 +88,10 @@ const ItemDetailPersona = () => {
               <option value="2">Femenino</option>
             </select>
           </label>
-
+      </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Fecha de Nacimiento:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Fecha de Nacimiento:</span>
             <input 
               type="date"
               name="fecha_nacimiento"
@@ -92,9 +103,9 @@ const ItemDetailPersona = () => {
               style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
             />
           </label>
-
+       </div>
           <label className="form-control w-full">
-            <span className="label-text font-bold">Email:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Email:</span>
             <input 
               type="email"
               name="correo_electronico"
@@ -105,8 +116,9 @@ const ItemDetailPersona = () => {
             />
           </label>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <label className="form-control w-full">
-            <span className="label-text font-bold">Recibe Notificaciones por Correo:</span>
+            <span className="label-text font-bold" style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '100%' }}>Recibe Notificaciones por Correo:</span>
             <select
               name="recibe_notif_x_correo"
               value={pers.recibe_notif_x_correo || ''}
@@ -119,9 +131,10 @@ const ItemDetailPersona = () => {
               <option value="N">No</option>
             </select>
           </label>
+       </div>
 
           <label className="form-control w-full">
-            <span className="label-text font-bold">Teléfono:</span>
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Teléfono:</span>
             <input 
               type="telefono"
               name="telefono"
@@ -132,8 +145,94 @@ const ItemDetailPersona = () => {
             />
           </label>
 
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="form-control w-full">
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Localidad de Nacimiento:</span>
+          <select 
+            name="id_localidad_nacimiento" 
+            value={pers.id_localidad_nacimiento || ''} 
+            onChange={handleChange}
+            className="select select-bordered w-full max-w-xs h-12"          >
+            <option value="" disabled>Seleccione una localidad</option>
 
+            {localidades.map((loc) => (
+              <option key={loc.id_localidad} value={loc.id_localidad}>
+                {loc.nombre}
+              </option>
+            ))}
+            
+          </select>
+          </label>
+       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <label className="form-control w-full">
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Localidad de Residencia:</span>
+          <select 
+            name="id_localidad_residencia" 
+            value={pers.id_localidad_residencia || ''} 
+            onChange={handleChange}
+            className="select select-bordered w-full max-w-xs h-12"          >
+            <option value="" disabled>Seleccione una localidad</option>
+
+            {localidades.map((loc) => (
+              <option key={loc.id_localidad} value={loc.id_localidad}>
+                {loc.nombre}
+              </option>
+            ))}
+            
+          </select>
+          </label>
+       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="form-control w-full">
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Estado:</span>
+            <select
+              name="activo"
+              value={pers.activo || ''}
+              onChange={handleChange}
+              className="select select-bordered w-full"
+              style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+            >
+              <option value="" disabled>Seleccione una opción</option>
+              <option value="S">Activo</option>
+              <option value="N">Inactivo</option>
+            </select>
+          </label>
+       </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="form-control w-full">
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Es alumno:</span>
+            <select
+              name="alumno"
+              value={pers.es_alumno || ''}
+              onChange={handleChange}
+              className="select select-bordered w-full"
+              style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+            >
+              <option value="" disabled>Seleccione una opción</option>
+              <option value="S">Si</option>
+              <option value="N">No</option>
+            </select>
+          </label>
+       </div>
+
+          <label className="form-control w-full">
+            <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Usuario:</span>
+            <input 
+              type="usuario"
+              name="usuario"
+              value={pers.usuario || ''} 
+              onChange={handleChange}
+              className="input input-bordered w-full"
+              style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+            />
+          </label>
+
+     <div className="flex justify-end mt-8">
         <button 
           onClick={() => console.log("Enviar a la API:", pers)}
           className="btn btn-primary mt-6"
@@ -141,15 +240,10 @@ const ItemDetailPersona = () => {
         >
           Guardar Cambios
         </button>
+      </div>
+        </div>
 
-    <button
-      onClick={() => navigate("/Home")} // 🚩 Navegación programática
-      className="btn btn-primary mt-6"
-      style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white' }}
-    >
-      VOLVER
-    </button>
-
+      </div>
       </div>
    </div> 
   );
