@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import Spinner from './Spinner';
 import { useParams } from "react-router-dom"; //useNavigate
+import { Link } from "react-router-dom";
 
 const ItemDetailPersona = () => {
   const [pers, setPers] = useState(null);
   const { id } = useParams();
- // const navigate = useNavigate(); // 👈 Agrega esta línea aquí
 
   useEffect(() => {
     fetch(`http://localhost:8080/api/personsconfiltro/${id}`)
@@ -40,7 +40,39 @@ useEffect(() => {
     });
   };
 
+
+  // Manejar el envío del formulario
+ // Manejar el envío del formulario
+  const grabar = async () => {
+   // e.preventDefault();
+    
+    try {
+      const response = await fetch(`http://localhost:8080/api/persons/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pers), // Convertimos el objeto a string JSON
+      });
+
+     // const data = await response.json();
+
+      if (response.ok) {
+       // setMensaje('¡Usuario actualizado correctamente!');
+      
+      } else {
+       // setMensaje(`Error: ${data.message || 'No se pudo actualizar'}`);
+      }
+    } catch (error) {
+      console.error('Error al conectar con el servidor:', error);
+     // setMensaje('Error de red al intentar actualizar.');
+    }
+
+  };
+
   if (!pers) return <Spinner />;
+  console.log(pers);
+
   return (
 <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
     <div className="mb-8 border-b pb-4">
@@ -197,8 +229,8 @@ useEffect(() => {
               style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
             >
               <option value="" disabled>Seleccione una opción</option>
-              <option value="S">Activo</option>
               <option value="N">Inactivo</option>
+              <option value="S">Activo</option>
             </select>
           </label>
        </div>
@@ -207,7 +239,7 @@ useEffect(() => {
           <label className="form-control w-full">
             <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Es alumno:</span>
             <select
-              name="alumno"
+              name="es_alumno"
               value={pers.es_alumno || ''}
               onChange={handleChange}
               className="select select-bordered w-full"
@@ -233,13 +265,16 @@ useEffect(() => {
           </label>
 
      <div className="flex justify-end mt-8">
+      <Link to={'/personas/abm'}>
         <button 
-          onClick={() => console.log("Enviar a la API:", pers)}
+          onClick={() => grabar()}  //console.log("Enviar a la API:", pers)}
           className="btn btn-primary mt-6"
           style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
         >
           Guardar Cambios
         </button>
+      </Link>
+
       </div>
         </div>
 
