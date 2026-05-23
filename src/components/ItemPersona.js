@@ -1,9 +1,38 @@
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
+//import { useState, useEffect } from 'react';
 
 
-const ItemPersona = ({ apellido, nombre, id_persona }) => {
+const ItemPersona = ({ apellido, nombre, id_persona, setProds }) => {
+
+
+  const cambiar_estado = async (e) => {
+    e.preventDefault();
+   
+    try {
+      const response = await fetch(`http://localhost:8080/api/persons/${id_persona}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+     // const data = await response.json();
+
+      if (response.ok) {
+           setProds(prevProds => prevProds.filter(persona => persona.id_persona !== id_persona));      
+        } else {
+       // setMensaje(`Error: ${data.message || 'No se pudo actualizar'}`);
+      }
+    } catch (error) {
+      console.error('Error al conectar con el servidor:', error);
+     // setMensaje('Error de red al intentar actualizar.');
+    }
+
+  };
+
+
     return (
         /* Eliminamos los estilos inline como "padding: 2px" que no funcionan en class */
         <tr className="odd:bg-yellow odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
@@ -28,11 +57,11 @@ const ItemPersona = ({ apellido, nombre, id_persona }) => {
             </td>
 
             <td className="px-6 py-2 text-right">
-                <Link to={'/personas/' + id_persona}>
-                    <button className="flex items-center bg-red-500 text-white p-2 rounded hover:bg-red-600">
+           {/*    <Link to={'/personas/abm'}>*/}
+                    <button onClick={(e) => cambiar_estado(e)} className="flex items-center bg-red-500 text-white p-2 rounded hover:bg-red-600">
                         <Trash2 size={17} className="mr-2" />
                     </button>
-                </Link>
+                {/*    </Link>*/}
             </td>
 
         </tr>
