@@ -1,6 +1,6 @@
 import ItemPersona from './ItemPersona'
 
-const ItemListPersona = ({ prods }) => {
+const ItemListPersona = ({ prods, setProds }) => {
     return (
         <div className="overflow-x-auto">
             <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
@@ -25,9 +25,11 @@ const ItemListPersona = ({ prods }) => {
                     {prods.length ? (
                         prods.map(p => (
                             <ItemPersona 
+                                key={p.id_persona} // Corregido: Key única para React
                                 id_persona={p.id_persona} // Siempre usa una key única en React
                                 apellido={p.apellidos} 
                                 nombre={p.nombres} 
+                                setProds={setProds}
                             />
                         ))
                     ) : (

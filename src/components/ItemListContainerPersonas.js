@@ -11,17 +11,18 @@ const ItemListContainerPersona = () => {
 
   //const { categoryId } = useParams()
 
-
-  useEffect(() => {     
-
- //   const fetchUserData = () => {
-  fetch(`http://localhost:8080/api/persons`)
+ const obtenerDatos = () => {
+    fetch(`http://localhost:8080/api/persons`)
   .then(response => {
           return response.json()
         })
         .then(data => {
           setProds(data)
         })
+ }
+
+  useEffect(() => {     
+     obtenerDatos()
     }, []);
 
 
@@ -60,9 +61,9 @@ const ItemListContainerPersona = () => {
         <div><strong>Listado de Personas</strong></div>
           <br></br>
       {/* <form onSubmit={handleSubmit}>*/}
-        <form onChange={handleInputChange}>
-        <h3> Filtar por Apellido: <input type="text" id="apellido" name="apellido" value={texto} onChange={handleInputChange}  /> <Button> Filtrar</Button> </h3> 
-          <ItemListPersonas prods={prods}/>
+    <form onChange={handleInputChange} onSubmit={(e) => e.preventDefault()}>
+          <h3> Filtar por Apellido: <input type="text" id="apellido" name="apellido" value={texto} onChange={handleInputChange}  /> <Button> Filtrar</Button> </h3> 
+          <ItemListPersonas prods={prods} setProds={setProds}/>
           <br></br>  <br></br> 
         </form>
         </div>
