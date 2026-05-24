@@ -28,66 +28,176 @@ function App() {
   // ==========================================
   // VERIFICAR TOKEN
   // ==========================================
-  useEffect(() => {
-    const verificarToken = () => {
-      const token = localStorage.getItem("token");
+  // ==========================================
+// VERIFICAR TOKEN + INACTIVIDAD
+// ==========================================
+useEffect(() => {
 
-      // SIN TOKEN
-      if (!token) {
-        setIsAuth(false);
+  let inactivityTimeout;
 
-        navigate("/login");
+  // ==========================================
+  // CERRAR SESION
+  // ==========================================
+  const cerrarSesion = (
+    mensaje = "La sesión expiró"
+  ) => {
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("usuario");
+    localStorage.removeItem("loginTime");
+
+    setIsAuth(false);
+
+    alert(mensaje);
+
+    navigate("/login");
+  };
+
+  // ==========================================
+  // VERIFICAR TOKEN
+  // ==========================================
+  const verificarToken = () => {
+
+    const token =
+      localStorage.getItem("token");
+
+    // SIN TOKEN
+    if (!token) {
+
+      setIsAuth(false);
+
+      navigate("/login");
+
+      return;
+    }
+
+    try {
+
+      // DECODIFICAR JWT
+      const decoded =
+        jwtDecode(token);
+
+      console.log(decoded);
+
+      // FECHA ACTUAL
+      const now =
+        Date.now() / 1000;
+
+      // TOKEN EXPIRADO
+      if (decoded.exp < now) {
+
+        cerrarSesion(
+          "La sesión expiró"
+        );
 
         return;
       }
 
-      try {
-        // DECODIFICAR JWT
-        const decoded = jwtDecode(token);
+      // TOKEN VALIDO
+      setIsAuth(true);
 
-        console.log(decoded);
+    } catch (error) {
 
-        // FECHA ACTUAL
-        const now = Date.now() / 1000;
+      console.error(error);
 
-        // TOKEN EXPIRADO
-        if (decoded.exp < now) {
-          localStorage.removeItem("token");
-          localStorage.removeItem("usuario");
-          localStorage.removeItem("loginTime");
+      cerrarSesion(
+        "Token inválido"
+      );
+    }
+  };
 
-          setIsAuth(false);
+  // ==========================================
+  // REINICIAR TEMPORIZADOR
+  // ==========================================
+  const reiniciarTemporizador = () => {
 
-          alert("La sesión expiró");
+    clearTimeout(
+      inactivityTimeout
+    );
 
-          navigate("/login");
+    inactivityTimeout =
+      setTimeout(() => {
 
-          return;
-        }
+        cerrarSesion(
+          "La sesión expiró por inactividad"
+        );
 
-        // TOKEN VALIDO
-        setIsAuth(true);
-      } catch (error) {
-        console.error(error);
+      }, 1 * 60 * 1000); // 15 MINUTOS
+  };
 
-        // TOKEN INVALIDO
-        localStorage.clear();
+  // ==========================================
+  // VERIFICA TOKEN AL CARGAR
+  // ==========================================
+  verificarToken();
 
-        setIsAuth(false);
+  // ==========================================
+  // VERIFICA TOKEN CADA 5 SEGUNDOS
+  // ==========================================
+  const interval =
+    setInterval(
+      verificarToken,
+      5000
+    );
 
-        navigate("/login");
-      }
-    };
+  // ==========================================
+  // EVENTOS DE ACTIVIDAD
+  // ==========================================
+  window.addEventListener(
+    "mousemove",
+    reiniciarTemporizador
+  );
 
-    // VERIFICA AL CARGAR
-    verificarToken();
+  window.addEventListener(
+    "click",
+    reiniciarTemporizador
+  );
 
-    // VERIFICA CADA 5 SEGUNDOS
-    const interval = setInterval(verificarToken, 5000);
+  window.addEventListener(
+    "keydown",
+    reiniciarTemporizador
+  );
 
-    // LIMPIEZA
-    return () => clearInterval(interval);
-  }, [navigate]);
+  window.addEventListener(
+    "scroll",
+    reiniciarTemporizador
+  );
+
+  // INICIAR TEMPORIZADOR
+  reiniciarTemporizador();
+
+  // ==========================================
+  // LIMPIEZA
+  // ==========================================
+  return () => {
+
+    clearInterval(interval);
+
+    clearTimeout(
+      inactivityTimeout
+    );
+
+    window.removeEventListener(
+      "mousemove",
+      reiniciarTemporizador
+    );
+
+    window.removeEventListener(
+      "click",
+      reiniciarTemporizador
+    );
+
+    window.removeEventListener(
+      "keydown",
+      reiniciarTemporizador
+    );
+
+    window.removeEventListener(
+      "scroll",
+      reiniciarTemporizador
+    );
+  };
+
+}, [navigate]);
 
   // ==========================================
   // LOGIN
