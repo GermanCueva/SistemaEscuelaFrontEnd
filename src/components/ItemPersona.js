@@ -10,11 +10,15 @@ const ItemPersona = ({ apellido, nombre, id_persona, setProds }) => {
   const cambiar_estado = async (e) => {
     e.preventDefault();
    
+  const token = localStorage.getItem('token');
+
+  
     try {
       const response = await fetch(`http://localhost:8080/api/persons/${id_persona}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` // Le pasamos el token de la línea 13
         }
       });
 
