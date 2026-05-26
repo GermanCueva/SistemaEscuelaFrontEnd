@@ -11,6 +11,8 @@ import Login from "./Login";
 
 import ItemListContainerPersona from "./components/ItemListContainerPersonas";
 import ItemPersonaDetail from "./components/ItemPersonaDetail";
+import ItemPersonaDetailAlta from "./components/ItemPersonaDetailAlta";
+
 
 import logo from "./logoEscuelaTransparente.png";
 
@@ -151,6 +153,8 @@ function App() {
             <Route path="gestion" element={<GestionAlumnos />} />
 
             <Route path=":id" element={<ItemPersonaDetail />} />
+
+            <Route path="alta" element={<ItemPersonaDetailAlta />} />
           </Route>
 
           {/* OTRAS SECCIONES */}

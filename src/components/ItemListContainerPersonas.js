@@ -11,8 +11,18 @@ const ItemListContainerPersona = () => {
 
   //const { categoryId } = useParams()
 
+  const token = localStorage.getItem('token');
+
  const obtenerDatos = () => {
-    fetch(`http://localhost:8080/api/persons`)
+    fetch(`http://localhost:8080/api/persons`, 
+      {
+      // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
+      method: 'GET', 
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // Le pasamos el token de la línea 13
+      }
+    })
   .then(response => {
           return response.json()
         })
@@ -33,9 +43,25 @@ const ItemListContainerPersona = () => {
 
     function conFiltro(texto){     
       if(texto === '' || texto === "")
-          fetch(`http://localhost:8080/api/persons`)
+          fetch(`http://localhost:8080/api/persons`, 
+      {
+      // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
+      method: 'GET', 
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // Le pasamos el token de la línea 13
+      }
+    })
       else
-           fetch(`http://localhost:8080/api/personsconfiltro/apellido/${texto}`)
+           fetch(`http://localhost:8080/api/personsconfiltro/apellido/${texto}`, 
+      {
+      // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
+      method: 'GET', 
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // Le pasamos el token de la línea 13
+      }
+    })
 
              .then(response => {
                return response.json()
