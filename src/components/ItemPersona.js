@@ -14,7 +14,7 @@ const ItemPersona = ({ apellido, nombre, id_persona, setProds }) => {
 
   
     try {
-      const response = await fetch(`http://localhost:8080/api/persons/${id_persona}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/${id_persona}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

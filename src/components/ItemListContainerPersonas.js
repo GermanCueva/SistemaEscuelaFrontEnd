@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 //import { useParams } from "react-router-dom"
 import ItemListPersonas from './ItemListPersonas'
 //import productosJson from "../productos.json";
@@ -13,27 +13,21 @@ const ItemListContainerPersona = () => {
 
   const token = localStorage.getItem('token');
 
- const obtenerDatos = () => {
-    fetch(`http://localhost:8080/api/persons`, 
-      {
-      // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
-      method: 'GET', 
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}` // Le pasamos el token de la línea 13
-      }
-    })
-  .then(response => {
-          return response.json()
-        })
-        .then(data => {
-          setProds(data)
-        })
- }
+const obtenerDatos = useCallback(() => {
+  fetch(`${process.env.REACT_APP_API_URL}/api/persons`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}` 
+    }
+  })
+  .then(response => response.json())
+  .then(data => setProds(data));
+}, [token]); // <--- Agregas 'token' como dependencia
 
   useEffect(() => {     
      obtenerDatos()
-    }, []);
+    }, [obtenerDatos]);
 
 
     const  handleInputChange = ({target}) => {
@@ -43,7 +37,7 @@ const ItemListContainerPersona = () => {
 
     function conFiltro(texto){     
       if(texto === '' || texto === "")
-          fetch(`http://localhost:8080/api/persons`, 
+          fetch(`${process.env.REACT_APP_API_URL}/api/persons`, 
       {
       // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
       method: 'GET', 
@@ -53,7 +47,7 @@ const ItemListContainerPersona = () => {
       }
     })
       else
-           fetch(`http://localhost:8080/api/personsconfiltro/apellido/${texto}`, 
+           fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/apellido/${texto}`, 
       {
       // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
       method: 'GET', 

@@ -12,7 +12,7 @@ const ItemDetailPersona = () => {
     
     const token = localStorage.getItem('token');
 
-    fetch(`http://localhost:8080/api/personsconfiltro/${id}`
+    fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/${id}`
       , {
       // 👇 AQUÍ AGREGAMOS LA CONFIGURACIÓN CON LOS HEADERS
       method: 'GET', 
@@ -35,7 +35,7 @@ const ItemDetailPersona = () => {
 // Ejemplo de cómo cargar los datos al montar el componente
 useEffect(() => {
     // Aquí llamas a tu API de backend
-    fetch('http://localhost:8080/api/localidades')
+    fetch(`${process.env.REACT_APP_API_URL}/api/localidades`)
         .then(res => res.json())
         .then(data => {
             setLocalidades(data); // Supongamos que data es [{id: 1, nombre: 'Concordia'}, ...]
@@ -49,7 +49,7 @@ useEffect(() => {
 // Ejemplo de cómo cargar los datos al montar el componente
 useEffect(() => {
     // Aquí llamas a tu API de backend
-    fetch('http://localhost:8080/api/nacionalidades')
+    fetch(`${process.env.REACT_APP_API_URL}/api/nacionalidades`)
         .then(res => res.json())
         .then(data => {
             setNacionalidades(data); // Supongamos que data es [{id: 1, nombre: 'Concordia'}, ...]
@@ -76,7 +76,7 @@ useEffect(() => {
     const token = localStorage.getItem('token');
 
     try {
-      const response = await fetch(`http://localhost:8080/api/persons/${id}`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

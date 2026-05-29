@@ -8,7 +8,18 @@ const ItemDetailPersonaAlta = () => {
   // 1. Creamos un estado único para controlar todos los campos del formulario
   const [formData, setFormData] = useState({
     apellidos: '',
-    nombres: ''
+    nombres: '',
+    id_sexo: '',
+    fecha_nacimiento: '',
+    correo_electronico: '',
+    recibe_notif_x_correo: '',
+    telefono: '',
+    id_localidad_nacimiento: '',
+    id_localidad_residencia: '',
+    id_nacionalidad: '',
+    activo: '',
+    es_alumno: '',
+    usuario: ''
   });
 
   // 2. Manejador para actualizar el estado cada vez que el usuario escribe
@@ -27,8 +38,20 @@ const ItemDetailPersonaAlta = () => {
         const token = localStorage.getItem('token');
 
     try {
+
+ /*     if (!formData.apellidos.trim()) {
+       alert("El nombre es obligatorio");
+       return;
+     }
+
+      if (!formData.nombres.trim()) {
+       alert("El nombre es obligatorio");
+       return;
+     }*/
+
+
       // Ajusta la URL según el puerto donde corra tu Node.js (ej. 5000)
-      const respuesta = await fetch('http://localhost:8080/api/persons', {
+      const respuesta = await fetch(`${process.env.REACT_APP_API_URL}/api/persons`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,6 +66,7 @@ const ItemDetailPersonaAlta = () => {
       if (respuesta.ok) {
         alert('¡Datos guardados en Node.js con éxito!');
         console.log('Respuesta del servidor:', datos);
+       // setFormData()
       } else {
         alert('Error en el servidor: ' + datos.error);
       }
@@ -56,7 +80,7 @@ const ItemDetailPersonaAlta = () => {
 // Ejemplo de cómo cargar los datos al montar el componente
 useEffect(() => {
     // Aquí llamas a tu API de backend
-    fetch('http://localhost:8080/api/localidades')
+    fetch(`${process.env.REACT_APP_API_URL}/api/localidades`)
         .then(res => res.json())
         .then(data => {
             setLocalidades(data); // Supongamos que data es [{id: 1, nombre: 'Concordia'}, ...]
@@ -70,7 +94,7 @@ useEffect(() => {
 // Ejemplo de cómo cargar los datos al montar el componente
 useEffect(() => {
     // Aquí llamas a tu API de backend
-    fetch('http://localhost:8080/api/nacionalidades')
+    fetch(`${process.env.REACT_APP_API_URL}/api/nacionalidades`)
         .then(res => res.json())
         .then(data => {
             setNacionalidades(data); // Supongamos que data es [{id: 1, nombre: 'Concordia'}, ...]
