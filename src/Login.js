@@ -61,7 +61,7 @@ const Login = ({ onLogin }) => {
               );
 
             const data = response.data;
-              console.log(data)
+              console.log(data.error)
             // GUARDA TOKEN
             localStorage.setItem(
               "token",
@@ -71,7 +71,8 @@ const Login = ({ onLogin }) => {
             // GUARDA USUARIO
             localStorage.setItem(
               "usuario",
-              data.usuario
+             // data.usuario.usuario
+             JSON.stringify(data.usuario)
             );
 
             // FECHA LOGIN
@@ -90,7 +91,7 @@ const Login = ({ onLogin }) => {
             
             setErrors({
               password:
-                "Contraseña incorrectos"
+                "Usuario y/o Contraseña incorrectos",
             });
 
           }
