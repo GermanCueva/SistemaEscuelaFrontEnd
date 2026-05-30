@@ -22,6 +22,9 @@ const ItemDetailPersonaAlta = () => {
     usuario: ''
   });
 
+  const [emailError, setEmailError] = useState("");
+  const [phoneError, setPhoneError] = useState(""); // <-- Agregar este
+
   // 2. Manejador para actualizar el estado cada vez que el usuario escribe
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -31,6 +34,43 @@ const ItemDetailPersonaAlta = () => {
     });
   };
 
+  const handleChangeEmail = (e) => {
+  const nuevoValor = e.target.value;
+  
+  // Primero actualizas tu estado global (lo que ya hacía tu handleChange original)
+  handleChange(e); 
+
+  // Luego validas
+  const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  
+  if (nuevoValor === "") {
+    setEmailError(""); // Si está vacío no mostramos error (o sí, si es obligatorio)
+  } else if (!regexEmail.test(nuevoValor)) {
+    setEmailError("Formato de correo inválido.");
+  } else {
+    setEmailError(""); // Correo correcto, borramos el error
+  }
+};
+
+const handleChangePhone = (e) => {
+  const nuevoValor = e.target.value;
+  
+  // 1. Actualizamos el estado global del formulario
+  handleChange(e); 
+
+  // 2. Expresión regular para teléfonos (compara números, espacios, guiones y el +)
+  // Permite formatos como: +54 9 345 1234567, 345-4211111, 4211111, etc.
+const regexPhone = /^\+?[0-9\s-]{7,15}$/;
+  
+  if (nuevoValor === "") {
+    setPhoneError(""); // Si está vacío no hay error de formato (controlado por el "grabar")
+  } else if (!regexPhone.test(nuevoValor)) {
+    setPhoneError("Formato de teléfono inválido (solo números, espacios o guiones. Entre 7 y 15 dígitos).");
+  } else {
+    setPhoneError(""); // Formato correcto
+  }
+};
+
   // 3. Manejador para enviar los datos al backend en Node.js
   const grabar = async (e) => {
     e.preventDefault();
@@ -39,16 +79,99 @@ const ItemDetailPersonaAlta = () => {
 
     try {
 
- /*     if (!formData.apellidos.trim()) {
-       alert("El nombre es obligatorio");
-       return;
-     }
+      let mensaje = "¡Error! No podés dejar vacío: "
+      let error = false
 
-      if (!formData.nombres.trim()) {
-       alert("El nombre es obligatorio");
-       return;
-     }*/
 
+// Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.apellidos || formData.apellidos === '') {
+    mensaje = mensaje + " el apellido, "
+    error = true
+  }
+
+// Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.nombres || formData.nombres === '') {
+    mensaje = mensaje + " el nombre, "
+    error = true
+  }
+
+    // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.id_sexo || formData.id_sexo === '') {
+    mensaje = mensaje + " el sexo, "
+    error = true
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.fecha_nacimiento || formData.fecha_nacimiento === '') {
+    mensaje = mensaje + " la fecha de nacimiento, "
+    error = true
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.correo_electronico || formData.correo_electronico === '') {
+    mensaje = mensaje + " el correo electrónico, "
+    error = true
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.recibe_notif_x_correo || formData.recibe_notif_x_correo === '') {
+    mensaje = mensaje + " si desea recibir notificaciones por correo, "
+    error = true
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.telefono || formData.telefono === '') {
+    mensaje = mensaje + " el teléfono, "
+    error = true
+  }
+
+  // Bloqueo por formato de Email
+  if (emailError) {
+    alert(`Por favor, corrige los errores antes de guardar: ${emailError}`);
+    return;
+  }
+
+  // --- NUEVO: Bloqueo por formato de Teléfono ---
+  if (phoneError) {
+    alert(`Por favor, corrige los errores antes de guardar: ${phoneError}`);
+    return;
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.id_localidad_nacimiento || formData.id_localidad_nacimiento === '') {
+    mensaje = mensaje + " la localidad de nacimiento, "
+    error = true
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.id_localidad_residencia || formData.id_localidad_residencia === '') {
+    mensaje = mensaje + " la localidad de residencia, "
+    error = true
+  }
+
+    // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.id_nacionalidad || formData.id_nacionalidad === '') {
+    mensaje = mensaje + " la nacionalidad, "
+    error = true
+  }
+
+  // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.activo || formData.activo === '') {
+    mensaje = mensaje + " si está Activo o Inactivo, "
+    error = true
+  }
+
+    // Verificamos si el valor no existe, es null, undefined o un texto vacío
+  if (!formData.es_alumno || formData.es_alumno === '') {
+    mensaje = mensaje + " si está es o no Alumno, "
+    error = true
+  }
+
+  if(error){
+    // Aquí ponés la alerta que prefieras (un alert común o cambiar un estado de error)
+    alert(mensaje);
+    return; // <--- IMPORTANTE: Detiene la función para que no siga ejecutando el guardado
+  }
 
       // Ajusta la URL según el puerto donde corra tu Node.js (ej. 5000)
       const respuesta = await fetch(`${process.env.REACT_APP_API_URL}/api/persons`, {
@@ -64,7 +187,25 @@ const ItemDetailPersonaAlta = () => {
 
       
       if (respuesta.ok) {
+// Reseteamos el estado a su forma inicial
+    setFormData({
+        apellidos: '',
+        nombres: '',
+        id_sexo: '',
+        fecha_nacimiento: '',
+        correo_electronico: '',
+        recibe_notif_x_correo: '',
+        telefono: '',
+        id_localidad_nacimiento: '',
+        id_localidad_residencia: '',
+        id_nacionalidad: '',
+        activo: '',
+        es_alumno: '',
+        usuario: ''
+    });
+    
         alert('¡Datos guardados en Node.js con éxito!');
+
         console.log('Respuesta del servidor:', datos);
        // setFormData()
       } else {
@@ -173,10 +314,16 @@ useEffect(() => {
               type="email"
               name="correo_electronico"
               value={formData.correo_electronico} 
-              onChange={handleChange}
+              onChange={handleChangeEmail}
               className="input input-bordered w-full"
               style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
             />
+              {/* --- MUESTRA EL ERROR EN PANTALLA --- */}
+              {emailError && (
+                <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', textAlign: 'left' }}>
+                  {emailError}
+                </span>
+              )}
           </label>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -202,10 +349,16 @@ useEffect(() => {
               type="telefono"
               name="telefono"
               value={formData.telefono} 
-              onChange={handleChange}
+              onChange={handleChangePhone}
               className="input input-bordered w-full"
               style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
             />
+            {/* --- MUESTRA EL ERROR EN PANTALLA --- */}
+              {phoneError && (
+                <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', textAlign: 'left', display: 'block' }}>
+                  {phoneError}
+                </span>
+              )}
           </label>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
