@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 
 const ItemDetailPersonaAlta = () => {
 
+  const [subSolapaActiva, setSubSolapaActiva] = useState('alta');
+  
   // 1. Creamos un estado único para controlar todos los campos del formulario
   const [formData, setFormData] = useState({
     apellidos: '',
@@ -23,8 +25,8 @@ const ItemDetailPersonaAlta = () => {
   });
 
   const [emailError, setEmailError] = useState("");
-  const [phoneError, setPhoneError] = useState(""); // <-- Agregar este
-
+  const [phoneError, setPhoneError] = useState(""); 
+  
   // 2. Manejador para actualizar el estado cada vez que el usuario escribe
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -60,8 +62,8 @@ const handleChangePhone = (e) => {
 
   // 2. Expresión regular para teléfonos (compara números, espacios, guiones y el +)
   // Permite formatos como: +54 9 345 1234567, 345-4211111, 4211111, etc.
-const regexPhone = /^\+?[0-9\s-]{7,15}$/;
-  
+  const regexPhone = /^\+?[0-9\s-]{7,15}$/;
+
   if (nuevoValor === "") {
     setPhoneError(""); // Si está vacío no hay error de formato (controlado por el "grabar")
   } else if (!regexPhone.test(nuevoValor)) {
@@ -245,6 +247,37 @@ useEffect(() => {
 
  
   return (
+
+<div>
+ {/* Botones de las 3 subsolapas abajo de ABM */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+        <button 
+          onClick={() => setSubSolapaActiva('alta')}
+          style={subSolapaActiva === 'alta' ? styles.activeSubTab : styles.subTab}          
+          >
+          Alta de Persona
+        </button>
+        <button 
+          onClick={() => setSubSolapaActiva('domicilios')}
+          style={subSolapaActiva === 'domicilios' ? styles.activeSubTab : styles.subTab}          
+          >
+          Domicilios
+        </button>
+        <button 
+          onClick={() => setSubSolapaActiva('documentos')}
+          style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}          
+          >
+          Documentos
+        </button>
+      </div>
+
+      {/* Renderizado condicional del contenido 
+      <div className="contenido-subsolapa">
+        {subSolapaActiva === 'alta' && <FormularioAlta />}
+        {subSolapaActiva === 'baja' && <FormularioBaja />}
+        {subSolapaActiva === 'modificacion' && <FormularioModificacion />}
+      </div>*/}
+  
 <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
     <div className="mb-8 border-b pb-4">
       <h2 className="text-2xl font-bold text-gray-800">Alta de Persona</h2>
@@ -486,7 +519,45 @@ useEffect(() => {
       </div>
       </div>
    </div> 
+   </div>  
   );
+};
+
+// Agrega esto al final absoluto del archivo, AFUERA de la función del componente
+// Agrega esto al final del archivo (AFUERA de la función del componente)
+const styles = {
+  subTabHeader: {
+    display: 'flex',
+    width: '100%',
+    backgroundColor: '#e0e0e0',    // El gris de fondo idéntico al de arriba
+    border: '1px solid #cccccc',   // Borde gris que encierra la barra completa
+    borderRadius: '4px',          // Esquinas sutilmente redondeadas
+    marginBottom: '25px',         /* Separación con el formulario de abajo */
+    overflow: 'hidden'            // Mantiene los botones dentro del borde redondeado
+  },
+  subTab: {
+    flex: 1,                      // Distribuye los 3 botones en partes exactamente iguales
+    backgroundColor: '#e0e0e0',   // Mismo gris de fondo que el contenedor
+    color: '#555555',              // Texto gris oscuro para el estado inactivo
+    padding: '12px 0',             // Relleno vertical para darles altura
+    border: 'none',
+    borderRight: '1px solid #cccccc', // Línea divisoria a la derecha
+    cursor: 'pointer',
+    fontSize: '14px',
+    textAlign: 'center'
+  },
+  activeSubTab: {
+    flex: 1,
+    backgroundColor: '#ffffff',   // Fondo blanco (o #f5f5f5) para resaltar cuál está activa
+    color: '#000000',              // Texto completamente negro
+    fontWeight: 'bold',           // Texto en negrita
+    padding: '12px 0',
+    border: 'none',
+    borderRight: '1px solid #cccccc',
+    cursor: 'pointer',
+    fontSize: '14px',
+    textAlign: 'center'
+  }
 };
 
 export default ItemDetailPersonaAlta;
