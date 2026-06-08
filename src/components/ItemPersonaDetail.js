@@ -159,15 +159,15 @@ const ItemDetailPersona = () => {
         <button onClick={() => setSubSolapaActiva('alta')} style={subSolapaActiva === 'alta' ? styles.activeSubTab : styles.subTab}>
           {isEditMode ? 'Editar Persona' : 'Alta de Persona'}
         </button>
-        <button onClick={() => setSubSolapaActiva('domicilios')} style={subSolapaActiva === 'domicilios' ? styles.activeSubTab : styles.subTab}>Domicilios</button>
         <button onClick={() => setSubSolapaActiva('documentos')} style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}>Documentos</button>
+        <button onClick={() => setSubSolapaActiva('alumnos')} style={subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab}>Datos Alumno</button>
       </div>
 
       <div className="contenido-subsolapa">
         {subSolapaActiva === 'documentos' && <FormularioAlta />} 
-        {subSolapaActiva === 'domicilios' && (
+        {subSolapaActiva === 'alumnos' && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px', textAlign: 'center', color: '#777' }}>
-            Formulario de Domicilios (Próximamente)
+            Formulario de Alumnos (Próximamente)
           </div>
         )}
       </div>
