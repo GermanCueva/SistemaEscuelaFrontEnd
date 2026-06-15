@@ -1,181 +1,230 @@
-import { Search } from "lucide-react";
-import { useState, useEffect } from "react";
-//import Spinner from './Spinner';
-import { useParams } from "react-router-dom"; //useNavigate
-import { Link } from "react-router-dom";
-
+import { Search, Trash2, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { useParams } from "react-router-dom";
 
 const ItemDetailPersonaDocumentoAlta = () => {
+    const [docs, setDocs] = useState([]);
+    const { id } = useParams(); // ID de la persona/alumno
+    
+    const [isEditing, setIsEditing] = useState(false);
+    // Mantenemos una referencia alternativa por seguridad
+    const [editingDocId, setEditingDocId] = useState(null);
 
-    const [docs, setDocs] = useState([])
-    const { id } = useParams();
-  
-    // 1. Creamos un estado único para controlar todos los campos del formulario
     const [formData, setFormData] = useState({
-        tipo_documento: '',
+        id_tipo_documento: '', // Para guardar el tipo seleccionado en el select (10, 8, etc.)
+        id_persona_tipo_documento: '', // AQUÍ GUARDAMOS EL ID DEL REGISTRO A MODIFICAR
         numero: '',
         activo: ''
     });
 
     const [documentos, setDocumentos] = useState([]);
   
-    // 1. Cargar tipos de documentos para el SELECT
-    useEffect(() => {
+    // 1. Cargar tipos de documentos
+    const cargarTiposDocumentos = useCallback(() => {
         fetch(`${process.env.REACT_APP_API_URL}/api/documentos`)
             .then(res => res.json())
             .then(data => {
-                // Si la API devuelve un objeto tipo { data: [...] }, usa data.data
-                // Si devuelve el array directo, se deja "data"
-                setDocumentos(Array.isArray(data) ? data : data.documentos || []);
+                const listaDocs = Array.isArray(data) ? data : data.documentos || data.data || [];
+                setDocumentos(listaDocs);
             })
             .catch(err => console.error("Error cargando documentos", err));
     }, []);
 
-    // 2. Cargar los documentos de la persona usando el ID de la URL
-    useEffect(() => {
-        if (!id) return; // Si no hay ID en la URL, no hace el fetch innecesario
-        
-        fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${id}`) // <--- Barra agregada
+    // 2. Cargar los documentos de la persona
+    const cargarDocumentosPersona = useCallback(() => {
+        if (!id) return;
+        fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${id}`) 
             .then(res => res.json())
             .then(data2 => {
-                setDocs(Array.isArray(data2) ? data2 : data2.docs || []);
+                const misDocs = Array.isArray(data2) ? data2 : data2.docs || data2.data || [];
+                setDocs(misDocs);
             })
             .catch(err => console.error("Error cargando documentos de la persona", err));
-    }, [id]); // <--- Agregamos 'id' como dependencia por seguridad
+    }, [id]);
 
-  
-    // 2. Manejador para actualizar el estado cada vez que el usuario escribe
+    // 3. Inicializar la carga de datos
+    useEffect(() => {
+        cargarTiposDocumentos();
+        cargarDocumentosPersona();
+    }, [cargarTiposDocumentos, cargarDocumentosPersona]); 
+
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData({
             ...formData,
-            [name]: value // Actualiza dinámicamente el campo correcto
+            [name]: value 
         });
     };
 
+    // Al hacer click en la lupa para EDITAR
+    const handleSelectEditar = (documentoAlumno) => {
+        setIsEditing(true);
+        
+        // Buscamos cuál es el ID real que identifica esta fila mapeando las opciones comunes
+        const idRegistroActual = documentoAlumno.id_persona_tipo_documento || documentoAlumno.id || documentoAlumno.id_tipo_documento;
+        setEditingDocId(idRegistroActual);
+        
+        let estadoNormalizado = 'N'; 
+        if (documentoAlumno.activo) {
+            const act = String(documentoAlumno.activo).toUpperCase().trim();
+            if (act === 'S' || act === 'A' || act === 'ACTIVO') {
+                estadoNormalizado = 'S';
+            }
+        }
 
-    // 3. Manejador para enviar los datos al backend en Node.js
+        setFormData({
+            id_tipo_documento: documentoAlumno.id_tipo_documento || '',
+            id_persona_tipo_documento: idRegistroActual, // Nos aseguramos de inyectarlo en el estado
+            numero: documentoAlumno.numero || '',
+            activo: estadoNormalizado
+        });
+    };
+
+    const cancelarEdicion = () => {
+        setIsEditing(false);
+        setEditingDocId(null);
+        setFormData({
+            id_tipo_documento: '',
+            id_persona_tipo_documento: '',
+            numero: '',
+            activo: ''
+        });
+    };
+
     const grabar = async (e) => {
         e.preventDefault();
         const token = localStorage.getItem('token');
 
+        if (!formData.id_tipo_documento || !formData.numero || !formData.activo) {
+            alert("¡Error! Por favor complete todos los campos obligatorios.");
+            return;
+        }
+
         try {
-            let mensaje = "¡Error! No podés dejar vacío: "
-            let error = false
+            // Usamos el ID seguro para armar la URL del PUT
+            const idParaUrl = formData.id_persona_tipo_documento || editingDocId;
 
-            // Verificamos si el valor no existe, es null, undefined o un texto vacío
-            if (!formData.tipo_documento || formData.tipo_documento === '') {
-                mensaje = mensaje + " el Tipo de Documento, "
-                error = true
-            }
+            const url = isEditing 
+                ? `${process.env.REACT_APP_API_URL}/api/documentos/${idParaUrl}` 
+                : `${process.env.REACT_APP_API_URL}/api/documentos`; 
 
-            // Verificamos si el valor no existe, es null, undefined o un texto vacío
-            if (!formData.numero || formData.numero === '') {
-                mensaje = mensaje + " el Número de Documento, "
-                error = true
-            }
+            const metodo = isEditing ? 'PUT' : 'POST';
 
-            // Verificamos si el valor no existe, es null, undefined o un texto vacío
-            if (!formData.activo || formData.activo === '') {
-                mensaje = mensaje + " si es Activo o No, "
-                error = true
-            }
+            // Armamos el objeto definitivo forzando a que id_persona_tipo_documento no sea undefined
+            const datosAEnviar = { 
+                ...formData, 
+                id_persona: id,
+                id_persona_tipo_documento: isEditing ? idParaUrl : formData.id_tipo_documento
+            };
 
-            if(error){
-                alert(mensaje);
-                return; // <--- IMPORTANTE: Detiene la función
-            }
-
-            // Ajusta la URL según el puerto donde corra tu Node.js (ej. 5000)
-            const respuesta = await fetch(`${process.env.REACT_APP_API_URL}/api/persons`, {
-                method: 'POST',
+            const respuesta = await fetch(url, {
+                method: metodo,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}` 
                 },
-                body: JSON.stringify(formData), // Convertimos el estado de React a JSON
+                body: JSON.stringify(datosAEnviar), 
             });
 
             const datos = await respuesta.json();
             
             if (respuesta.ok) {
-                // Reseteamos el estado a su forma inicial
-                setFormData({
-                    tipo_documento: '',
-                    numero: '',
-                    activo: ''
-                });
-            
-                alert('¡Datos guardados en Node.js con éxito!');
-                console.log('Respuesta del servidor:', datos);
+                alert(isEditing ? '¡Documento actualizado con éxito!' : '¡Documento guardado con éxito!');
+                cancelarEdicion();
+                cargarDocumentosPersona(); 
             } else {
-                alert('Error en el servidor: ' + datos.error);
+                alert('Error en el servidor: ' + (datos.error || datos.mensaje));
             }
         } catch (error) {
             console.error('Error al conectar con el servidor:', error);
         }
     };
 
+    const handleEliminar = async (docId) => {
+        if (!window.confirm("¿De verdad querés eliminar este documento?")) return;
+
+        const token = localStorage.getItem('token');
+        try {
+            const respuesta = await fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${docId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (respuesta.ok) {
+                alert('Documento eliminado correctamente.');
+                if (editingDocId === docId || formData.id_persona_tipo_documento === docId) cancelarEdicion(); 
+                cargarDocumentosPersona(); 
+            } else {
+                const datos = await respuesta.json();
+                alert('Error al eliminar: ' + (datos.error || 'Error del servidor'));
+            }
+        } catch (error) {
+            console.error('Error al eliminar documento:', error);
+        }
+    };
 
     return (
-        <div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                    {/* El encabezado siempre debe ir en <thead> */}
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+        <div className="w-full max-w-4xl mx-auto p-4">
+            
+            {/* TABLA DE DOCUMENTOS */}
+            <div className="overflow-x-auto bg-white rounded-xl shadow-md border border-gray-100 mb-10 p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 px-2 text-left">Documentos del Alumno</h3>
+                <table className="w-full table-auto text-sm text-left text-gray-500">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
-                            <th scope="col" className="px-12 py-3">
-                                Tipo de Documento
-                            </th>
-                            <th scope="col" className="px-12 py-3">
-                                Número de Documento
-                            </th>
-                            <th scope="col" className="px-12 py-3 text-center">
-                                Activo
-                            </th>
-                            <th scope="col" className="px-6 py-3">
-                                {/* Celda vacía reservada para el espacio del botón de lupa en las filas */}
-                            </th>
+                            <th scope="col" className="px-6 py-3">Tipo de Documento</th>
+                            <th scope="col" className="px-6 py-3">Número de Documento</th>
+                            <th scope="col" className="px-6 py-3 text-center">Activo</th>
+                            <th scope="col" className="px-6 py-3 text-center">Acciones</th>
                         </tr>
                     </thead>
 
-                    {/* Los datos siempre deben ir en <tbody> */}
                     <tbody>
-                        {docs.length ? (
-                            docs.map(d => (
-                                <tr key={d.id} className="odd:bg-yellow odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-                                    
-                                    {/* Tipo de documento resuelto mediante búsqueda */}
-                                    <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
-                                        {
-                                            documentos.find(doc => doc.id_tipo_documento === d.id_tipo_documento)?.nombre || "Cargando..."
-                                        }            
-                                    </td>
+                        {docs.length > 0 ? (
+                            docs.map(d => {
+                                const tipoEncontrado = documentos.find(doc => 
+                                    String(doc.id_tipo_documento || doc.id) === String(d.id_tipo_documento || d.id)
+                                );
 
-                                    {/* Número */}
-                                    <td className="px-6 py-2 text-sm text-gray-700 dark:text-gray-300">
-                                        {d.numero}
-                                    </td>
-
-                                    {/* Estado transformado textualmente */}
-                                    <td className="px-6 py-2 text-sm text-gray-700 dark:text-gray-300 text-center">
-                                        {d.activo === 'A' ? 'Activo' : d.activo === 'S' ? 'Inactivo' : d.activo}
-                                    </td>
-
-                                    {/* Botón de lupa (Solo aparece si la fila de datos existe) */}
-                                    <td className="px-6 py-2 text-right">
-                                        <Link to={'/personas/alta'}>
-                                            <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
-                                                <Search size={20} className="mr-2" />
+                                return (
+                                    <tr key={d.id || d.id_persona_tipo_documento} className="odd:bg-white even:bg-gray-50 border-b hover:bg-gray-100 transition-colors">
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">
+                                            {tipoEncontrado ? tipoEncontrado.nombre : `ID: ${d.id_tipo_documento || 'Desconocido'}`}            
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-700">
+                                            {d.numero}
+                                        </td>
+                                        <td className="px-6 py-4 text-sm text-gray-700 text-center">
+                                            {d.activo === 'S' || d.activo === 'A' ? 'Activo' : 'Inactivo'}
+                                        </td>
+                                        <td className="px-6 py-4 text-center flex justify-center gap-2">
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleSelectEditar(d)}
+                                                title="Editar registro"
+                                                className="inline-flex items-center justify-center p-2 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 rounded transition-all"
+                                            >
+                                                <Search size={16} />
                                             </button>
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ))
+                                            
+                                            <button 
+                                                type="button"
+                                                onClick={() => handleEliminar(d.id || d.id_persona_tipo_documento)}
+                                                title="Eliminar registro"
+                                                className="inline-flex items-center justify-center p-2 bg-transparent hover:bg-red-500 text-red-700 hover:text-white border border-red-500 rounded transition-all"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })
                         ) : (
                             <tr>
-                                <td colSpan="4" className="text-center py-10">
-                                    <h1 className="text-xl font-bold">No hay datos</h1>
+                                <td colSpan="4" className="text-center py-10 text-gray-400">
+                                    <h1 className="text-lg font-semibold">Este alumno no posee documentos cargados.</h1>
                                 </td>
                             </tr>
                         )}
@@ -183,73 +232,80 @@ const ItemDetailPersonaDocumentoAlta = () => {
                 </table>
             </div>
     
-            <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
-                <div className="mb-8 border-b pb-4">
-                    <h2 className="text-2xl font-bold text-gray-800">Alta de Documentos</h2>
+            {/* FORMULARIO */}
+            <div className="max-w-md mx-auto p-8 bg-white rounded-xl shadow-md border border-gray-100">
+                <div className="mb-6 border-b pb-4 flex justify-between items-center">
+                    <h2 className="text-2xl font-bold text-gray-800 text-left">
+                        {isEditing ? 'Modificar Documento' : 'Alta de Documentos'}
+                    </h2>
+                    {isEditing && (
+                        <button 
+                            type="button"
+                            onClick={cancelarEdicion}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-red-500 bg-gray-100 px-2 py-1 rounded transition-colors"
+                        >
+                            <X size={12} /> Cancelar
+                        </button>
+                    )}
                 </div>
-                <div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="flex flex-col gap-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label className="form-control w-full">
-                                    <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Tipo de Documento:</span>
-                                    <select 
-                                        name="id_tipo_documento" 
-                                        value={formData.id_tipo_documento || ''} 
-                                        onChange={handleChange}
-                                        className="select select-bordered w-full max-w-xs h-12"
-                                    >
-                                        <option value="" disabled>Seleccione</option>
-                                        {documentos.map((doc) => (
-                                            <option key={doc.id_tipo_documento} value={doc.id_tipo_documento}>
-                                                {doc.nombre}
-                                            </option>
-                                        ))}
-                                    </select>
-                                </label>
-                            </div>
-
-                            <label className="form-control w-full">
-                                <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Número de Documento:</span>
-                                <input 
-                                    type="text"
-                                    name="numero"
-                                    value={formData.numero} 
-                                    onChange={handleChange}
-                                    className="input input-bordered w-full"
-                                    style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
-                                />
-                            </label>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <label className="form-control w-full">
-                                    <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', width: '100%' }}>Estado:</span>
-                                    <select
-                                        name="activo"
-                                        value={formData.activo || ''}
-                                        onChange={handleChange}
-                                        className="select select-bordered w-full"
-                                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
-                                    >
-                                        <option value="" disabled>Seleccione una opción</option>
-                                        <option value="N">Inactivo</option>
-                                        <option value="S">Activo</option>
-                                    </select>
-                                </label>
-                            </div>
-
-                            <div className="flex justify-end mt-8">
-                                <button 
-                                    onClick={(e) => grabar(e)}  
-                                    className="btn btn-primary mt-6"
-                                    style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                                >
-                                    Guardar Cambios
-                                </button>
-                            </div>
-                        </div>
+                
+                <form onSubmit={grabar} className="flex flex-col gap-6">
+                    
+                    <div className="flex flex-col gap-2 w-full">
+                        <label className="font-bold text-gray-700 text-left">Tipo de Documento:</label>
+                        <select 
+                            name="id_tipo_documento" 
+                            value={formData.id_tipo_documento || ''} 
+                            onChange={handleChange}
+                            className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                            style={{ border: '1px solid #ccc' }}
+                        >
+                            <option value="" disabled>Seleccione</option>
+                            {documentos.map((doc) => (
+                                <option key={doc.id_tipo_documento || doc.id} value={doc.id_tipo_documento || doc.id}>
+                                    {doc.nombre}
+                                </option>
+                            ))}
+                        </select>
                     </div>
-                </div>
+
+                    <div className="flex flex-col gap-2 w-full">
+                        <label className="font-bold text-gray-700 text-left">Número de Documento:</label>
+                        <input 
+                            type="text"
+                            name="numero"
+                            value={formData.numero} 
+                            onChange={handleChange}
+                            className="w-full h-12 border border-gray-300 rounded-md px-3 focus:outline-none focus:border-blue-500 transition-colors"
+                            style={{ border: '1px solid #ccc' }}
+                        />
+                    </div>
+
+                    <div className="flex flex-col gap-2 w-full">
+                        <label className="font-bold text-gray-700 text-left">Estado:</label>
+                        <select
+                            name="activo"
+                            value={formData.activo || ''}
+                            onChange={handleChange}
+                            className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white focus:outline-none focus:border-blue-500 transition-colors"
+                            style={{ border: '1px solid #ccc' }}
+                        >
+                            <option value="" disabled>Seleccione una opción</option>
+                            <option value="N">Inactivo</option>
+                            <option value="S">Activo</option>
+                        </select>
+                    </div>
+
+                    <div className="flex justify-end mt-2">
+                        <button 
+                            type="submit"
+                            className="w-full px-6 py-3 font-semibold text-white rounded shadow transition-all"
+                            style={{ backgroundColor: isEditing ? '#fd7e14' : '#007bff' }}
+                        >
+                            {isEditing ? 'Actualizar Cambios' : 'Guardar Nuevo'}
+                        </button>
+                    </div>
+                </form>
             </div> 
         </div>  
     );

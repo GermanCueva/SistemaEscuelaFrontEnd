@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Spinner from './Spinner';
 import FormularioAlta from './ItemPersonaDocumentoDetailAlta'; 
+import { avisar } from "../utils/notificaciones.js";
+
 
 const ItemDetailPersona = () => {
   const { id } = useParams();
@@ -103,7 +105,9 @@ const ItemDetailPersona = () => {
     const token = localStorage.getItem('token'); 
 
     if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.recibe_notif_x_correo || !pers.telefono || !pers.id_localidad_nacimiento || !pers.id_localidad_residencia || !pers.id_nacionalidad || !pers.activo || !pers.es_alumno) {
-      alert("¡Por favor, completa todos los campos obligatorios!");
+       avisar.error("¡Por favor, completa todos los campos obligatorios!");
+       //     alert("¡Por favor, completa todos los campos obligatorios!");
+
       return;
     }
 

@@ -19,6 +19,9 @@ import "./App.css";
 
 import { LogOut } from "lucide-react";
 
+import { ToastContainer } from "react-toastify";
+
+
 const GestionAlumnos = () => <div>Gestión Académica</div>;
 
 function App() {
@@ -158,6 +161,7 @@ function App() {
       window.removeEventListener("keydown", reiniciarTemporizador);
 
       window.removeEventListener("scroll", reiniciarTemporizador);
+
     };
   }, [navigate]);
 
@@ -322,6 +326,9 @@ function App() {
         {/* FALLBACK */}
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
+
+      <ToastContainer />
+
     </div>
   );
 }
