@@ -262,8 +262,29 @@ const handleChange = (e) => {
         <button onClick={() => setSubSolapaActiva('documentos')} style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}>
           Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
         </button>
-        <button onClick={() => setSubSolapaActiva('alumnos')} style={subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab}>Datos Alumno</button>
-      </div>
+{/* Reemplaza el botón original por este código condicional */}
+<button 
+  onClick={() => {
+    // Solo permitimos cambiar de pestaña si es alumno ('S')
+    if (pers.es_alumno === 'S') {
+      setSubSolapaActiva('alumnos');
+    }
+  }} 
+  style={{
+    ...(subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab),
+    // Si NO es alumno, le inyectamos estilos visuales de deshabilitado
+    ...(pers.es_alumno !== 'S' ? {
+      opacity: 0.5,
+      cursor: 'not-allowed',
+      backgroundColor: '#f1f3f5',
+      color: '#adb5bd'
+    } : {})
+  }}
+  // Atributo nativo para mejorar accesibilidad
+  disabled={pers.es_alumno !== 'S'}
+>
+  Datos Alumno
+</button>      </div>
 
       {/* Renderizado Condicional de Vistas */}
       <div className="contenido-subsolapa">
