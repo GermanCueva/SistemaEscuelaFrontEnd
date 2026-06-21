@@ -2,8 +2,7 @@ import { Search, Trash2, X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { avisar } from "../utils/notificaciones.js";
 
-
-const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs }) => {
+const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarBackend }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingDocId, setEditingDocId] = useState(null);
 
@@ -103,12 +102,25 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs }) => {
         cancelarEdicion();
     };
 
-    // 🌟 ELIMINAR EN MEMORIA (No hace fetch)
-    const handleEliminar = (docId) => {
+    // 🌟 ELIMINAR EN MEMORIA / BACKEND (Sincronizado)
+    const handleEliminar = async (docId, documentoCompleto) => {
+        // Un documento es persistido si tiene id de relacion y no es un timestamp de Date.now() largo.
+        const esDocumentoPersistido = documentoCompleto.id_persona_tipo_documento && String(documentoCompleto.id_persona_tipo_documento).length < 10;
+
+        if (isEditMode && esDocumentoPersistido) {
+            const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este documento del servidor?");
+            if (!confirmar) return;
+
+            // Invoca al endpoint pasándole el id del registro intermedio/documento
+            const exito = await onEliminarBackend(documentoCompleto.id_persona_tipo_documento);
+            if (!exito) return; // Si la petición falló, frena la remoción visual
+        }
+
         const listaFiltrada = docs.filter(d => {
             const idActual = d.id || d.id_persona_tipo_documento || d.id_tipo_documento;
             return idActual !== docId;
         });
+        
         setDocs(listaFiltrada);
         if (editingDocId === docId) cancelarEdicion(); 
     };
@@ -159,7 +171,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs }) => {
                                             
                                             <button 
                                                 type="button"
-                                                onClick={() => handleEliminar(currentId)}
+                                                onClick={() => handleEliminar(currentId, d)}
                                                 className="inline-flex items-center justify-center p-2 text-red-700 border border-red-500 rounded hover:bg-red-500 hover:text-white transition-all"
                                             >
                                                 <Trash2 size={16} />
@@ -204,7 +216,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs }) => {
                             value={formData.id_tipo_documento || ''} 
                             onChange={handleChange}
                             className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white"
-                            disabled={isEditing} // No permitir cambiar el tipo en edición de grilla local
+                            disabled={isEditing} 
                         >
                             <option value="" disabled>Seleccione</option>
                             {documentos.map((doc) => (

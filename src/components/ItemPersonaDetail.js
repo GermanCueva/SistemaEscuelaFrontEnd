@@ -115,6 +115,34 @@ const handleChange = (e) => {
     setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
   };
 
+  // 🗑️ ELIMINAR EL DOCUMENTO EN EL BACKEND
+  const eliminarDocumentoBackend = async (idDocumento) => {
+    const token = localStorage.getItem('token');
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${idDocumento}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.mensaje || 'No se pudo eliminar el documento del servidor.');
+      }
+
+      avisar.exito('¡Documento eliminado correctamente de la base de datos!');
+      return true;
+    } catch (error) {
+      console.error('Error al eliminar el documento:', error);
+      alert('Hubo un problema al eliminar el documento:\n' + error.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
  // 📥 FUNCIÓN CENTRAL DE GUARDADO (CON DIAGNÓSTICO DE RESPUESTA)
   const grabar = async (e) => {
     if (e) e.preventDefault();
@@ -262,29 +290,27 @@ const handleChange = (e) => {
         <button onClick={() => setSubSolapaActiva('documentos')} style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}>
           Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
         </button>
-{/* Reemplaza el botón original por este código condicional */}
-<button 
-  onClick={() => {
-    // Solo permitimos cambiar de pestaña si es alumno ('S')
-    if (pers.es_alumno === 'S') {
-      setSubSolapaActiva('alumnos');
-    }
-  }} 
-  style={{
-    ...(subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab),
-    // Si NO es alumno, le inyectamos estilos visuales de deshabilitado
-    ...(pers.es_alumno !== 'S' ? {
-      opacity: 0.5,
-      cursor: 'not-allowed',
-      backgroundColor: '#f1f3f5',
-      color: '#adb5bd'
-    } : {})
-  }}
-  // Atributo nativo para mejorar accesibilidad
-  disabled={pers.es_alumno !== 'S'}
->
-  Datos Alumno
-</button>      </div>
+
+        <button 
+          onClick={() => {
+            if (pers.es_alumno === 'S') {
+              setSubSolapaActiva('alumnos');
+            }
+          }} 
+          style={{
+            ...(subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab),
+            ...(pers.es_alumno !== 'S' ? {
+              opacity: 0.5,
+              cursor: 'not-allowed',
+              backgroundColor: '#f1f3f5',
+              color: '#adb5bd'
+            } : {})
+          }}
+          disabled={pers.es_alumno !== 'S'}
+        >
+          Datos Alumno
+        </button>      
+      </div>
 
       {/* Renderizado Condicional de Vistas */}
       <div className="contenido-subsolapa">
@@ -292,6 +318,8 @@ const handleChange = (e) => {
           <ItemDetailPersonaDocumentoAlta 
             docs={pers.documentos} 
             setDocs={setDocumentosGlobal} 
+            isEditMode={isEditMode}
+            onEliminarBackend={eliminarDocumentoBackend}
           />
         )} 
         {subSolapaActiva === 'alumnos' && (
@@ -407,9 +435,7 @@ const handleChange = (e) => {
                     value={pers.usuario || ''} 
                     onChange={handleChange} 
                     className="input input-bordered w-full" 
-                    // 👇 SI ES ALUMNO ('S'), SE DESHABILITA. SI NO ('N' o vacío), QUEDA HABILITADO.
                     disabled={pers.es_alumno === 'S'} 
-                    // Opcional: Un estilo visual grisáceo para cuando esté deshabilitado
                     style={{ 
                       border: '1px solid #ccc', 
                       padding: '8px', 
