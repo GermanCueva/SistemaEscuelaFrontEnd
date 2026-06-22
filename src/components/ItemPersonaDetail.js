@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Spinner from './Spinner';
 import ItemDetailPersonaDocumentoAlta from './ItemPersonaDocumentoDetailAlta'; 
+import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta'; 
 import { avisar } from "../utils/notificaciones.js";
 
 const ItemDetailPersona = () => {
@@ -79,23 +80,20 @@ const ItemDetailPersona = () => {
     }
   }, [id, isEditMode]);
 
-const handleChange = (e) => {
-  const { name, value } = e.target;
-  
-  setPers((prev) => {
-    // Si están cambiando el selector de 'es_alumno' y eligen 'S' (Sí)
-    if (name === 'es_alumno' && value === 'S') {
-      return {
-        ...prev,
-        [name]: value,
-        usuario: '' // 👈 Limpiamos el texto del usuario automáticamente
-      };
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
     
-    // Para cualquier otro campo, se comporta normalmente
-    return { ...prev, [name]: value };
-  });
-};
+    setPers((prev) => {
+      if (name === 'es_alumno' && value === 'S') {
+        return {
+          ...prev,
+          [name]: value,
+          usuario: '' 
+        };
+      }
+      return { ...prev, [name]: value };
+    });
+  };
 
   const handleChangeEmail = (e) => {
     handleChange(e); 
@@ -143,12 +141,11 @@ const handleChange = (e) => {
     }
   };
 
- // 📥 FUNCIÓN CENTRAL DE GUARDADO (CON DIAGNÓSTICO DE RESPUESTA)
+  // 📥 FUNCIÓN CENTRAL DE GUARDADO
   const grabar = async (e) => {
     if (e) e.preventDefault();
     const token = localStorage.getItem('token'); 
 
-    // Validaciones de Solapa Alta
     if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
        avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!");
        setSubSolapaActiva('alta');
@@ -168,7 +165,6 @@ const handleChange = (e) => {
     }
 
     setIsLoading(true);
-
     const { documentos, ...datosPersona } = pers;
 
     if (!isEditMode) {
@@ -183,7 +179,6 @@ const handleChange = (e) => {
     const methodPersona = isEditMode ? 'PUT' : 'POST'; 
 
     try {
-      // 1️⃣ PASO 1: Guardar la Persona
       const responsePersona = await fetch(urlPersona, {
         method: methodPersona,
         headers: {
@@ -199,19 +194,13 @@ const handleChange = (e) => {
         throw new Error(resultadoPersona.error || resultadoPersona.message || 'No se pudo procesar la persona.');
       }
 
-      // 🔍 INSPECCIÓN EN CONSOLA: Abre F12 en tu navegador para ver qué estructura llegó aquí.
-      console.log("=== RESPUESTA DEL BACKEND ===");
-      console.log(resultadoPersona);
-      console.log("=============================");
-
-      // 🔍 EXTRACTOR AUTOMÁTICO MULTI-ESTRUCTURA:
       let idPersonaFinal = isEditMode ? id : null;
       
       if (!isEditMode && resultadoPersona) {
         idPersonaFinal = 
           resultadoPersona.id_persona || 
           resultadoPersona.id ||
-          (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona) || // Si el backend devolvió el objeto query directo
+          (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona) || 
           (resultadoPersona.rows && resultadoPersona.rows[0]?.id) ||
           resultadoPersona.data?.id_persona || 
           resultadoPersona.data?.id ||
@@ -219,7 +208,6 @@ const handleChange = (e) => {
           (Array.isArray(resultadoPersona) ? resultadoPersona[0] : null);
       }
 
-      // Si todo lo anterior falla pero obtuvimos un objeto plano con un número único adentro, intentamos deducirlo:
       if (!idPersonaFinal && typeof resultadoPersona === 'object') {
          const valoresObjeto = Object.values(resultadoPersona);
          const posibleId = valoresObjeto.find(v => typeof v === 'number');
@@ -227,11 +215,9 @@ const handleChange = (e) => {
       }
 
       if (!idPersonaFinal) {
-        // Imprimimos en el alert el objeto convertido a texto para que veas qué campos tiene en pantalla
         throw new Error(`El backend guardó pero la propiedad del ID no se reconoció. Estructura recibida: ${JSON.stringify(resultadoPersona)}`);
       }
 
-      // 2️⃣ PASO 2: Guardar los documentos
       const promesasDocumentos = documentos.map(async (doc) => {
         const esNuevoDocumento = !isEditMode || !doc.id_persona;
         const urlDoc = esNuevoDocumento
@@ -291,25 +277,15 @@ const handleChange = (e) => {
           Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
         </button>
 
-        <button 
-          onClick={() => {
-            if (pers.es_alumno === 'S') {
-              setSubSolapaActiva('alumnos');
-            }
-          }} 
-          style={{
-            ...(subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab),
-            ...(pers.es_alumno !== 'S' ? {
-              opacity: 0.5,
-              cursor: 'not-allowed',
-              backgroundColor: '#f1f3f5',
-              color: '#adb5bd'
-            } : {})
-          }}
-          disabled={pers.es_alumno !== 'S'}
-        >
-          Datos Alumno
-        </button>      
+        {/* 👁️ CONTROL CONDICIONAL PURO: Si es 'S', renderiza el botón; de lo contrario, no genera nada */}
+        {pers.es_alumno === 'S' && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnos')} 
+            style={subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab}
+          >
+            Datos Alumno
+          </button>
+        )}      
       </div>
 
       {/* Renderizado Condicional de Vistas */}
@@ -322,9 +298,14 @@ const handleChange = (e) => {
             onEliminarBackend={eliminarDocumentoBackend}
           />
         )} 
-        {subSolapaActiva === 'alumnos' && (
+        {subSolapaActiva === 'alumnos' && pers.es_alumno === 'S' && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px', textAlign: 'center', color: '#777' }}>
-            Formulario de Alumnos (Próximamente)
+          <ItemPersonaAlumnoDetailAlta 
+            docs={pers.documentos} 
+            setDocs={setDocumentosGlobal} 
+            isEditMode={isEditMode}
+            onEliminarBackend={eliminarDocumentoBackend}
+          />          
           </div>
         )}
       </div>

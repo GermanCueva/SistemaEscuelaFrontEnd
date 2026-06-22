@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
-//import { useState, useEffect } from 'react';
 
 
 const ItemPersona = ({ apellido, nombre, id_persona, setProds }) => {

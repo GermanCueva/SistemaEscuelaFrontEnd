@@ -247,8 +247,8 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                             className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white"
                         >
                             <option value="" disabled>Seleccione una opción</option>
-                            <option value="N">Inactivo</option>
                             <option value="S">Activo</option>
+                            <option value="N">Inactivo</option>
                         </select>
                     </div>
 

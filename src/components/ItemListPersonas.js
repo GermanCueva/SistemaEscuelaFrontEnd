@@ -19,7 +19,7 @@ const ItemListPersona = ({ prods, setProds }) => {
                         <th scope="col" className="px-12 py-3 text-center">
                             Acciones
                         </th>
-                                    <td className="px-6 py-2 text-right">
+            <td className="px-6 py-2 text-right">
                 <Link to={'/personas/alta'}>
                     <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
                         <Plus size={20} className="mr-2" />
