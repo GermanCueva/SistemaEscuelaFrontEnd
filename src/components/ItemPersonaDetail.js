@@ -18,13 +18,27 @@ const ItemDetailPersona = () => {
 
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState(""); 
+  
+  // Flag para saber si el registro de alumno ya existe en el backend (Modo Edición)
+  const [hasAlumnoRecord, setHasAlumnoRecord] = useState(false);
 
-  // ESTADO UNIFICADO: Persona + su array de documentos local
+// ESTADO UNIFICADO
   const [pers, setPers] = useState({
     apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
     correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
     id_localidad_nacimiento: '', id_localidad_residencia: '',
     id_nacionalidad: '', activo: '', es_alumno: '', usuario: '',
+    // Campos de Alumno
+    legajo: '',
+    extranjero: '',
+    regular: '',
+    id_motivo_desercion: '',
+    es_celiaco: '',
+    direccion_calle: '',
+    direccion_numero: '',
+    direccion_piso: '',
+    direccion_depto: '',
+    // 👇 AGREGA ESTA LÍNEA AQUÍ
     documentos: [] 
   });
 
@@ -61,15 +75,32 @@ const ItemDetailPersona = () => {
         }).then(res => res.json()),
         fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.json()).catch(() => []) 
+        }).then(res => res.json()).catch(() => []),
+        // Petición condicional al endpoint de alumnos
+        fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.ok ? res.json() : null).catch(() => null)
       ])
-      .then(([dataPersona, dataDocs]) => {
+      .then(([dataPersona, dataDocs, dataAlumno]) => {
         if (dataPersona && dataPersona.length > 0) {
           const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
-          setPers({
+          
+          // Procesar datos de alumno si existen
+          let datosAlumno = {};
+          if (dataAlumno) {
+            const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
+            if (alumnoObj) {
+              datosAlumno = alumnoObj;
+              setHasAlumnoRecord(true);
+            }
+          }
+
+          setPers(prev => ({
+            ...prev,
             ...dataPersona[0],
+            ...datosAlumno, // Se sobreescriben los campos vacíos de alumno con los reales del backend
             documentos: misDocs 
-          }); 
+          })); 
         }
         setIsLoading(false);
       })
@@ -113,7 +144,6 @@ const ItemDetailPersona = () => {
     setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
   };
 
-  // 🗑️ ELIMINAR EL DOCUMENTO EN EL BACKEND
   const eliminarDocumentoBackend = async (idDocumento) => {
     const token = localStorage.getItem('token');
     try {
@@ -141,15 +171,32 @@ const ItemDetailPersona = () => {
     }
   };
 
-  // 📥 FUNCIÓN CENTRAL DE GUARDADO
-  const grabar = async (e) => {
+// 📥 FUNCIÓN CENTRAL DE GUARDADO
+const grabar = async (e) => {
     if (e) e.preventDefault();
     const token = localStorage.getItem('token'); 
 
+    // [Validación existente de persona...]
     if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
        avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!");
        setSubSolapaActiva('alta');
        return;
+    }
+
+    // 🔴 NUEVA VALIDACIÓN: Campos obligatorios de Alumno (Si corresponde)
+    if (pers.es_alumno === 'S') {
+      if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
+        avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!");
+        setSubSolapaActiva('alumnos');
+        return;
+      }
+
+      // Validación condicional del motivo de deserción
+      if (pers.regular === 'N' && !pers.id_motivo_desercion) {
+        avisar.advertencia("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!");
+        setSubSolapaActiva('alumnos');
+        return;
+      }
     }
 
     if (emailError || phoneError) { 
@@ -165,7 +212,26 @@ const ItemDetailPersona = () => {
     }
 
     setIsLoading(true);
-    const { documentos, ...datosPersona } = pers;
+    
+    // Desestructuramos para separar los datos específicos que NO van a la tabla Personas
+    const { documentos, ...todo } = pers;
+
+    // Extraemos los campos del Alumno para mandarlos a su propio endpoint
+    const datosAlumno = {
+      legajo: todo.legajo,
+      extranjero: todo.extranjero,
+      regular: todo.regular,
+      id_motivo_desercion: todo.id_motivo_desercion ? Number(todo.id_motivo_desercion) : null,
+      es_celiaco: todo.es_celiaco,
+      direccion_calle: todo.direccion_calle,
+      direccion_numero: todo.direccion_numero,
+      direccion_piso: todo.direccion_piso,
+      direccion_depto: todo.direccion_depto
+    };
+
+    // Construimos los datos limpios de la Persona (eliminando los del Alumno)
+    const datosPersona = { ...todo };
+    Object.keys(datosAlumno).forEach(key => delete datosPersona[key]);
 
     if (!isEditMode) {
       delete datosPersona.id_persona; 
@@ -179,6 +245,7 @@ const ItemDetailPersona = () => {
     const methodPersona = isEditMode ? 'PUT' : 'POST'; 
 
     try {
+      // 1. Guardar o Modificar Persona
       const responsePersona = await fetch(urlPersona, {
         method: methodPersona,
         headers: {
@@ -218,6 +285,7 @@ const ItemDetailPersona = () => {
         throw new Error(`El backend guardó pero la propiedad del ID no se reconoció. Estructura recibida: ${JSON.stringify(resultadoPersona)}`);
       }
 
+      // 2. Guardar o Modificar Documentos
       const promesasDocumentos = documentos.map(async (doc) => {
         const esNuevoDocumento = !isEditMode || !doc.id_persona;
         const urlDoc = esNuevoDocumento
@@ -252,7 +320,35 @@ const ItemDetailPersona = () => {
 
       await Promise.all(promesasDocumentos);
 
-      avisar.exito(isEditMode ? '¡Datos y documentos actualizados correctamente!' : '¡Persona y Documentos guardados juntos con éxito!');
+      // 3. Guardar / Modificar Alumno (Solo si es_alumno === 'S')
+      if (pers.es_alumno === 'S') {
+        // Determinamos si es un POST o un PUT basándonos en si ya existía registro en la BD
+        const esNuevoAlumno = !isEditMode || !hasAlumnoRecord;
+        const urlAlumno = esNuevoAlumno 
+          ? `${process.env.REACT_APP_API_URL}/api/alumnos`
+          : `${process.env.REACT_APP_API_URL}/api/alumnos/${idPersonaFinal}`;
+        
+        const methodAlumno = esNuevoAlumno ? 'POST' : 'PUT';
+        
+        // Adjuntamos el id_persona correspondiente
+        datosAlumno.id_persona = Number(idPersonaFinal);
+
+        const resAlumno = await fetch(urlAlumno, {
+          method: methodAlumno,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(datosAlumno)
+        });
+
+        if (!resAlumno.ok) {
+          const errAlumno = await resAlumno.json().catch(() => ({}));
+          throw new Error(`Error en datos de Alumno: ${errAlumno.error || errAlumno.mensaje || 'No se pudo guardar la información escolar.'}`);
+        }
+      }
+
+      avisar.exito(isEditMode ? '¡Datos, documentos y legajo de alumno actualizados!' : '¡Persona, Documentos y Alumno guardados con éxito!');
       navigate('/personas/abm'); 
 
     } catch (error) {
@@ -277,7 +373,6 @@ const ItemDetailPersona = () => {
           Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
         </button>
 
-        {/* 👁️ CONTROL CONDICIONAL PURO: Si es 'S', renderiza el botón; de lo contrario, no genera nada */}
         {pers.es_alumno === 'S' && (
           <button 
             onClick={() => setSubSolapaActiva('alumnos')} 
@@ -299,13 +394,12 @@ const ItemDetailPersona = () => {
           />
         )} 
         {subSolapaActiva === 'alumnos' && pers.es_alumno === 'S' && (
-          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px', textAlign: 'center', color: '#777' }}>
-          <ItemPersonaAlumnoDetailAlta 
-            docs={pers.documentos} 
-            setDocs={setDocumentosGlobal} 
-            isEditMode={isEditMode}
-            onEliminarBackend={eliminarDocumentoBackend}
-          />          
+          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+            {/* 🛠️ Aquí corregimos las props para que mande el estado y el cambiador global */}
+            <ItemPersonaAlumnoDetailAlta 
+              formData={pers} 
+              handleChange={handleChange} 
+            />          
           </div>
         )}
       </div>

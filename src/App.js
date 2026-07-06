@@ -1,9 +1,5 @@
-// App.js
-
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-
-import { useState, useEffect } from "react";
-
+import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 
 import Home from "./Home";
@@ -12,20 +8,22 @@ import Login from "./Login";
 import ItemListContainerPersona from "./components/ItemListContainerPersonas";
 import ItemPersonaDetail from "./components/ItemPersonaDetail";
 
+import { useAuth } from "./context/AuthContext";
 
 import logo from "./logoEscuelaTransparente.png";
-
 import "./App.css";
 
 import { LogOut } from "lucide-react";
 
-import { ToastContainer } from "react-toastify";
-
+import ProtectedRoute from "./routes/ProtectedRoute";
+import RoleRoute from "./routes/RoleRoute";
 
 const GestionAlumnos = () => <div>Gestión Académica</div>;
 
 function App() {
-  const [isAuth, setIsAuth] = useState(false);
+  const navigate = useNavigate();
+
+  const { user, isAuth, logout } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -34,9 +32,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const cerrarMenu = () => {
-      setMenuOpen(false);
-    };
+    const cerrarMenu = () => setMenuOpen(false);
 
     window.addEventListener("click", cerrarMenu);
 
@@ -45,62 +41,40 @@ function App() {
     };
   }, []);
 
-  const navigate = useNavigate();
+  //=====================================
+  // VERIFICAR TOKEN
+  //=====================================
 
-  // ==========================================
-  // VERIFICAR TOKEN + INACTIVIDAD
-  // ==========================================
   useEffect(() => {
     let inactivityTimeout;
 
-    // ==========================================
-    // CERRAR SESION
-    // ==========================================
-    const cerrarSesion = (mensaje = "La sesión expiró") => {
-      localStorage.removeItem("token");
-      localStorage.removeItem("usuario");
-      localStorage.removeItem("loginTime");
-
-      setIsAuth(false);
+    const cerrarSesion = (mensaje) => {
+      logout();
 
       alert(mensaje);
 
       navigate("/login");
     };
 
-    // ==========================================
-    // VERIFICAR TOKEN
-    // ==========================================
     const verificarToken = () => {
       const token = localStorage.getItem("token");
 
-      // SIN TOKEN
       if (!token) {
-        setIsAuth(false);
-
         navigate("/login");
 
         return;
       }
 
       try {
-        // DECODIFICAR JWT
         const decoded = jwtDecode(token);
 
-        console.log(decoded);
-
-        // FECHA ACTUAL
         const now = Date.now() / 1000;
 
-        // TOKEN EXPIRADO
         if (decoded.exp < now) {
           cerrarSesion("La sesión expiró");
 
           return;
         }
-
-        // TOKEN VALIDO
-        setIsAuth(true);
       } catch (error) {
         console.error(error);
 
@@ -108,113 +82,51 @@ function App() {
       }
     };
 
-    // ==========================================
-    // REINICIAR TEMPORIZADOR
-    // ==========================================
     const reiniciarTemporizador = () => {
       clearTimeout(inactivityTimeout);
 
-      inactivityTimeout = setTimeout(
-        () => {
-          cerrarSesion("La sesión expiró por inactividad");
-        },
-        1 * 60 * 1000,
-      );
+      inactivityTimeout = setTimeout(() => {
+        cerrarSesion("La sesión expiró por inactividad");
+      }, 60 * 1000);
     };
 
-    // ==========================================
-    // VERIFICA TOKEN AL CARGAR
-    // ==========================================
     verificarToken();
 
-    // ==========================================
-    // VERIFICA TOKEN CADA 5 SEGUNDOS
-    // ==========================================
     const interval = setInterval(verificarToken, 5000);
 
-    // ==========================================
-    // EVENTOS DE ACTIVIDAD
-    // ==========================================
     window.addEventListener("mousemove", reiniciarTemporizador);
-
     window.addEventListener("click", reiniciarTemporizador);
-
     window.addEventListener("keydown", reiniciarTemporizador);
-
     window.addEventListener("scroll", reiniciarTemporizador);
 
-    // INICIAR TEMPORIZADOR
     reiniciarTemporizador();
 
-    // ==========================================
-    // LIMPIEZA
-    // ==========================================
     return () => {
       clearInterval(interval);
 
       clearTimeout(inactivityTimeout);
 
       window.removeEventListener("mousemove", reiniciarTemporizador);
-
       window.removeEventListener("click", reiniciarTemporizador);
-
       window.removeEventListener("keydown", reiniciarTemporizador);
-
       window.removeEventListener("scroll", reiniciarTemporizador);
-
     };
-  }, [navigate]);
+  }, [logout, navigate]);
 
-  // ==========================================
-  // LOGIN
-  // ==========================================
-  const login = () => {
-    setIsAuth(true);
-
-    navigate("/");
-  };
-
-  // ==========================================
-  // LOGOUT
-  // ==========================================
-  const logout = () => {
-    localStorage.removeItem("token");
-
-    localStorage.removeItem("usuario");
-
-    localStorage.removeItem("loginTime");
-
-    setIsAuth(false);
-
-    navigate("/login");
-  };
-
-  // ==========================================
-  // ESTILO MENU
-  // ==========================================
   const menuStyle = {
     width: "100%",
-
     padding: "10px",
-
     border: "none",
-
     background: "white",
-
     color: "black",
-
     cursor: "pointer",
-
     display: "flex",
-
     alignItems: "center",
-
     gap: "10px",
-
     textAlign: "left",
   };
-
-  return (
+  
+    return (
     <div className="App">
       <header
         className="App-header"
@@ -238,13 +150,10 @@ function App() {
                 className="logout-button"
                 onClick={(e) => {
                   e.stopPropagation();
-
                   setMenuOpen((prev) => !prev);
                 }}
               >
-                {JSON.parse(localStorage.getItem("usuario"))?.usuario ||
-                  "Usuario"}{" "}
-                ▼
+                {user?.usuario || "Usuario"} ▼
               </button>
 
               {menuOpen && (
@@ -263,11 +172,23 @@ function App() {
                     overflow: "hidden",
                   }}
                 >
-                  <button style={menuStyle} onClick={() => navigate("/perfil")}>
+                  <button
+                    style={menuStyle}
+                    onClick={() => {
+                      setMenuOpen(false);
+                      navigate("/perfil");
+                    }}
+                  >
                     Editar perfil
                   </button>
 
-                  <button style={menuStyle} onClick={logout}>
+                  <button
+                    style={menuStyle}
+                    onClick={() => {
+                      logout();
+                      navigate("/login");
+                    }}
+                  >
                     <LogOut size={18} />
                     Cerrar sesión
                   </button>
@@ -284,51 +205,38 @@ function App() {
         {/* LOGIN */}
         <Route
           path="/login"
-          element={isAuth ? <Navigate to="/" /> : <Login onLogin={login} />}
+          element={isAuth ? <Navigate to="/" replace /> : <Login />}
         />
 
         {/* RUTAS PROTEGIDAS */}
         <Route
           path="/"
-          element={
-            isAuth ? <Home onLogout={logout} /> : <Navigate to="/login" />
-          }
+          element={isAuth ? <Home /> : <Navigate to="/login" replace />}
         >
-          {/* INICIO */}
+          {/* Inicio */}
           <Route index element={<div>Sistema de Gestión de Escuelas</div>} />
 
-          {/* PERSONAS */}
+          {/* Personas */}
           <Route path="personas">
             <Route path="abm" element={<ItemListContainerPersona />} />
-
             <Route path="gestion" element={<GestionAlumnos />} />
-
-            {/* 👇 AGREGÁ ESTA LÍNEA AQUÍ (SIEMPRE ARRIBA DE :id) */}
             <Route path="alta" element={<ItemPersonaDetail />} />
-
             <Route path=":id" element={<ItemPersonaDetail />} />
-
           </Route>
 
-          {/* PERFIL */}
+          {/* Perfil */}
           <Route path="perfil" element={<div>Editar perfil</div>} />
 
-          {/* OTRAS SECCIONES */}
+          {/* Otros módulos */}
           <Route path="tutor" element={<div>Contenido Tutor</div>} />
-
           <Route path="gestion" element={<div>Contenido Gestión</div>} />
-
           <Route path="reportes" element={<div>Contenido Reportes</div>} />
-
           <Route path="admin" element={<div>Contenido Admin</div>} />
         </Route>
 
-        {/* FALLBACK */}
-        <Route path="*" element={<Navigate to="/" />} />
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-      <ToastContainer />
-
     </div>
   );
 }
