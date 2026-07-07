@@ -5,18 +5,28 @@ import { Plus } from 'lucide-react';
 const ItemListPersona = ({ prods, setProds }) => {
     return (
         <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-                {/* El encabezado siempre debe ir en <thead> */}
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                    <tr>
+{/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
+        <table className="w-full text-sm text-left text-gray-500 bg-white">
+                    {/* El encabezado siempre debe ir en <thead> */}
+<thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
+                        <tr>
                         <th scope="col" className="px-12 py-3">
                             Apellido
                         </th>
                         <th scope="col" className="px-12 py-3">
                             Nombre
                         </th>
+                        <th scope="col" className="px-4 py-3">
+                            Tipo de Documento
+                        </th>
+                        <th scope="col" className="px-4 py-3">
+                            Número de Documento
+                        </th>
+                        <th scope="col" className="px-12 py-3">
+                            Alumno/Tutor
+                        </th>
                         {/* Agrega una columna extra si el ItemPersona tiene el botón de lupa */}
-                        <th scope="col" className="px-12 py-3 text-center">
+                        <th scope="col" className="px-12 py-30 text-center">
                             Acciones
                         </th>
             <td className="px-6 py-2 text-right">
@@ -38,12 +48,15 @@ const ItemListPersona = ({ prods, setProds }) => {
                                 id_persona={p.id_persona} // Siempre usa una key única en React
                                 apellido={p.apellidos} 
                                 nombre={p.nombres} 
+                                tipo_documento={p.id_tipo_documento} 
+                                numero={p.numero} 
+                                tipo_usuario={p.es_alumno} 
                                 setProds={setProds}
                             />
                         ))
                     ) : (
                         <tr>
-                            <td colSpan="3" className="text-center py-10">
+                        <td colSpan={6} className="py-10 text-center text-gray-500 bg-white font-medium">                                 
                                 <h1 className="text-xl font-bold">No hay datos</h1>
                             </td>
                         </tr>
