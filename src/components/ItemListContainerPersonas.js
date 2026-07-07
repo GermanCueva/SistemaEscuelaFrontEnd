@@ -9,7 +9,6 @@ const ItemListContainerPersona = () => {
   const [prods, setProds] = useState([])
   const [texto, setTexto] = useState('')
 
-  //const { categoryId } = useParams()
 
   const token = localStorage.getItem('token');
 
@@ -69,10 +68,6 @@ const obtenerDatos = useCallback(() => {
              })
          }
         
-  /*    const handleSubmit = (e) => {
-        e.preventDefault()
-        conFiltro(texto)      
-      }*/
 
     return (
       <>
@@ -81,11 +76,11 @@ const obtenerDatos = useCallback(() => {
         <div><strong>Listado de Personas</strong></div>
           <br></br>
       {/* <form onSubmit={handleSubmit}>*/}
-    <form onChange={handleInputChange} onSubmit={(e) => e.preventDefault()}>
-          <h3> Filtar por Apellido: <input type="text" id="apellido" name="apellido" value={texto} onChange={handleInputChange}  /> <Button> Filtrar</Button> </h3> 
-          <ItemListPersonas prods={prods} setProds={setProds}/>
-          <br></br>  <br></br> 
-        </form>
+          <form onChange={handleInputChange} onSubmit={(e) => e.preventDefault()}>
+            <h3> Filtar por Apellido: <input type="text" id="apellido" name="apellido" value={texto} onChange={handleInputChange}  /> <Button> Filtrar</Button> </h3> 
+            <ItemListPersonas prods={prods} setProds={setProds}/>
+            <br></br>  <br></br> 
+          </form>
         </div>
       </>
     )

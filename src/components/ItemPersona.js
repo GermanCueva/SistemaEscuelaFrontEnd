@@ -1,10 +1,9 @@
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
-//import { useState, useEffect } from 'react';
 
 
-const ItemPersona = ({ apellido, nombre, id_persona, setProds }) => {
+const ItemPersona = ({ apellido, nombre, id_persona, tipo_documento, numero, tipo_usuario, setProds }) => {
 
 
   const cambiar_estado = async (e) => {
@@ -37,37 +36,62 @@ const ItemPersona = ({ apellido, nombre, id_persona, setProds }) => {
   };
 
 
-    return (
-        /* Eliminamos los estilos inline como "padding: 2px" que no funcionan en class */
-        <tr className="odd:bg-yellow odd:dark:bg-gray-900 even:bg-gray-50 even:dark:bg-gray-800 border-b dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+return (
+        <tr className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
 
-            {/* Apellido: Usamos w-1/4 para darle un ancho fijo del 25% si quieres orden */}
-            <td className="px-6 py-2 text-sm text-gray-900 dark:text-white">
+            {/* Apellido */}
+            <td className="px-6 py-2 text-sm text-gray-900 bg-white">
                 {apellido}
             </td>
 
             {/* Nombre */}
-            <td className="px-6 py-2 text-sm text-gray-700 dark:text-gray-300">
+            <td className="px-6 py-2 text-sm text-gray-700 bg-white">
                 {nombre}
             </td>
 
-            {/* Botón: Centrado y sin clases CSS puras */}
-            <td className="px-6 py-2 text-right">
-                <Link to={'/personas/' + id_persona}>
-                    <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
-                        <Search size={20} className="mr-2" />
-                    </button>
-                </Link>
+            {/* Tipo de Documento */}
+            <td className="px-6 py-2 text-sm text-gray-700 bg-white">
+                <div className="flex justify-center w-full">
+                {tipo_documento === 8 ? "DNI" : "CUIL"}
+                </div>
             </td>
 
-            <td className="px-6 py-2 text-right">
-           {/*    <Link to={'/personas/abm'}>*/}
+            {/* Número de Documento */}
+            <td className="px-6 py-2 text-sm text-gray-700 bg-white">
+             <div className="flex justify-center w-full">
+                {numero}
+            </div>
+            </td>
+
+            {/* Tipo de Usuario */}
+            <td className="px-6 py-2 text-sm bg-white">  
+                <div className="flex justify-center w-full">
+                    {tipo_usuario === "S" ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            Alumno
+                        </span>
+                    ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                            Tutor
+                        </span>
+                    )}
+                </div>
+            </td>
+
+            {/* Botones de Acciones */}
+            <td className="px-6 py-2 text-sm text-center bg-white">
+                <div className="flex items-center justify-center gap-2">
+                    <Link to={'/personas/' + id_persona}>
+                        <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
+                            <Search size={20} className="mr-2" />
+                        </button>
+                    </Link>
+  
                     <button onClick={(e) => cambiar_estado(e)} className="flex items-center bg-red-500 text-white p-2 rounded hover:bg-red-600">
                         <Trash2 size={17} className="mr-2" />
                     </button>
-                {/*    </Link>*/}
+               </div>
             </td>
-
         </tr>
     );
 }

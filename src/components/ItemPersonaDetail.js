@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Spinner from './Spinner';
-import FormularioAlta from './ItemPersonaDocumentoDetailAlta'; 
+import ItemDetailPersonaDocumentoAlta from './ItemPersonaDocumentoDetailAlta'; 
+import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta'; 
+import { avisar } from "../utils/notificaciones.js";
 
 const ItemDetailPersona = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // Condición estricta para saber si estamos editando o dando de alta
   const isEditMode = Boolean(id) && id !== "alta" && id !== "undefined";
 
   const [subSolapaActiva, setSubSolapaActiva] = useState('alta');
@@ -17,17 +18,31 @@ const ItemDetailPersona = () => {
 
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState(""); 
+  
+  // Flag para saber si el registro de alumno ya existe en el backend (Modo Edición)
+  const [hasAlumnoRecord, setHasAlumnoRecord] = useState(false);
 
-  // 🌟 SOLUCIÓN AL CRASH: Inicializamos el estado como objeto con campos vacíos.
-  // Así nunca dará el error "Cannot read properties of null (reading 'apellidos')"
+// ESTADO UNIFICADO
   const [pers, setPers] = useState({
     apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
     correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
     id_localidad_nacimiento: '', id_localidad_residencia: '',
-    id_nacionalidad: '', activo: '', es_alumno: '', usuario: ''
+    id_nacionalidad: '', activo: '', es_alumno: '', usuario: '',
+    // Campos de Alumno
+    legajo: '',
+    extranjero: '',
+    regular: '',
+    id_motivo_desercion: '',
+    es_celiaco: '',
+    direccion_calle: '',
+    direccion_numero: '',
+    direccion_piso: '',
+    direccion_depto: '',
+    // 👇 AGREGA ESTA LÍNEA AQUÍ
+    documentos: [] 
   });
 
-  // 1. Cargar Catálogos (Se ejecuta siempre)
+  // 1. Cargar Catálogos
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
@@ -42,46 +57,73 @@ const ItemDetailPersona = () => {
       } catch (err) {
         console.error("Error cargando catálogos:", err);
       } finally {
-        // Si es Alta nueva, una vez cargados los combos, liberamos la pantalla de inmediato
-        if (!isEditMode) {
-          setIsLoading(false);
-        }
+        if (!isEditMode) setIsLoading(false);
       }
     };
     cargarCatalogos();
   }, [isEditMode]);
 
-  // 2. Cargar Datos del Registro (Sólo en Modo Edición)
+  // 2. Cargar Datos del Registro (Modo Edición)
   useEffect(() => {
     if (isEditMode) {
       setIsLoading(true);
       const token = localStorage.getItem('token'); 
 
-      fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/${id}`, { 
-        method: 'GET', 
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        }
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data && data.length > 0) {
-            // Reemplazamos las propiedades vacías con los datos reales que vienen de la Base de Datos
-            setPers(data[0]); 
+      Promise.all([
+        fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/${id}`, { 
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.json()),
+        fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.json()).catch(() => []),
+        // Petición condicional al endpoint de alumnos
+        fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.ok ? res.json() : null).catch(() => null)
+      ])
+      .then(([dataPersona, dataDocs, dataAlumno]) => {
+        if (dataPersona && dataPersona.length > 0) {
+          const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
+          
+          // Procesar datos de alumno si existen
+          let datosAlumno = {};
+          if (dataAlumno) {
+            const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
+            if (alumnoObj) {
+              datosAlumno = alumnoObj;
+              setHasAlumnoRecord(true);
+            }
           }
-          setIsLoading(false); // Apagamos el spinner una vez que los datos impactaron en el estado
-        })
-        .catch((err) => {
-          console.error("Error obteniendo datos de la persona:", err);
-          setIsLoading(false);
-        });
+
+          setPers(prev => ({
+            ...prev,
+            ...dataPersona[0],
+            ...datosAlumno, // Se sobreescriben los campos vacíos de alumno con los reales del backend
+            documentos: misDocs 
+          })); 
+        }
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("Error obteniendo datos completos de la persona:", err);
+        setIsLoading(false);
+      });
     }
   }, [id, isEditMode]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setPers((prev) => ({ ...prev, [name]: value }));
+    
+    setPers((prev) => {
+      if (name === 'es_alumno' && value === 'S') {
+        return {
+          ...prev,
+          [name]: value,
+          usuario: '' 
+        };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   const handleChangeEmail = (e) => {
@@ -98,76 +140,266 @@ const ItemDetailPersona = () => {
     setPhoneError(v !== "" && !regexPhone.test(v) ? "Formato de teléfono inválido." : ""); 
   };
 
-  const grabar = async (e) => {
+  const setDocumentosGlobal = (nuevosDocumentos) => {
+    setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
+  };
+
+  const eliminarDocumentoBackend = async (idDocumento) => {
+    const token = localStorage.getItem('token');
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${idDocumento}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.mensaje || 'No se pudo eliminar el documento del servidor.');
+      }
+
+      avisar.exito('¡Documento eliminado correctamente de la base de datos!');
+      return true;
+    } catch (error) {
+      console.error('Error al eliminar el documento:', error);
+      alert('Hubo un problema al eliminar el documento:\n' + error.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+// 📥 FUNCIÓN CENTRAL DE GUARDADO
+const grabar = async (e) => {
     if (e) e.preventDefault();
     const token = localStorage.getItem('token'); 
 
-    if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.recibe_notif_x_correo || !pers.telefono || !pers.id_localidad_nacimiento || !pers.id_localidad_residencia || !pers.id_nacionalidad || !pers.activo || !pers.es_alumno) {
-      alert("¡Por favor, completa todos los campos obligatorios!");
-      return;
+    // [Validación existente de persona...]
+    if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
+       avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!");
+       setSubSolapaActiva('alta');
+       return;
+    }
+
+    // 🔴 NUEVA VALIDACIÓN: Campos obligatorios de Alumno (Si corresponde)
+    if (pers.es_alumno === 'S') {
+      if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
+        avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!");
+        setSubSolapaActiva('alumnos');
+        return;
+      }
+
+      // Validación condicional del motivo de deserción
+      if (pers.regular === 'N' && !pers.id_motivo_desercion) {
+        avisar.advertencia("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!");
+        setSubSolapaActiva('alumnos');
+        return;
+      }
     }
 
     if (emailError || phoneError) { 
-      alert("Corrige los errores de formato antes de guardar.");
+      avisar.error("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.");
+      setSubSolapaActiva('alta');
       return;
     }
 
-    const datosAEnviar = { ...pers };
-    if (!isEditMode) {
-      delete datosAEnviar.id_persona; 
-      delete datosAEnviar.id; 
+    if (!pers.documentos || pers.documentos.length === 0) {
+      avisar.advertencia("⚠️ Error: No puedes guardar el registro sin asignarle al menos un Documento en la solapa 'Documentos'.");
+      setSubSolapaActiva('documentos');
+      return;
     }
 
-    const url = isEditMode 
+    setIsLoading(true);
+    
+    // Desestructuramos para separar los datos específicos que NO van a la tabla Personas
+    const { documentos, ...todo } = pers;
+
+    // Extraemos los campos del Alumno para mandarlos a su propio endpoint
+    const datosAlumno = {
+      legajo: todo.legajo,
+      extranjero: todo.extranjero,
+      regular: todo.regular,
+      id_motivo_desercion: todo.id_motivo_desercion ? Number(todo.id_motivo_desercion) : null,
+      es_celiaco: todo.es_celiaco,
+      direccion_calle: todo.direccion_calle,
+      direccion_numero: todo.direccion_numero,
+      direccion_piso: todo.direccion_piso,
+      direccion_depto: todo.direccion_depto
+    };
+
+    // Construimos los datos limpios de la Persona (eliminando los del Alumno)
+    const datosPersona = { ...todo };
+    Object.keys(datosAlumno).forEach(key => delete datosPersona[key]);
+
+    if (!isEditMode) {
+      delete datosPersona.id_persona; 
+      delete datosPersona.id; 
+    }
+
+    const urlPersona = isEditMode 
       ? `${process.env.REACT_APP_API_URL}/api/persons/${id}` 
       : `${process.env.REACT_APP_API_URL}/api/persons`;      
 
-    const method = isEditMode ? 'PUT' : 'POST'; 
+    const methodPersona = isEditMode ? 'PUT' : 'POST'; 
 
     try {
-      const response = await fetch(url, {
-        method: method,
+      // 1. Guardar o Modificar Persona
+      const responsePersona = await fetch(urlPersona, {
+        method: methodPersona,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify(datosAEnviar), 
+        body: JSON.stringify(datosPersona), 
       });
 
-      const datos = await response.json();
+      const resultadoPersona = await responsePersona.json();
 
-      if (response.ok) {
-        alert(isEditMode ? '¡Usuario actualizado correctamente!' : '¡Persona registrada con éxito!');
-        navigate('/personas/abm'); 
-      } else {
-        alert('Error del servidor: ' + (datos.error || datos.message || 'No se pudo procesar.')); 
+      if (!responsePersona.ok) {
+        throw new Error(resultadoPersona.error || resultadoPersona.message || 'No se pudo procesar la persona.');
       }
+
+      let idPersonaFinal = isEditMode ? id : null;
+      
+      if (!isEditMode && resultadoPersona) {
+        idPersonaFinal = 
+          resultadoPersona.id_persona || 
+          resultadoPersona.id ||
+          (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona) || 
+          (resultadoPersona.rows && resultadoPersona.rows[0]?.id) ||
+          resultadoPersona.data?.id_persona || 
+          resultadoPersona.data?.id ||
+          (Array.isArray(resultadoPersona) ? resultadoPersona[0]?.id_persona : null) ||
+          (Array.isArray(resultadoPersona) ? resultadoPersona[0] : null);
+      }
+
+      if (!idPersonaFinal && typeof resultadoPersona === 'object') {
+         const valoresObjeto = Object.values(resultadoPersona);
+         const posibleId = valoresObjeto.find(v => typeof v === 'number');
+         if (posibleId) idPersonaFinal = posibleId;
+      }
+
+      if (!idPersonaFinal) {
+        throw new Error(`El backend guardó pero la propiedad del ID no se reconoció. Estructura recibida: ${JSON.stringify(resultadoPersona)}`);
+      }
+
+      // 2. Guardar o Modificar Documentos
+      const promesasDocumentos = documentos.map(async (doc) => {
+        const esNuevoDocumento = !isEditMode || !doc.id_persona;
+        const urlDoc = esNuevoDocumento
+          ? `${process.env.REACT_APP_API_URL}/api/documentos`
+          : `${process.env.REACT_APP_API_URL}/api/documentos/${doc.id_persona_tipo_documento || doc.id}`;
+
+        const methodDoc = esNuevoDocumento ? 'POST' : 'PUT';
+
+        const datosAEnviarDoc = {
+          id_persona: Number(idPersonaFinal), 
+          id_tipo_documento: Number(doc.id_tipo_documento),
+          numero: String(doc.numero),
+          activo: doc.activo || 'S',
+          id_persona_tipo_documento: doc.id_persona_tipo_documento || doc.id_tipo_documento
+        };
+
+        const resDoc = await fetch(urlDoc, {
+          method: methodDoc,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(datosAEnviarDoc)
+        });
+
+        if (!resDoc.ok) {
+          const errData = await resDoc.json().catch(() => ({}));
+          throw new Error(`Documento N° ${doc.numero}: ${errData.error || errData.mensaje || 'Fallo al procesar'}`);
+        }
+        return resDoc.json();
+      });
+
+      await Promise.all(promesasDocumentos);
+
+      // 3. Guardar / Modificar Alumno (Solo si es_alumno === 'S')
+      if (pers.es_alumno === 'S') {
+        // Determinamos si es un POST o un PUT basándonos en si ya existía registro en la BD
+        const esNuevoAlumno = !isEditMode || !hasAlumnoRecord;
+        const urlAlumno = esNuevoAlumno 
+          ? `${process.env.REACT_APP_API_URL}/api/alumnos`
+          : `${process.env.REACT_APP_API_URL}/api/alumnos/${idPersonaFinal}`;
+        
+        const methodAlumno = esNuevoAlumno ? 'POST' : 'PUT';
+        
+        // Adjuntamos el id_persona correspondiente
+        datosAlumno.id_persona = Number(idPersonaFinal);
+
+        const resAlumno = await fetch(urlAlumno, {
+          method: methodAlumno,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(datosAlumno)
+        });
+
+        if (!resAlumno.ok) {
+          const errAlumno = await resAlumno.json().catch(() => ({}));
+          throw new Error(`Error en datos de Alumno: ${errAlumno.error || errAlumno.mensaje || 'No se pudo guardar la información escolar.'}`);
+        }
+      }
+
+      avisar.exito(isEditMode ? '¡Datos, documentos y legajo de alumno actualizados!' : '¡Persona, Documentos y Alumno guardados con éxito!');
+      navigate('/personas/abm'); 
+
     } catch (error) {
-      console.error('Error al conectar con el servidor:', error); 
-      alert('Error de red al intentar guardar.');
+      console.error('Error en el proceso de guardado:', error); 
+      alert('Hubo un problema al procesar el guardado completo:\n' + error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Muestra el Spinner de carga de forma segura mientras espera las APIs asíncronas
   if (isLoading) return <Spinner />;
 
   return (
     <div style={{ padding: '20px' }}>
       
-      {/* Pestañas de Subsolapas */}
+      {/* Botones de Navegación de Pestañas locales */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
         <button onClick={() => setSubSolapaActiva('alta')} style={subSolapaActiva === 'alta' ? styles.activeSubTab : styles.subTab}>
           {isEditMode ? 'Editar Persona' : 'Alta de Persona'}
         </button>
-        <button onClick={() => setSubSolapaActiva('documentos')} style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}>Documentos</button>
-        <button onClick={() => setSubSolapaActiva('alumnos')} style={subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab}>Datos Alumno</button>
+        <button onClick={() => setSubSolapaActiva('documentos')} style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}>
+          Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
+        </button>
+
+        {pers.es_alumno === 'S' && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnos')} 
+            style={subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab}
+          >
+            Datos Alumno
+          </button>
+        )}      
       </div>
 
+      {/* Renderizado Condicional de Vistas */}
       <div className="contenido-subsolapa">
-        {subSolapaActiva === 'documentos' && <FormularioAlta />} 
-        {subSolapaActiva === 'alumnos' && (
-          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px', textAlign: 'center', color: '#777' }}>
-            Formulario de Alumnos (Próximamente)
+        {subSolapaActiva === 'documentos' && (
+          <ItemDetailPersonaDocumentoAlta 
+            docs={pers.documentos} 
+            setDocs={setDocumentosGlobal} 
+            isEditMode={isEditMode}
+            onEliminarBackend={eliminarDocumentoBackend}
+          />
+        )} 
+        {subSolapaActiva === 'alumnos' && pers.es_alumno === 'S' && (
+          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+            {/* 🛠️ Aquí corregimos las props para que mande el estado y el cambiador global */}
+            <ItemPersonaAlumnoDetailAlta 
+              formData={pers} 
+              handleChange={handleChange} 
+            />          
           </div>
         )}
       </div>
@@ -272,22 +504,39 @@ const ItemDetailPersona = () => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Usuario:</span>
-                  <input type="text" name="usuario" value={pers.usuario || ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }} />
+                  <input 
+                    type="text" 
+                    name="usuario" 
+                    value={pers.usuario || ''} 
+                    onChange={handleChange} 
+                    className="input input-bordered w-full" 
+                    disabled={pers.es_alumno === 'S'} 
+                    style={{ 
+                      border: '1px solid #ccc', 
+                      padding: '8px', 
+                      borderRadius: '4px', 
+                      width: '100%',
+                      backgroundColor: pers.es_alumno === 'S' ? '#e9ecef' : '#ffffff',
+                      cursor: pers.es_alumno === 'S' ? 'not-allowed' : 'text'
+                    }} 
+                  />
                 </label>
-
-                <div className="flex justify-end mt-8 gap-4">
-                  <Link to={'/personas/abm'}>
-                    <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
-                  </Link>
-                  <button onClick={grabar} className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                    {isEditMode ? 'Guardar Cambios' : 'Registrar Persona'}
-                  </button>
-                </div>
 
               </div>
             </div>
         </div>
       )}
+
+      {/* BOTONES GLOBALES */}
+      <div className="max-w-4xl mx-auto flex justify-end mt-4 gap-4 px-8">
+        <Link to={'/personas/abm'}>
+          <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
+        </Link>
+        <button onClick={grabar} className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+          {isEditMode ? 'Guardar Cambios Totales' : 'Registrar Persona Completa'}
+        </button>
+      </div>
+
     </div>  
   );
 };
