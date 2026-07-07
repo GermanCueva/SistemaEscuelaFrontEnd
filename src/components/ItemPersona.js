@@ -64,10 +64,18 @@ return (
             </td>
 
             {/* Tipo de Usuario */}
-            <td className="px-6 py-2 text-sm text-gray-700 bg-white">  
-              <div className="flex justify-center w-full">
-                {tipo_usuario === "S" ? "Alumno" : "Tutor"}
-              </div>
+            <td className="px-6 py-2 text-sm bg-white">  
+                <div className="flex justify-center w-full">
+                    {tipo_usuario === "S" ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                            Alumno
+                        </span>
+                    ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
+                            Tutor
+                        </span>
+                    )}
+                </div>
             </td>
 
             {/* Botones de Acciones */}
