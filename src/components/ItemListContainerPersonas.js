@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-//import { useParams } from "react-router-dom"
 import ItemListPersonas from './ItemListPersonas'
-//import productosJson from "../productos.json";
 import { Button } from "react-daisyui"
 
 const ItemListContainerPersona = () => {
@@ -68,7 +66,6 @@ const obtenerDatos = useCallback(() => {
              })
          }
         
-
     return (
       <>
         <div className="container"> 

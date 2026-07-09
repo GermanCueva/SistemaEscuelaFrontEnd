@@ -1,12 +1,15 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import Home from "./Home";
 import Login from "./Login";
 
 import ItemListContainerPersona from "./components/ItemListContainerPersonas";
 import ItemPersonaDetail from "./components/ItemPersonaDetail";
+
 
 import { useAuth } from "./context/AuthContext";
 
@@ -15,8 +18,8 @@ import "./App.css";
 
 import { LogOut } from "lucide-react";
 
-import ProtectedRoute from "./routes/ProtectedRoute";
-import RoleRoute from "./routes/RoleRoute";
+//import ProtectedRoute from "./routes/ProtectedRoute";
+//import RoleRoute from "./routes/RoleRoute";
 
 const GestionAlumnos = () => <div>Gestión Académica</div>;
 
@@ -127,6 +130,7 @@ function App() {
   };
   
     return (
+      
     <div className="App">
       <header
         className="App-header"
@@ -237,7 +241,9 @@ function App() {
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <ToastContainer />
     </div>
+    
   );
 }
 

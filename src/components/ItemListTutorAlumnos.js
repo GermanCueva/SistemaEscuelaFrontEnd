@@ -1,8 +1,33 @@
-import ItemPersona from './ItemPersona'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useState } from "react"
+import { useParams, Link } from "react-router-dom";
 import { Plus } from 'lucide-react';
 
-const ItemListPersona = ({ prods, setProds }) => {
+
+
+const ItemListTutorAlumnos = () => {
+  
+      const { id } = useParams();
+    
+      const [pers, setpers] = useState([])
+
+      const token = localStorage.getItem('token');
+    
+    const obtenerDatos = useCallback(() => {
+      fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnosTutorId/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}` 
+        }
+      })
+      .then(response => response.json())
+      .then(data => setpers(data));
+    }, [ token]); // <--- Agregas 'token' como dependencia
+    
+      useEffect(() => {     
+         obtenerDatos()
+        }, [obtenerDatos]);
+    
     return (
         <div className="overflow-x-auto">
 {/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
@@ -11,7 +36,7 @@ const ItemListPersona = ({ prods, setProds }) => {
 <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                         <tr>
                         <th scope="col" className="px-12 py-3">
-                            Apellido
+                            Legajo
                         </th>
                         <th scope="col" className="px-12 py-3">
                             Nombre
@@ -41,22 +66,36 @@ const ItemListPersona = ({ prods, setProds }) => {
 
                 {/* Los datos siempre deben ir en <tbody> */}
                 <tbody>
-                    {prods.length ? (
-                        prods.map(p => (
-                            <ItemPersona 
-                                key={p.id_persona} // Corregido: Key única para React
-                                id_persona={p.id_persona} // Siempre usa una key única en React
-                                apellido={p.apellidos} 
-                                nombre={p.nombres} 
-                                tipo_documento={p.nombre_corto} 
-                                numero={p.numero} 
-                                tipo_usuario={p.es_alumno} 
-                                motivo_desercion={p.motivo_desercion} 
-                                activo={p.activo}
-                                regular={p.regular}
-                                setProds={setProds}
-                            />
-                        ))
+                    {pers && pers.length > 0 ? (
+                    pers.map((p, index) => (
+                        <tr key={p.id_persona || index} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                        
+                        {/* Apellido */}
+                        <td className="px-6 py-2 text-sm text-gray-900 bg-white">
+                            {p.legajo}
+                        </td>
+
+                        {/* Nombre */}
+                        <td className="px-6 py-2 text-sm text-gray-700 bg-white">
+                            {p.nombrealumno}
+                        </td>
+
+                        {/* Tipo de Documento */}
+                        <td className="px-6 py-2 text-sm text-gray-700 bg-white">
+                            <div className="flex justify-center w-full">
+                            {p.tipo_documento}
+                            </div>
+                        </td>
+
+                        {/* Número de Documento */}
+                        <td className="px-6 py-2 text-sm text-gray-700 bg-white">
+                            <div className="flex justify-center w-full">
+                            {p.numero}
+                            </div>
+                        </td>
+
+                        </tr>
+                    ))
                     ) : (
                         <tr>
                         <td colSpan={6} className="py-10 text-center text-gray-500 bg-white font-medium">                                 
@@ -70,4 +109,4 @@ const ItemListPersona = ({ prods, setProds }) => {
     )
 }
 
-export default ItemListPersona
+export default ItemListTutorAlumnos

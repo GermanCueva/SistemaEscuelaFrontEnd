@@ -3,7 +3,9 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import Spinner from './Spinner';
 import ItemDetailPersonaDocumentoAlta from './ItemPersonaDocumentoDetailAlta'; 
 import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta'; 
+import ItemListTutorAlumnos from "./ItemListTutorAlumnos.js";
 import { avisar } from "../utils/notificaciones.js";
+//import { ActivitySquare } from "lucide-react";
 
 const ItemDetailPersona = () => {
   const { id } = useParams();
@@ -22,7 +24,7 @@ const ItemDetailPersona = () => {
   // Flag para saber si el registro de alumno ya existe en el backend (Modo Edición)
   const [hasAlumnoRecord, setHasAlumnoRecord] = useState(false);
 
-// ESTADO UNIFICADO
+  // ESTADO UNIFICADO
   const [pers, setPers] = useState({
     apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
     correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
@@ -38,9 +40,23 @@ const ItemDetailPersona = () => {
     direccion_numero: '',
     direccion_piso: '',
     direccion_depto: '',
-    // 👇 AGREGA ESTA LÍNEA AQUÍ
     documentos: [] 
   });
+
+  // Helper seguro para mostrar notificaciones garantizadas
+  const notificar = (mensaje, tipo = 'advertencia') => {
+    try {
+      if (avisar && typeof avisar[tipo] === 'function') {
+        avisar[tipo](mensaje);
+      } else if (avisar && typeof avisar.advertencia === 'function') {
+        avisar.advertencia(mensaje);
+      } else {
+        alert(mensaje);
+      }
+    } catch (e) {
+      alert(mensaje);
+    }
+  };
 
   // 1. Cargar Catálogos
   useEffect(() => {
@@ -76,7 +92,6 @@ const ItemDetailPersona = () => {
         fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => res.json()).catch(() => []),
-        // Petición condicional al endpoint de alumnos
         fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => res.ok ? res.json() : null).catch(() => null)
@@ -85,7 +100,6 @@ const ItemDetailPersona = () => {
         if (dataPersona && dataPersona.length > 0) {
           const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
           
-          // Procesar datos de alumno si existen
           let datosAlumno = {};
           if (dataAlumno) {
             const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
@@ -98,7 +112,7 @@ const ItemDetailPersona = () => {
           setPers(prev => ({
             ...prev,
             ...dataPersona[0],
-            ...datosAlumno, // Se sobreescriben los campos vacíos de alumno con los reales del backend
+            ...datosAlumno,
             documentos: misDocs 
           })); 
         }
@@ -111,8 +125,31 @@ const ItemDetailPersona = () => {
     }
   }, [id, isEditMode]);
 
+
+  const calcularEdad = (fechaNacimiento) => {
+    const hoy = new Date();
+    const nacimiento = new Date(fechaNacimiento);
+    let edad = hoy.getFullYear() - nacimiento.getFullYear();
+    const mes = hoy.getMonth() - nacimiento.getMonth();
+
+    // Ajuste si aún no ha cumplido años en el año actual
+    if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
+      edad--;
+    }
+    return edad;
+};
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+
+    if (name === 'fecha_nacimiento' && value) {
+    const edad = calcularEdad(value);
+
+    if (edad < 4) {
+      avisar.error("El alumno debe tener al menos 4 años de edad.");
+      return; // O puedes guardar un mensaje de error en el estado
+    }
+  }
     
     setPers((prev) => {
       if (name === 'es_alumno' && value === 'S') {
@@ -140,6 +177,7 @@ const ItemDetailPersona = () => {
     setPhoneError(v !== "" && !regexPhone.test(v) ? "Formato de teléfono inválido." : ""); 
   };
 
+
   const setDocumentosGlobal = (nuevosDocumentos) => {
     setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
   };
@@ -160,7 +198,7 @@ const ItemDetailPersona = () => {
         throw new Error(errData.error || errData.mensaje || 'No se pudo eliminar el documento del servidor.');
       }
 
-      avisar.exito('¡Documento eliminado correctamente de la base de datos!');
+      avisar.advertencia('¡Documento eliminado correctamente de la base de datos!', 'exito');
       return true;
     } catch (error) {
       console.error('Error al eliminar el documento:', error);
@@ -173,79 +211,92 @@ const ItemDetailPersona = () => {
 
 // 📥 FUNCIÓN CENTRAL DE GUARDADO
 const grabar = async (e) => {
-    if (e) e.preventDefault();
+  if (e) e.preventDefault();
+
+  try {
     const token = localStorage.getItem('token'); 
 
-    // [Validación existente de persona...]
+    // 1. Validar campos obligatorios básicos de la Persona
     if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
-       avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!");
+       avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!", 'advertencia');
        setSubSolapaActiva('alta');
        return;
     }
 
-    // 🔴 NUEVA VALIDACIÓN: Campos obligatorios de Alumno (Si corresponde)
-    if (pers.es_alumno === 'S') {
-      if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
-        avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!");
-        setSubSolapaActiva('alumnos');
-        return;
-      }
-
-      // Validación condicional del motivo de deserción
-      if (pers.regular === 'N' && !pers.id_motivo_desercion) {
-        avisar.advertencia("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!");
-        setSubSolapaActiva('alumnos');
-        return;
-      }
+    // 2. Validar que se haya indicado si "Es alumno"
+    if (!pers.es_alumno || String(pers.es_alumno).trim() === '') {
+       notificar("⚠️ Error: Selecciona una opción en el campo 'Es alumno' (Sí / No) antes de continuar.", 'advertencia');
+       setSubSolapaActiva('alta');
+       return;
     }
 
+    // 3. Validar Formatos (Email / Teléfono)
     if (emailError || phoneError) { 
-      avisar.error("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.");
+      notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
       setSubSolapaActiva('alta');
       return;
     }
 
+    // 4. Validar DOCUMENTOS PRIMERO (Antes de Alumno)
     if (!pers.documentos || pers.documentos.length === 0) {
-      avisar.advertencia("⚠️ Error: No puedes guardar el registro sin asignarle al menos un Documento en la solapa 'Documentos'.");
-      setSubSolapaActiva('documentos');
+      notificar("⚠️ Error: Debes ir a la solapa 'Documentos' y agregar al menos un Documento a la grilla antes de continuar.", 'advertencia');
+      setSubSolapaActiva('documentos'); // <--- Ahora redirigirá a Documentos primero
       return;
+    }
+
+    // Normalización para saber si es Alumno ('S', 's', true, 1)
+    const esAlumno = pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1;
+
+    // 5. Validaciones si ES ALUMNO (Desplazado al final)
+    if (esAlumno) {
+      if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
+        notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!", 'advertencia');
+        setSubSolapaActiva('alumnos');
+        return;
+      }
+
+      const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
+
+      if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
+        notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
+        setSubSolapaActiva('alumnos');
+        return;
+      }
     }
 
     setIsLoading(true);
     
-    // Desestructuramos para separar los datos específicos que NO van a la tabla Personas
-    const { documentos, ...todo } = pers;
+    // ... RESTO DEL CÓDIGO DE GRABAR SIN CAMBIOS ...
+      
+      const { documentos, ...todo } = pers;
 
-    // Extraemos los campos del Alumno para mandarlos a su propio endpoint
-    const datosAlumno = {
-      legajo: todo.legajo,
-      extranjero: todo.extranjero,
-      regular: todo.regular,
-      id_motivo_desercion: todo.id_motivo_desercion ? Number(todo.id_motivo_desercion) : null,
-      es_celiaco: todo.es_celiaco,
-      direccion_calle: todo.direccion_calle,
-      direccion_numero: todo.direccion_numero,
-      direccion_piso: todo.direccion_piso,
-      direccion_depto: todo.direccion_depto
-    };
+      const datosAlumno = {
+        legajo: todo.legajo,
+        extranjero: todo.extranjero,
+        regular: todo.regular,
+        id_motivo_desercion: todo.id_motivo_desercion ? Number(todo.id_motivo_desercion) : null,
+        es_celiaco: todo.es_celiaco,
+        direccion_calle: todo.direccion_calle,
+        direccion_numero: todo.direccion_numero,
+        direccion_piso: todo.direccion_piso,
+        direccion_depto: todo.direccion_depto
+      };
 
-    // Construimos los datos limpios de la Persona (eliminando los del Alumno)
-    const datosPersona = { ...todo };
-    Object.keys(datosAlumno).forEach(key => delete datosPersona[key]);
+      const datosPersona = { ...todo };
+      Object.keys(datosAlumno).forEach(key => delete datosPersona[key]);
 
-    if (!isEditMode) {
-      delete datosPersona.id_persona; 
-      delete datosPersona.id; 
-    }
+      if (!isEditMode) {
+        delete datosPersona.id_persona; 
+        delete datosPersona.id; 
+      }
 
-    const urlPersona = isEditMode 
-      ? `${process.env.REACT_APP_API_URL}/api/persons/${id}` 
-      : `${process.env.REACT_APP_API_URL}/api/persons`;      
+      const urlPersona = isEditMode 
+        ? `${process.env.REACT_APP_API_URL}/api/persons/${id}` 
+        : `${process.env.REACT_APP_API_URL}/api/persons`;      
 
-    const methodPersona = isEditMode ? 'PUT' : 'POST'; 
+      const methodPersona = isEditMode ? 'PUT' : 'POST'; 
 
-    try {
-      // 1. Guardar o Modificar Persona
+      // 1. Guardar Persona
       const responsePersona = await fetch(urlPersona, {
         method: methodPersona,
         headers: {
@@ -282,10 +333,10 @@ const grabar = async (e) => {
       }
 
       if (!idPersonaFinal) {
-        throw new Error(`El backend guardó pero la propiedad del ID no se reconoció. Estructura recibida: ${JSON.stringify(resultadoPersona)}`);
+        throw new Error(`El backend guardó la persona pero no devolvió un ID reconocible.`);
       }
 
-      // 2. Guardar o Modificar Documentos
+      // 2. Guardar Documentos
       const promesasDocumentos = documentos.map(async (doc) => {
         const esNuevoDocumento = !isEditMode || !doc.id_persona;
         const urlDoc = esNuevoDocumento
@@ -320,17 +371,14 @@ const grabar = async (e) => {
 
       await Promise.all(promesasDocumentos);
 
-      // 3. Guardar / Modificar Alumno (Solo si es_alumno === 'S')
-      if (pers.es_alumno === 'S') {
-        // Determinamos si es un POST o un PUT basándonos en si ya existía registro en la BD
+      // 3. Guardar Alumno
+      if (esAlumno) {
         const esNuevoAlumno = !isEditMode || !hasAlumnoRecord;
         const urlAlumno = esNuevoAlumno 
           ? `${process.env.REACT_APP_API_URL}/api/alumnos`
           : `${process.env.REACT_APP_API_URL}/api/alumnos/${idPersonaFinal}`;
         
         const methodAlumno = esNuevoAlumno ? 'POST' : 'PUT';
-        
-        // Adjuntamos el id_persona correspondiente
         datosAlumno.id_persona = Number(idPersonaFinal);
 
         const resAlumno = await fetch(urlAlumno, {
@@ -348,12 +396,12 @@ const grabar = async (e) => {
         }
       }
 
-      avisar.exito(isEditMode ? '¡Datos, documentos y legajo de alumno actualizados!' : '¡Persona, Documentos y Alumno guardados con éxito!');
+      notificar(isEditMode ? '¡Datos, documentos y legajo de alumno actualizados!' : '¡Persona, Documentos y Alumno guardados con éxito!', 'exito');
       navigate('/personas/abm'); 
 
     } catch (error) {
       console.error('Error en el proceso de guardado:', error); 
-      alert('Hubo un problema al procesar el guardado completo:\n' + error.message);
+      alert('Hubo un problema al procesar el guardado:\n' + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -373,14 +421,21 @@ const grabar = async (e) => {
           Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
         </button>
 
-        {pers.es_alumno === 'S' && (
+        {(pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) ? (
           <button 
             onClick={() => setSubSolapaActiva('alumnos')} 
             style={subSolapaActiva === 'alumnos' ? styles.activeSubTab : styles.subTab}
           >
             Datos Alumno
           </button>
-        )}      
+        ) : isEditMode && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnosTutor')} 
+            style={subSolapaActiva === 'alumnosTutor' ? styles.activeSubTab : styles.subTab}
+          >
+            Alumnos Vinculados
+          </button>
+        )}    
       </div>
 
       {/* Renderizado Condicional de Vistas */}
@@ -393,12 +448,19 @@ const grabar = async (e) => {
             onEliminarBackend={eliminarDocumentoBackend}
           />
         )} 
-        {subSolapaActiva === 'alumnos' && pers.es_alumno === 'S' && (
+        {subSolapaActiva === 'alumnos' && (pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
-            {/* 🛠️ Aquí corregimos las props para que mande el estado y el cambiador global */}
             <ItemPersonaAlumnoDetailAlta 
               formData={pers} 
               handleChange={handleChange} 
+            />          
+          </div>
+        )}
+
+      {subSolapaActiva === 'alumnosTutor' && (
+          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+           <ItemListTutorAlumnos
+              id={id || pers.id_persona} 
             />          
           </div>
         )}
@@ -532,7 +594,7 @@ const grabar = async (e) => {
         <Link to={'/personas/abm'}>
           <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
         </Link>
-        <button onClick={grabar} className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+        <button onClick={grabar} type="button" className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
           {isEditMode ? 'Guardar Cambios Totales' : 'Registrar Persona Completa'}
         </button>
       </div>
