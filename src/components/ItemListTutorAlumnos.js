@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom";
-import { Plus } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 
 
@@ -22,7 +22,7 @@ const ItemListTutorAlumnos = () => {
       })
       .then(response => response.json())
       .then(data => setpers(data));
-    }, [ token]); // <--- Agregas 'token' como dependencia
+    }, [id, token]); // <--- Agregas 'token' como dependencia
     
       useEffect(() => {     
          obtenerDatos()
@@ -30,37 +30,49 @@ const ItemListTutorAlumnos = () => {
     
     return (
         <div className="overflow-x-auto">
-{/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
-        <table className="w-full text-sm text-left text-gray-500 bg-white">
-                    {/* El encabezado siempre debe ir en <thead> */}
-<thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
+            {/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
+                    <table className="w-full text-sm text-left text-gray-500 bg-white">
+                                {/* El encabezado siempre debe ir en <thead> */}
+            <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                         <tr>
                         <th scope="col" className="px-12 py-3">
+                         <div className="flex justify-center w-full">
                             Legajo
+                         </div>
                         </th>
                         <th scope="col" className="px-12 py-3">
                             Nombre
                         </th>
                         <th scope="col" className="px-4 py-3">
+                          <div className="flex justify-center w-full">
                             Tipo de Documento
+                          </div>
                         </th>
                         <th scope="col" className="px-4 py-3">
+                          <div className="flex justify-center w-full">
                             Número de Documento
+                          </div>
                         </th>
                         <th scope="col" className="px-12 py-3">
-                            Alumno/Tutor
+                          <div className="flex justify-center w-full">
+                            Tipo de Allegado
+                         </div>
+                        </th>
+                        <th scope="col" className="px-3 py-3">
+                          <div className="flex justify-center w-full">
+                            ¿Tutor?
+                          </div>
+                        </th>
+                        <th scope="col" className="px-3 py-3">
+                          <div className="flex justify-center w-full">
+                            ¿Activo?
+                          </div>
                         </th>
                         {/* Agrega una columna extra si el ItemPersona tiene el botón de lupa */}
-                        <th scope="col" className="px-12 py-30 text-center">
+                        <th scope="col" className="px-3 py-30 text-center">
                             Acciones
                         </th>
-            <td className="px-6 py-2 text-right">
-                <Link to={'/personas/alta'}>
-                    <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
-                        <Plus size={20} className="mr-2" />
-                    </button>
-                </Link>
-            </td>
+
                     </tr>
                 </thead>
 
@@ -70,9 +82,11 @@ const ItemListTutorAlumnos = () => {
                     pers.map((p, index) => (
                         <tr key={p.id_persona || index} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
                         
-                        {/* Apellido */}
+                        {/* Legajo */}
                         <td className="px-6 py-2 text-sm text-gray-900 bg-white">
-                            {p.legajo}
+                            <div className="flex justify-center w-full">
+                                {p.legajo}
+                            </div>
                         </td>
 
                         {/* Nombre */}
@@ -83,7 +97,7 @@ const ItemListTutorAlumnos = () => {
                         {/* Tipo de Documento */}
                         <td className="px-6 py-2 text-sm text-gray-700 bg-white">
                             <div className="flex justify-center w-full">
-                            {p.tipo_documento}
+                            {p.nombre_corto}
                             </div>
                         </td>
 
@@ -93,7 +107,31 @@ const ItemListTutorAlumnos = () => {
                             {p.numero}
                             </div>
                         </td>
-
+                        {/* Tipo de Allegado */}
+                        <td className="px-6 py-2 text-sm text-gray-700 bg-white">
+                            <div className="flex justify-center w-full">
+                            {p.nombre}
+                            </div>
+                        </td>
+                        {/* ¿Tutor? */}
+                        <td className="px-3 py-2 text-sm text-gray-700 bg-white">
+                            <div className="flex justify-center w-full">
+                                <span>{p.tutor === 'S' ? 'Sí' : 'No'}</span>
+                            </div>
+                        </td>
+                        {/* ¿Activo? */}
+                        <td className="px-3 py-2 text-sm text-gray-700 bg-white">
+                            <div className="flex justify-center w-full">
+                                <span>{p.activo === 'S' ? 'Sí' : 'No'}</span>
+                            </div>
+                        </td>
+                        <Link to={'/personas/' + p.id_persona_alumno}>
+                        <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
+                           <div className="marginLeft: '10px' inline-flex items-center justify-center p-1 ml-2 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-100 transition-colors">
+                            <Search size={20} className="mr-2" />
+                           </div>
+                        </button>
+                        </Link>
                         </tr>
                     ))
                     ) : (

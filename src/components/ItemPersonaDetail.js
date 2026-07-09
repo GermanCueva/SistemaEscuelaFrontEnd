@@ -8,8 +8,14 @@ import { avisar } from "../utils/notificaciones.js";
 //import { ActivitySquare } from "lucide-react";
 
 const ItemDetailPersona = () => {
+
   const { id } = useParams();
   const navigate = useNavigate();
+
+    // Resetear la pestaña activa a 'alta' cada vez que cambie el ID de la persona en la URL
+useEffect(() => {
+  setSubSolapaActiva('alta');
+}, [id]);
   
   const isEditMode = Boolean(id) && id !== "alta" && id !== "undefined";
 
