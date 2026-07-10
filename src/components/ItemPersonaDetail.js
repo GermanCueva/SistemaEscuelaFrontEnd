@@ -5,6 +5,7 @@ import ItemDetailPersonaDocumentoAlta from './ItemPersonaDocumentoDetailAlta';
 import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta'; 
 import ItemListTutorAlumnos from "./ItemListTutorAlumnos.js";
 import { avisar } from "../utils/notificaciones.js";
+import ItemListAlumnoAllegados from "./ItemListAlumnoAllegados.js";
 //import { ActivitySquare } from "lucide-react";
 
 const ItemDetailPersona = () => {
@@ -442,6 +443,16 @@ const grabar = async (e) => {
             Alumnos Vinculados
           </button>
         )}    
+
+        {(pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnoAllegados')} 
+            style={subSolapaActiva === 'alumnoAllegados' ? styles.activeSubTab : styles.subTab}
+          >
+            Allegados
+          </button>
+        )}  
+
       </div>
 
       {/* Renderizado Condicional de Vistas */}
@@ -466,6 +477,14 @@ const grabar = async (e) => {
       {subSolapaActiva === 'alumnosTutor' && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
            <ItemListTutorAlumnos
+              id={id || pers.id_persona} 
+            />          
+          </div>
+        )}
+
+      {subSolapaActiva === 'alumnoAllegados' && (
+          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+           <ItemListAlumnoAllegados
               id={id || pers.id_persona} 
             />          
           </div>

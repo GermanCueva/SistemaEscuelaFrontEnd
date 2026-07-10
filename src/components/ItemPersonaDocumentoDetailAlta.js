@@ -85,7 +85,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
             // Validar que no se repita el mismo tipo antes de guardarlo en memoria local
             const yaExiste = docs.some(d => String(d.id_tipo_documento) === String(formData.id_tipo_documento));
             if (yaExiste) {
-                alert("Este tipo de documento ya está listado en la grilla temporal.");
+                avisar.advertencia("Este tipo de documento ya está listado en la grilla temporal.");
                 return;
             }
 
@@ -135,8 +135,10 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                     <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
                             <th scope="col" className="px-6 py-3">Tipo de Documento</th>
+                          <div className="flex justify-center w-full">
                             <th scope="col" className="px-6 py-3">Número de Documento</th>
-                            <th scope="col" className="px-6 py-3 text-center">Activo</th>
+                          </div>       
+                            <th scope="col" className="px-6 py-3">Activo</th>
                             <th scope="col" className="px-6 py-3 text-center">Acciones</th>
                         </tr>
                     </thead>
@@ -152,13 +154,19 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                                 return (
                                     <tr key={currentId} className="odd:bg-white even:bg-gray-50 border-b hover:bg-gray-100 transition-colors">
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                                            {tipoEncontrado ? tipoEncontrado.nombre : `ID: ${d.id_tipo_documento}`}            
+                                          <div className="flex justify-left w-full">
+                                            {tipoEncontrado ? tipoEncontrado.nombre : `ID: ${d.id_tipo_documento}`}     
+                                          </div>       
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-700">
+                                          <div className="flex justify-center w-full">
                                             {d.numero}
+                                          </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-700 text-center">
+                                        <td className="px-6 py-4 text-sm text-gray-700">
+                                           <div className="flex justify-left w-full">
                                             {d.activo === 'S' || d.activo === 'A' ? 'Activo' : 'Inactivo'}
+                                           </div>
                                         </td>
                                         <td className="px-6 py-4 text-center flex justify-center gap-2">
                                             <button 

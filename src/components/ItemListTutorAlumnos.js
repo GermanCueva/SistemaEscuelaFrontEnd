@@ -136,9 +136,19 @@ const ItemListTutorAlumnos = () => {
                     ))
                     ) : (
                         <tr>
-                        <td colSpan={6} className="py-10 text-center text-gray-500 bg-white font-medium">                                 
-                                <h1 className="text-xl font-bold">No hay datos</h1>
-                            </td>
+                        <td 
+                            colSpan={8} 
+                            style={{
+                            backgroundColor: '#bebebe', // O el color gris exacto de tu diseño
+                            textAlign: 'center',
+                            padding: '20px',
+                            width: '100%',
+                            fontWeight: 'bold',
+                            color: '#555'
+                            }}
+                        >
+                            No hay datos
+                        </td>
                         </tr>
                     )}
                 </tbody>
