@@ -8,34 +8,64 @@ const ItemListAlumnoAllegados = () => {
     const [pers, setpers] = useState([]);
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState({});
+    const [listaEstudios, setEstudios] = useState([]);
+    const [listaOcupaciones, setOcupaciones] = useState([]);
+    const [listaTiposAllegados, setTiposAllegados] = useState([]);
+
 
     // Catálogo para el buscador dinámico de personas
     const [listaPersonas, setListaPersonas] = useState([]);
 
-    // --- OPCIONES PARA LOS COMBOS (ESTUDIO Y OCUPACIÓN) ---
-    const listaEstudios = [
-        "Primario Incompleto", 
-        "Primario Completo", 
-        "Secundario Incompleto",
-        "Secundario", 
-        "Terciario", 
-        "Universitario", 
-        "Especialización",
-        "Postgrado"
-    ];
-
-    const listaOcupaciones = [
-        "Profesionales científicos e intelectuales",
-        "Operadores de instalaciones y máquinas y ensambladores",
-        "Comerciante", 
-        "Docente", 
-        "Empleado Público", 
-        "Quehaceres del hogar",
-        "Desocupado/a",
-        "Otro"
-    ];
 
     const token = localStorage.getItem('token');
+
+
+    // --- OPCIONES PARA LOS COMBOS (ESTUDIO Y OCUPACIÓN) ---
+
+        const obtenerOcupaciones = useCallback(() => {
+          fetch(`${process.env.REACT_APP_API_URL}/api/ocupacion`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            }
+          })
+          .then(response => response.json())
+          .then(data => setOcupaciones(data));
+        }, [token]); // <--- Agregas 'token' como dependencia
+
+        
+        const obtenerEstudios = useCallback(() => {
+          fetch(`${process.env.REACT_APP_API_URL}/api/estudio`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            }
+          })
+          .then(response => response.json())
+          .then(data => setEstudios(data));
+        }, [token]); // <--- Agregas 'token' como dependencia
+
+        
+        const obtenerTiposAllegado = useCallback(() => {
+          fetch(`${process.env.REACT_APP_API_URL}/api/tipoallegado`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}` 
+            }
+          })
+          .then(response => response.json())
+          .then(data => setTiposAllegados(data));
+        }, [token]); // <--- Agregas 'token' como dependencia
+        
+          useEffect(() => {     
+             obtenerOcupaciones();
+             obtenerEstudios();
+             obtenerTiposAllegado();
+            }, [obtenerOcupaciones, obtenerEstudios, obtenerTiposAllegado]);
+
 
     const obtenerDatos = useCallback(() => {
         fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${id}`, {
@@ -240,10 +270,10 @@ const handleSaveRow = (id_persona) => {
                                                     onChange={(e) => handleInputChange(e, 'nombre')}
                                                     className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-blue-500"
                                                 >
-                                                    <option value="Madre">Madre</option>
-                                                    <option value="Padre">Padre</option>
-                                                    <option value="Tutor/a Legal">Tutor/a Legal</option>
-                                                    <option value="Otro">Otro</option>
+                                                    {listaTiposAllegados.map((allegado, i) => (
+                                                        <option key={i} value={allegado.nombre}>{allegado.nombre}</option>
+                                                    ))}
+
                                                 </select>
                                             ) : p.nombre}
                                         </td>
@@ -257,7 +287,7 @@ const handleSaveRow = (id_persona) => {
                                                     className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
                                                 >
                                                     {listaEstudios.map((estudio, i) => (
-                                                        <option key={i} value={estudio}>{estudio}</option>
+                                                        <option key={i} value={estudio.nombre}>{estudio.nombre}</option>
                                                     ))}
                                                 </select>
                                             ) : p.nivel_estudio_tutor}
@@ -272,7 +302,7 @@ const handleSaveRow = (id_persona) => {
                                                     className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
                                                 >
                                                     {listaOcupaciones.map((ocupacion, i) => (
-                                                        <option key={i} value={ocupacion}>{ocupacion}</option>
+                                                        <option key={i} value={ocupacion.nombre}>{ocupacion.nombre}</option>
                                                     ))}
                                                 </select>
                                             ) : p.ocupacion_tutor}
