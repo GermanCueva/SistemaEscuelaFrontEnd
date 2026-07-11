@@ -48,9 +48,12 @@ const ItemListPersona = ({ prods, setProds }) => {
                                 id_persona={p.id_persona} // Siempre usa una key única en React
                                 apellido={p.apellidos} 
                                 nombre={p.nombres} 
-                                tipo_documento={p.id_tipo_documento} 
+                                tipo_documento={p.nombre_corto} 
                                 numero={p.numero} 
                                 tipo_usuario={p.es_alumno} 
+                                motivo_desercion={p.motivo_desercion} 
+                                activo={p.activo}
+                                regular={p.regular}
                                 setProds={setProds}
                             />
                         ))

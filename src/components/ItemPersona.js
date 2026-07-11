@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 
 
-const ItemPersona = ({ apellido, nombre, id_persona, tipo_documento, numero, tipo_usuario, setProds }) => {
+const ItemPersona = ({ apellido, nombre, id_persona, tipo_documento, numero, tipo_usuario, activo, motivo_desercion, regular, setProds }) => {
 
 
   const cambiar_estado = async (e) => {
@@ -52,7 +52,7 @@ return (
             {/* Tipo de Documento */}
             <td className="px-6 py-2 text-sm text-gray-700 bg-white">
                 <div className="flex justify-center w-full">
-                {tipo_documento === 8 ? "DNI" : "CUIL"}
+                {tipo_documento}
                 </div>
             </td>
 
@@ -66,13 +66,37 @@ return (
             {/* Tipo de Usuario */}
             <td className="px-6 py-2 text-sm bg-white">  
                 <div className="flex justify-center w-full">
-                    {tipo_usuario === "S" ? (
+                    {tipo_usuario === "S" && activo === "S" && regular === "S"  ? (
                         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                             Alumno
                         </span>
-                    ) : (
+                    ): tipo_usuario === "S" && activo === "N" && regular === "N" && motivo_desercion ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                           {motivo_desercion}
+                        </span>
+                    ): tipo_usuario === "S" && activo === "S" && regular === "N" && motivo_desercion ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                           {motivo_desercion}
+                        </span>
+                    ): tipo_usuario === "S" && activo === "N" && regular === "N" && !motivo_desercion ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                           No Regular Sin Motivo
+                        </span>
+                    ): tipo_usuario === "S" && activo === "S" && regular === "N" && !motivo_desercion ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                           No Regular Sin Motivo
+                        </span>
+                    ): tipo_usuario === "S" && activo === "N" && regular === "S" ? (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                           Inactivo
+                        </span>
+                    ): tipo_usuario === "N" ? (
                         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                            Tutor
+                           Tutor
+                        </span>
+                    ) : (
+                        <span className="px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                            Otro Motivo
                         </span>
                     )}
                 </div>

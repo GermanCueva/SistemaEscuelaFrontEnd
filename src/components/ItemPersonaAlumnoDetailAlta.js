@@ -67,15 +67,18 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                 {/* 👇 RENDERIZADO CONDICIONAL: Solo se muestra si Alumno Regular es "No" */}
                 {formData?.regular === 'N' && (
                     <label className="form-control w-full">
-                        <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', marginBottom: '4px' }}>Motivo Deserción:</span>
+                        <span className="label-text font-bold text-red-600" style={{ display: 'block', textAlign: 'left', marginBottom: '4px' }}>
+                            Motivo Deserción <span style={{ color: 'red' }}>*</span>:
+                        </span>
                         <select 
                             name="id_motivo_desercion" 
                             value={formData?.id_motivo_desercion || ''} 
                             onChange={handleChange}
+                            required={formData?.regular === 'N'}
                             className="select select-bordered w-full"
                             style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
                         >
-                            <option value="">Ninguno / Seleccione</option>
+                            <option value="">Seleccione un motivo...</option>
                             {desercion.map((des) => (
                                 <option key={des.id_motivo_desercion || des.id} value={String(des.id_motivo_desercion || des.id)}>
                                     {des.nombre}
