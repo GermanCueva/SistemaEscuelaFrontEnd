@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Spinner from './Spinner';
 import ItemDetailPersonaDocumentoAlta from './ItemPersonaDocumentoDetailAlta'; 
@@ -6,17 +6,16 @@ import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta';
 import ItemListTutorAlumnos from "./ItemListTutorAlumnos.js";
 import { avisar } from "../utils/notificaciones.js";
 import ItemListAlumnoAllegados from "./ItemListAlumnoAllegados.js";
-//import { ActivitySquare } from "lucide-react";
 
 const ItemDetailPersona = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
 
-    // Resetear la pestaña activa a 'alta' cada vez que cambie el ID de la persona en la URL
-useEffect(() => {
-  setSubSolapaActiva('alta');
-}, [id]);
+  // Resetear la pestaña activa a 'alta' cada vez que cambie el ID de la persona en la URL
+  useEffect(() => {
+    setSubSolapaActiva('alta');
+  }, [id]);
   
   const isEditMode = Boolean(id) && id !== "alta" && id !== "undefined";
 
@@ -31,7 +30,7 @@ useEffect(() => {
   // Flag para saber si el registro de alumno ya existe en el backend (Modo Edición)
   const [hasAlumnoRecord, setHasAlumnoRecord] = useState(false);
 
-  // ESTADO UNIFICADO
+  // ESTADO UNIFICADO (Incluye allegados)
   const [pers, setPers] = useState({
     apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
     correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
@@ -47,7 +46,8 @@ useEffect(() => {
     direccion_numero: '',
     direccion_piso: '',
     direccion_depto: '',
-    documentos: [] 
+    documentos: [],
+    allegados: [] // <-- Lista de allegados integrada
   });
 
   // Helper seguro para mostrar notificaciones garantizadas
@@ -86,6 +86,22 @@ useEffect(() => {
     cargarCatalogos();
   }, [isEditMode]);
 
+  // Carga de Allegados de forma aislada / reutilizable
+  const obtenerAllegados = useCallback(async (idAlumno) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${idAlumno}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPers(prev => ({ ...prev, allegados: Array.isArray(data) ? data : [] }));
+      }
+    } catch (err) {
+      console.error("Error al obtener allegados:", err);
+    }
+  }, []);
+
   // 2. Cargar Datos del Registro (Modo Edición)
   useEffect(() => {
     if (isEditMode) {
@@ -101,12 +117,16 @@ useEffect(() => {
         }).then(res => res.json()).catch(() => []),
         fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.ok ? res.json() : null).catch(() => null)
+        }).then(res => res.ok ? res.json() : null).catch(() => null),
+        fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.json()).catch(() => [])
       ])
-      .then(([dataPersona, dataDocs, dataAlumno]) => {
+      .then(([dataPersona, dataDocs, dataAlumno, dataAllegados]) => {
         if (dataPersona && dataPersona.length > 0) {
           const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
-          
+          const misAllegados = Array.isArray(dataAllegados) ? dataAllegados : [];
+
           let datosAlumno = {};
           if (dataAlumno) {
             const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
@@ -120,7 +140,8 @@ useEffect(() => {
             ...prev,
             ...dataPersona[0],
             ...datosAlumno,
-            documentos: misDocs 
+            documentos: misDocs,
+            allegados: misAllegados
           })); 
         }
         setIsLoading(false);
@@ -132,31 +153,28 @@ useEffect(() => {
     }
   }, [id, isEditMode]);
 
-
   const calcularEdad = (fechaNacimiento) => {
     const hoy = new Date();
     const nacimiento = new Date(fechaNacimiento);
     let edad = hoy.getFullYear() - nacimiento.getFullYear();
     const mes = hoy.getMonth() - nacimiento.getMonth();
 
-    // Ajuste si aún no ha cumplido años en el año actual
     if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
       edad--;
     }
     return edad;
-};
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === 'fecha_nacimiento' && value) {
-    const edad = calcularEdad(value);
-
-    if (edad < 4) {
-      avisar.error("El alumno debe tener al menos 4 años de edad.");
-      return; // O puedes guardar un mensaje de error en el estado
+      const edad = calcularEdad(value);
+      if (edad < 4) {
+        avisar.error("El alumno debe tener al menos 4 años de edad.");
+        return; 
+      }
     }
-  }
     
     setPers((prev) => {
       if (name === 'es_alumno' && value === 'S') {
@@ -184,9 +202,50 @@ useEffect(() => {
     setPhoneError(v !== "" && !regexPhone.test(v) ? "Formato de teléfono inválido." : ""); 
   };
 
-
   const setDocumentosGlobal = (nuevosDocumentos) => {
     setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
+  };
+
+// En ItemDetailPersona.js
+  const setAllegadosGlobal = (nuevaListaOFunction) => {
+    setPers(prev => {
+      const allegadosActuales = Array.isArray(prev.allegados) ? prev.allegados : [];
+
+      // 1. Resolvemos si viene una función updater (prev => ...) o un valor directo
+      const resultado = typeof nuevaListaOFunction === 'function' 
+        ? nuevaListaOFunction(allegadosActuales)
+        : nuevaListaOFunction;
+
+      const nuevaListaBruta = Array.isArray(resultado) ? resultado : [];
+
+      // 2. FILTRADO DE DUPLICADOS:
+      // Conservamos solo un registro por persona (comparando id_persona / id_persona_real)
+      const listaSinDuplicados = [];
+      const idsVistos = new Set();
+
+      for (const item of nuevaListaBruta) {
+        if (!item) continue;
+        
+        // Obtenemos el ID real/único de la persona agregada
+        const idPersonaUnico = String(item.id_persona_real || item.id_persona || '');
+
+        if (idPersonaUnico) {
+          if (idsVistos.has(idPersonaUnico)) {
+            // Notificamos que se intentó agregar un duplicado
+            notificar('⚠️ Esta persona ya se encuentra agregada en la lista de allegados.', 'advertencia');
+            continue; // Se saltea esta entrada duplicada
+          }
+          idsVistos.add(idPersonaUnico);
+        }
+
+        listaSinDuplicados.push(item);
+      }
+
+      return {
+        ...prev,
+        allegados: listaSinDuplicados
+      };
+    });
   };
 
   const eliminarDocumentoBackend = async (idDocumento) => {
@@ -216,66 +275,158 @@ useEffect(() => {
     }
   };
 
-// 📥 FUNCIÓN CENTRAL DE GUARDADO
-const grabar = async (e) => {
-  if (e) e.preventDefault();
+const eliminarAllegadoBackend = async (idPersonaAllegado) => {
+  const token = localStorage.getItem('token');
 
   try {
-    const token = localStorage.getItem('token'); 
-
-    // 1. Validar campos obligatorios básicos de la Persona
-    if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
-       avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!", 'advertencia');
-       setSubSolapaActiva('alta');
-       return;
-    }
-
-    // 2. Validar que se haya indicado si "Es alumno"
-    if (!pers.es_alumno || String(pers.es_alumno).trim() === '') {
-       notificar("⚠️ Error: Selecciona una opción en el campo 'Es alumno' (Sí / No) antes de continuar.", 'advertencia');
-       setSubSolapaActiva('alta');
-       return;
-    }
-
-    // 3. Validar Formatos (Email / Teléfono)
-    if (emailError || phoneError) { 
-      notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
-      setSubSolapaActiva('alta');
-      return;
-    }
-
-    // 4. Validar DOCUMENTOS PRIMERO (Antes de Alumno)
-    if (!pers.documentos || pers.documentos.length === 0) {
-      notificar("⚠️ Error: Debes ir a la solapa 'Documentos' y agregar al menos un Documento a la grilla antes de continuar.", 'advertencia');
-      setSubSolapaActiva('documentos'); // <--- Ahora redirigirá a Documentos primero
-      return;
-    }
-
-    // Normalización para saber si es Alumno ('S', 's', true, 1)
-    const esAlumno = pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1;
-
-    // 5. Validaciones si ES ALUMNO (Desplazado al final)
-    if (esAlumno) {
-      if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
-        notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!", 'advertencia');
-        setSubSolapaActiva('alumnos');
-        return;
-      }
-
-      const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
-
-      if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
-        notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
-        setSubSolapaActiva('alumnos');
-        return;
-      }
-    }
-
     setIsLoading(true);
-    
-    // ... RESTO DEL CÓDIGO DE GRABAR SIN CAMBIOS ...
-      
-      const { documentos, ...todo } = pers;
+
+    const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores/${idPersonaAllegado}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || errData.mensaje || "Error al eliminar de la base de datos.");
+    }
+
+    // 🎯 AQUÍ ESTÁ EL TRUCO PARA EL REFRESO INMEDIATO:
+    // Filtramos pers.allegados en tiempo real para quitar la fila borrada
+    setPers(prev => {
+      const listaActual = Array.isArray(prev.allegados) ? prev.allegados : [];
+      return {
+        ...prev,
+        allegados: listaActual.filter(item => 
+          item.id_persona_allegado !== idPersonaAllegado && 
+          item.id_persona !== idPersonaAllegado
+        )
+      };
+    });
+
+    avisar.advertencia('¡Allegado eliminado correctamente!', 'exito');
+
+  } catch (error) {
+    console.error("Error al eliminar allegado:", error);
+    alert("Ocurrió un error al eliminar:\n" + error.message);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  // 📥 FUNCIÓN CENTRAL DE GUARDADO (CON OPCIÓN A APLICADA)
+  const grabar = async (e) => {
+    if (e) e.preventDefault();
+
+    try {
+      const token = localStorage.getItem('token'); 
+
+      // 1. Validar campos obligatorios básicos de la Persona
+      if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
+          avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!", 'advertencia');
+          setSubSolapaActiva('alta');
+          return;
+      }
+
+      // 2. Validar que se haya indicado si "Es alumno"
+      if (!pers.es_alumno || String(pers.es_alumno).trim() === '') {
+          notificar("⚠️ Error: Selecciona una opción en el campo 'Es alumno' (Sí / No) antes de continuar.", 'advertencia');
+          setSubSolapaActiva('alta');
+          return;
+      }
+
+            // Verificao haya cargado Usuario (solo cuando no es alumno)
+      if (pers.es_alumno === 'N' && (String(pers.usuario).trim() === '' || pers.usuario === null )) {
+          notificar("⚠️ Error: Debe ingresar un valor de Usuario antes de continuar.", 'advertencia');
+          setSubSolapaActiva('alta');
+          return;
+      }
+
+
+      // 3. Validar Formatos (Email / Teléfono)
+      if (emailError || phoneError) { 
+        notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
+        setSubSolapaActiva('alta');
+        return;
+      }
+
+      // 4. Validar DOCUMENTOS PRIMERO (Antes de Alumno)
+      if (!pers.documentos || pers.documentos.length === 0) {
+        notificar("⚠️ Error: Debes ir a la solapa 'Documentos' y agregar al menos un Documento a la grilla antes de continuar.", 'advertencia');
+        setSubSolapaActiva('documentos');
+        return;
+      }
+
+
+      // -----------------------------------------------------------------
+      // 🛡️ NUEVO: CONTROL DE EXISTENCIA POR DOCUMENTO EN MODO ALTA
+      // -----------------------------------------------------------------
+      if (!isEditMode) {
+        setIsLoading(true);
+
+        for (const doc of pers.documentos) {
+          const tipoDoc = doc.id_tipo_documento;
+          const numDoc = String(doc.numero).trim();
+
+          if (tipoDoc && numDoc) {
+            // Se realiza la petición al backend para consultar si ya existe esa combinación
+            const resCheck = await fetch(`${process.env.REACT_APP_API_URL}/api/documentos/validar?tipo=${tipoDoc}&numero=${numDoc}`, {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (resCheck.ok) {
+              const dataCheck = await resCheck.json();
+              
+              // Si la API responde que ya existe
+              if (dataCheck.existe) {
+                setIsLoading(false);
+                avisar.error(`⚠️ Error: Ya existe una persona registrada con el documento N° ${numDoc}.`, 'error');
+                setSubSolapaActiva('documentos');
+                return; // ✋ Frena la grabación
+              }
+            }
+          }
+        }
+      }
+      // -----------------------------------------------------------------
+
+
+      // Normalización para saber si es Alumno ('S', 's', true, 1)
+      const esAlumno = pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1;
+
+      // 5. Validaciones si ES ALUMNO
+      if (esAlumno) {
+        if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
+          notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!", 'advertencia');
+          setSubSolapaActiva('alumnos');
+          return;
+        }
+
+        const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
+
+        if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
+          notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
+          setSubSolapaActiva('alumnos');
+          return;
+        }
+
+        // Validaciones en Allegados (que no queden inconclusos)
+        if (pers.allegados && pers.allegados.length > 0) {
+          for (let item of pers.allegados) {
+            if (!item.Tutor || !item.tutor || !item.activo) {
+              notificar("⚠️ Error: Hay filas en la tabla de Allegados con datos incompletos.", 'advertencia');
+              setSubSolapaActiva('alumnoAllegados');
+              return;
+            }
+          }
+        }
+      }
+
+      setIsLoading(true);
+
+      const { documentos, allegados, ...todo } = pers;
 
       const datosAlumno = {
         legajo: todo.legajo,
@@ -343,22 +494,27 @@ const grabar = async (e) => {
         throw new Error(`El backend guardó la persona pero no devolvió un ID reconocible.`);
       }
 
-      // 2. Guardar Documentos
+// 2. Guardar Documentos (CORREGIDO)
       const promesasDocumentos = documentos.map(async (doc) => {
-        const esNuevoDocumento = !isEditMode || !doc.id_persona;
+        // Detectar si el documento ya tiene un ID de registro asignado previamente en la BD
+        const idRelacionDoc = doc.id_persona_tipo_documento || doc.id_documento || doc.id;
+        const esNuevoDocumento = !isEditMode || !idRelacionDoc;
+
         const urlDoc = esNuevoDocumento
           ? `${process.env.REACT_APP_API_URL}/api/documentos`
-          : `${process.env.REACT_APP_API_URL}/api/documentos/${doc.id_persona_tipo_documento || doc.id}`;
+          : `${process.env.REACT_APP_API_URL}/api/documentos/${idRelacionDoc}`;
 
         const methodDoc = esNuevoDocumento ? 'POST' : 'PUT';
 
         const datosAEnviarDoc = {
           id_persona: Number(idPersonaFinal), 
           id_tipo_documento: Number(doc.id_tipo_documento),
-          numero: String(doc.numero),
+          numero: String(doc.numero).trim(), // Trim para limpiar espacios extra
           activo: doc.activo || 'S',
-          id_persona_tipo_documento: doc.id_persona_tipo_documento || doc.id_tipo_documento
+          id_persona_tipo_documento: idRelacionDoc ? Number(idRelacionDoc) : null
         };
+
+        console.log(`📡 Enviando Documento (${methodDoc}):`, datosAEnviarDoc);
 
         const resDoc = await fetch(urlDoc, {
           method: methodDoc,
@@ -371,7 +527,7 @@ const grabar = async (e) => {
 
         if (!resDoc.ok) {
           const errData = await resDoc.json().catch(() => ({}));
-          throw new Error(`Documento N° ${doc.numero}: ${errData.error || errData.mensaje || 'Fallo al procesar'}`);
+          throw new Error(`Documento N° ${doc.numero}: ${errData.error || errData.mensaje || 'Fallo al procesar en la BD'}`);
         }
         return resDoc.json();
       });
@@ -401,9 +557,58 @@ const grabar = async (e) => {
           const errAlumno = await resAlumno.json().catch(() => ({}));
           throw new Error(`Error en datos de Alumno: ${errAlumno.error || errAlumno.mensaje || 'No se pudo guardar la información escolar.'}`);
         }
+
+        // 4. Guardar SOLO Allegados NUEVOS (OPCIÓN A APLICADA)
+        if (allegados && allegados.length > 0) {
+          
+          // 🎯 FILTRADO EXCLUSIVO: ignora las filas ya persistidas previamente
+          const allegadosNuevos = allegados.filter(all => {
+            const esTemporal = String(all.id_persona).startsWith('temp-');
+            return all.esNuevo || esTemporal;
+          });
+
+          if (allegadosNuevos.length > 0) {
+            const promesasAllegados = allegadosNuevos.map(async (all) => {
+              
+              const urlAllegado = `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`;
+
+              // Helper para convertir enteros o retornar null limpia y explícitamente
+              const parseOrNull = (val) => {
+                const n = Number(val);
+                return isNaN(n) || n === 0 ? null : n;
+              };
+
+              const payloadAllegado = {
+                id_persona: parseOrNull(all.id_persona_real || all.id_persona),
+                id_alumno: Number(pers.id_alumno),
+                id_tipo_allegado: parseOrNull(all.id_tipo_allegado || all.nombre),
+                id_estudio_alcanzado: parseOrNull(all.id_estudio_alcanzado || all.id_nivel_estudio || all.nivel_estudio_tutor),
+                id_ocupacion: parseOrNull(all.id_ocupacion || all.ocupacion_tutor),
+                tutor: all.tutor || 'S',
+                activo: all.activo || 'S'
+              };
+
+              const resAllegado = await fetch(urlAllegado, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(payloadAllegado)
+              });
+
+              if (!resAllegado.ok) {
+                const errAllegado = await resAllegado.json().catch(() => ({}));
+                throw new Error(`Fallo al insertar allegado: ${errAllegado.error || errAllegado.mensaje || ''}`);
+              }
+            });
+
+            await Promise.all(promesasAllegados);
+          }
+        }
       }
 
-      notificar(isEditMode ? '¡Datos, documentos y legajo de alumno actualizados!' : '¡Persona, Documentos y Alumno guardados con éxito!', 'exito');
+      notificar(isEditMode ? '¡Datos, documentos, alumno y allegados actualizados!' : '¡Registro completo guardado con éxito!', 'exito');
       navigate('/personas/abm'); 
 
     } catch (error) {
@@ -449,7 +654,7 @@ const grabar = async (e) => {
             onClick={() => setSubSolapaActiva('alumnoAllegados')} 
             style={subSolapaActiva === 'alumnoAllegados' ? styles.activeSubTab : styles.subTab}
           >
-            Allegados
+            Allegados {pers.allegados.length > 0 && `(${pers.allegados.length})`}
           </button>
         )}  
 
@@ -474,7 +679,7 @@ const grabar = async (e) => {
           </div>
         )}
 
-      {subSolapaActiva === 'alumnosTutor' && (
+        {subSolapaActiva === 'alumnosTutor' && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
            <ItemListTutorAlumnos
               id={id || pers.id_persona} 
@@ -482,10 +687,13 @@ const grabar = async (e) => {
           </div>
         )}
 
-      {subSolapaActiva === 'alumnoAllegados' && (
+        {subSolapaActiva === 'alumnoAllegados' && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
-           <ItemListAlumnoAllegados
-              id={id || pers.id_persona} 
+            <ItemListAlumnoAllegados
+              allegados={pers.allegados}
+              setAllegados={setAllegadosGlobal}
+              onEliminarAllegado={eliminarAllegadoBackend}
+              onRecargar={() => obtenerAllegados(id || pers.id_persona)}
             />          
           </div>
         )}
