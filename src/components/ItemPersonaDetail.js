@@ -6,6 +6,8 @@ import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta';
 import ItemListTutorAlumnos from "./ItemListTutorAlumnos.js";
 import { avisar } from "../utils/notificaciones.js";
 import ItemListAlumnoAllegados from "./ItemListAlumnoAllegados.js";
+//import ItemListAlumnoAcademica from "./ItemListAlumnoAcademica.js";
+
 
 const ItemDetailPersona = () => {
 
@@ -388,6 +390,44 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
         }
       }
 
+      
+// =========================================================================
+  // VALIDADOR ESTRICTO CON TOASTIFY: OBLIGATORIEDAD DE ALLEGADOS
+  // =========================================================================
+
+  const allegadosParaValidar = pers?.allegados;
+
+  if (!allegadosParaValidar || allegadosParaValidar.length === 0) {
+    // 1. Mostrar la alerta flotante de advertencia
+    avisar.advertencia('Debe ingresar obligatoriamente al menos un allegado antes de registrar al alumno.');
+    
+    // 2. Redirigir inmediatamente a la pestaña de Allegados
+    // (Reemplazá el 2 por el índice de tu pestaña de Allegados si es necesario)
+    setSubSolapaActiva('alumnoAllegados'); 
+    
+    return; // Frena la grabación
+  }
+
+  // =========================================================================
+  // VALIDADOR DETALLADO: CAMPOS REQUERIDOS DENTRO DE LOS ALLEGADOS
+  // =========================================================================
+  const allegadosIncompletos = allegadosParaValidar.filter(all => {
+    const tieneTipo = Boolean(all.id_tipo_allegado || all.id_parentesco);
+    const tienePersona = Boolean(all.id_persona || all.id_persona_real);
+    return !tieneTipo || !tienePersona;
+  });
+
+  if (allegadosIncompletos.length > 0) {
+    avisar.advertencia('Por favor, complete los campos obligatorios (Parentesco y Persona) de todos los allegados.');
+    
+    // Redirigir inmediatamente a la pestaña de Allegados
+    setSubSolapaActiva('alumnoAllegados'); 
+    
+    return; // Frena la grabación
+  }
+
+
+
       //alert("PASO 6: Pasó todas las validaciones. Iniciando guardado en Backend...");
       setIsLoading(true);
 
@@ -588,7 +628,7 @@ const parseIdPersona = (item) => {
 // En ItemPersonaDetail.js dentro de la función grabar()
 
 // Un allegado es NUEVO (POST) si tiene la marca esNuevo, su id empieza con 'temp-' o NO tiene ID de relación previo
-const allegadosNuevos = allegados.filter(all => 
+/*const allegadosNuevos = allegados.filter(all => 
   all.esNuevo || 
   String(all.id_persona || '').startsWith('temp-') || 
   !all.id_alumno_tutor
@@ -599,7 +639,25 @@ const allegadosExistentes = allegados.filter(all =>
   !all.esNuevo && 
   !String(all.id_persona || '').startsWith('temp-') && 
   Boolean(all.id_alumno_tutor)
-);
+);*/
+
+// ==========================================
+// CLASIFICACIÓN CORREGIDA DE ALLEGADOS (POST vs PUT)
+// ==========================================
+
+// Un allegado es NUEVO (POST) si tiene la marca esNuevo, su id empieza con 'temp-' 
+// o si verdaderamente NO posee ningún ID de relación previo con la base de datos.
+const allegadosNuevos = allegados.filter(all => {
+  const tieneRelacionPrevia = Boolean(all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores);
+  return all.esNuevo || String(all.id_persona || '').startsWith('temp-') || !tieneRelacionPrevia;
+});
+
+// Un allegado es EXISTENTE (PUT) si no es nuevo y posee un ID de relación previo.
+const allegadosExistentes = allegados.filter(all => {
+  const tieneRelacionPrevia = Boolean(all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores);
+  const esTemporal = String(all.id_persona || '').startsWith('temp-');
+  return !all.esNuevo && !esTemporal && tieneRelacionPrevia;
+});
 
           // A) ALTAS (POST)
           for (const all of allegadosNuevos) {
@@ -681,6 +739,8 @@ const allegadosExistentes = allegados.filter(all =>
       }
 
       //alert("PASO FINAL: ¡Guardado completado exitosamente!");
+      avisar.exito("¡Los datos se han guardado con éxito!");
+
       navigate('/personas/abm'); 
 
     } catch (error) {
@@ -730,6 +790,15 @@ const allegadosExistentes = allegados.filter(all =>
           </button>
         )}  
 
+   {/*     {(pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnoAcademica')} 
+            style={subSolapaActiva === 'alumnoAcademica' ? styles.activeSubTab : styles.subTab}
+          >
+            Gestión Académica {pers.allegados.length > 0 && `(${pers.allegados.length})`}
+          </button>
+        )}  
+     */}  
       </div>
 
       {/* Renderizado Condicional de Vistas */}
@@ -769,7 +838,18 @@ const allegadosExistentes = allegados.filter(all =>
             />          
           </div>
         )}
-      </div>
+
+    {/*    {subSolapaActiva === 'alumnoAcademica' && (
+          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+            <ItemListAlumnoAcademica
+              allegados={pers.allegados}
+              setAllegados={setAllegadosGlobal}
+              onEliminarAllegado={eliminarAllegadoBackend}
+              onRecargar={() => obtenerAllegados(id || pers.id_persona)}
+            />          
+          </div>
+        )} */}
+      </div>  
   
       {subSolapaActiva === 'alta' && (
         <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
