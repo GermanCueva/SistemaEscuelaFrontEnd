@@ -50,6 +50,7 @@ const ItemDetailPersona = () => {
     allegados: [] // <-- Lista de allegados integrada
   });
 
+
   // Helper seguro para mostrar notificaciones garantizadas
   const notificar = (mensaje, tipo = 'advertencia') => {
     try {
@@ -316,114 +317,78 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
   }
 };
 
-  // 📥 FUNCIÓN CENTRAL DE GUARDADO (CON OPCIÓN A APLICADA)
+// 📥 FUNCIÓN CENTRAL DE GUARDADO CON AUDITORÍA PASO A PASO
   const grabar = async (e) => {
-    if (e) e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    //alert("PASO 1: Presionaste guardar. Iniciando validaciones...");
 
     try {
       const token = localStorage.getItem('token'); 
 
       // 1. Validar campos obligatorios básicos de la Persona
       if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
+          //alert("FRENADO EN PASO 1: Falta algún campo básico de Persona");
           avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!", 'advertencia');
           setSubSolapaActiva('alta');
           return;
       }
 
-      // 2. Validar que se haya indicado si "Es alumno"
-      if (!pers.es_alumno || String(pers.es_alumno).trim() === '') {
+      // 2. Validar "Es alumno"
+      if (pers.es_alumno === undefined || pers.es_alumno === null || String(pers.es_alumno).trim() === '') {
+          //alert("FRENADO EN PASO 2: El campo 'es_alumno' está vacío");
           notificar("⚠️ Error: Selecciona una opción en el campo 'Es alumno' (Sí / No) antes de continuar.", 'advertencia');
           setSubSolapaActiva('alta');
           return;
       }
 
-            // Verificao haya cargado Usuario (solo cuando no es alumno)
-      if (pers.es_alumno === 'N' && (String(pers.usuario).trim() === '' || pers.usuario === null )) {
+      const esAlumno = String(pers.es_alumno).toUpperCase() === 'S' || pers.es_alumno === true || pers.es_alumno === 1 || Boolean(pers.legajo);
+
+      if (!esAlumno && (String(pers.usuario || '').trim() === '')) {
+          //alert("FRENADO EN PASO 2.B: No es alumno y falta el usuario");
           notificar("⚠️ Error: Debe ingresar un valor de Usuario antes de continuar.", 'advertencia');
           setSubSolapaActiva('alta');
           return;
       }
 
-
-      // 3. Validar Formatos (Email / Teléfono)
+      // 3. Validar Formatos
       if (emailError || phoneError) { 
+        //alert("FRENADO EN PASO 3: Hay error en formato de Email o Teléfono");
         notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
         setSubSolapaActiva('alta');
         return;
       }
 
-      // 4. Validar DOCUMENTOS PRIMERO (Antes de Alumno)
+      // 4. Validar Documentos
       if (!pers.documentos || pers.documentos.length === 0) {
+        //alert("FRENADO EN PASO 4: La lista pers.documentos está vacía");
         notificar("⚠️ Error: Debes ir a la solapa 'Documentos' y agregar al menos un Documento a la grilla antes de continuar.", 'advertencia');
         setSubSolapaActiva('documentos');
         return;
       }
 
-
-      // -----------------------------------------------------------------
-      // 🛡️ NUEVO: CONTROL DE EXISTENCIA POR DOCUMENTO EN MODO ALTA
-      // -----------------------------------------------------------------
-      if (!isEditMode) {
-        setIsLoading(true);
-
-        for (const doc of pers.documentos) {
-          const tipoDoc = doc.id_tipo_documento;
-          const numDoc = String(doc.numero).trim();
-
-          if (tipoDoc && numDoc) {
-            // Se realiza la petición al backend para consultar si ya existe esa combinación
-            const resCheck = await fetch(`${process.env.REACT_APP_API_URL}/api/documentos/validar?tipo=${tipoDoc}&numero=${numDoc}`, {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (resCheck.ok) {
-              const dataCheck = await resCheck.json();
-              
-              // Si la API responde que ya existe
-              if (dataCheck.existe) {
-                setIsLoading(false);
-                avisar.error(`⚠️ Error: Ya existe una persona registrada con el documento N° ${numDoc}.`, 'error');
-                setSubSolapaActiva('documentos');
-                return; // ✋ Frena la grabación
-              }
-            }
-          }
-        }
-      }
-      // -----------------------------------------------------------------
-
-
-      // Normalización para saber si es Alumno ('S', 's', true, 1)
-      const esAlumno = pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1;
-
-      // 5. Validaciones si ES ALUMNO
+      // Validar datos de Alumno si corresponde
       if (esAlumno) {
         if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
-          notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!", 'advertencia');
+          //alert("FRENADO EN PASO 5: Faltan datos obligatorios del Alumno (Legajo, Calle, etc)");
+          notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno!", 'advertencia');
           setSubSolapaActiva('alumnos');
           return;
         }
 
         const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
-
         if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
+          alert("FRENADO EN PASO 5.B: Alumno no regular sin motivo de deserción");
           notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
           setSubSolapaActiva('alumnos');
           return;
         }
-
-        // Validaciones en Allegados (que no queden inconclusos)
-        if (pers.allegados && pers.allegados.length > 0) {
-          for (let item of pers.allegados) {
-            if (!item.Tutor || !item.tutor || !item.activo) {
-              notificar("⚠️ Error: Hay filas en la tabla de Allegados con datos incompletos.", 'advertencia');
-              setSubSolapaActiva('alumnoAllegados');
-              return;
-            }
-          }
-        }
       }
 
+      //alert("PASO 6: Pasó todas las validaciones. Iniciando guardado en Backend...");
       setIsLoading(true);
 
       const { documentos, allegados, ...todo } = pers;
@@ -454,7 +419,7 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
 
       const methodPersona = isEditMode ? 'PUT' : 'POST'; 
 
-      // 1. Guardar Persona
+      // 1. Persona
       const responsePersona = await fetch(urlPersona, {
         method: methodPersona,
         headers: {
@@ -471,70 +436,73 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
       }
 
       let idPersonaFinal = isEditMode ? id : null;
-      
       if (!isEditMode && resultadoPersona) {
-        idPersonaFinal = 
-          resultadoPersona.id_persona || 
-          resultadoPersona.id ||
-          (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona) || 
-          (resultadoPersona.rows && resultadoPersona.rows[0]?.id) ||
-          resultadoPersona.data?.id_persona || 
-          resultadoPersona.data?.id ||
-          (Array.isArray(resultadoPersona) ? resultadoPersona[0]?.id_persona : null) ||
-          (Array.isArray(resultadoPersona) ? resultadoPersona[0] : null);
+        idPersonaFinal = resultadoPersona.id_persona || resultadoPersona.id || (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona);
       }
+      if (!idPersonaFinal) idPersonaFinal = id;
 
-      if (!idPersonaFinal && typeof resultadoPersona === 'object') {
-         const valoresObjeto = Object.values(resultadoPersona);
-         const posibleId = valoresObjeto.find(v => typeof v === 'number');
-         if (posibleId) idPersonaFinal = posibleId;
-      }
+      //alert("PASO 7: Persona guardada con éxito (ID: " + idPersonaFinal + "). Guardando documentos...");
 
-      if (!idPersonaFinal) {
-        throw new Error(`El backend guardó la persona pero no devolvió un ID reconocible.`);
-      }
-
-// 2. Guardar Documentos (CORREGIDO)
+// ==========================================
+      // 2. DOCUMENTOS (CORREGIDO)
+      // ==========================================
       const promesasDocumentos = documentos.map(async (doc) => {
-        // Detectar si el documento ya tiene un ID de registro asignado previamente en la BD
         const idRelacionDoc = doc.id_persona_tipo_documento || doc.id_documento || doc.id;
-        const esNuevoDocumento = !isEditMode || !idRelacionDoc;
+        
+        // Un documento es temporalmente nuevo si:
+        // - No tiene ID de relación.
+        // - Su ID de relación es un timestamp de JavaScript (Date.now() es mayor a 1000000000000).
+        // - O si no estamos en modo edición de persona.
+        const esNuevoDocumento = 
+          !isEditMode || 
+          !idRelacionDoc || 
+          Number(idRelacionDoc) > 1000000000000; 
 
         const urlDoc = esNuevoDocumento
           ? `${process.env.REACT_APP_API_URL}/api/documentos`
           : `${process.env.REACT_APP_API_URL}/api/documentos/${idRelacionDoc}`;
 
-        const methodDoc = esNuevoDocumento ? 'POST' : 'PUT';
+        const metodo = esNuevoDocumento ? 'POST' : 'PUT';
 
-        const datosAEnviarDoc = {
+        // Armamos el payload limpio para enviar al backend
+        const payloadDoc = {
           id_persona: Number(idPersonaFinal), 
           id_tipo_documento: Number(doc.id_tipo_documento),
-          numero: String(doc.numero).trim(), // Trim para limpiar espacios extra
-          activo: doc.activo || 'S',
-          id_persona_tipo_documento: idRelacionDoc ? Number(idRelacionDoc) : null
+          numero: String(doc.numero).trim(),
+          activo: doc.activo || 'S'
         };
 
-        console.log(`📡 Enviando Documento (${methodDoc}):`, datosAEnviarDoc);
+        // Si es una edición real en el backend, le mandamos el ID intermedio de la tabla pivote
+        if (!esNuevoDocumento) {
+          payloadDoc.id_persona_tipo_documento = Number(idRelacionDoc);
+        }
 
         const resDoc = await fetch(urlDoc, {
-          method: methodDoc,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
+          method: metodo,
+          headers: { 
+            'Content-Type': 'application/json', 
+            'Authorization': `Bearer ${token}` 
           },
-          body: JSON.stringify(datosAEnviarDoc)
+          body: JSON.stringify(payloadDoc)
         });
 
         if (!resDoc.ok) {
-          const errData = await resDoc.json().catch(() => ({}));
-          throw new Error(`Documento N° ${doc.numero}: ${errData.error || errData.mensaje || 'Fallo al procesar en la BD'}`);
+          const errBody = await resDoc.json().catch(() => ({}));
+          throw new Error(`Error al guardar documento (${metodo}): ${errBody.error || errBody.mensaje || resDoc.statusText}`);
         }
-        return resDoc.json();
+
+        return resDoc;
       });
 
       await Promise.all(promesasDocumentos);
 
-      // 3. Guardar Alumno
+      //alert("PASO 8: Documentos guardados. ¿Es alumno?: " + esAlumno);
+
+// ------------------------------------------------------------------
+      // 3. GUARDAR / ACTUALIZAR ALUMNO Y OBTENER SU id_alumno REAL
+      // ------------------------------------------------------------------
+      let idAlumnoFinal = null;
+
       if (esAlumno) {
         const esNuevoAlumno = !isEditMode || !hasAlumnoRecord;
         const urlAlumno = esNuevoAlumno 
@@ -553,71 +521,175 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
           body: JSON.stringify(datosAlumno)
         });
 
+        const resultadoAlumno = await resAlumno.json().catch(() => ({}));
+
         if (!resAlumno.ok) {
-          const errAlumno = await resAlumno.json().catch(() => ({}));
-          throw new Error(`Error en datos de Alumno: ${errAlumno.error || errAlumno.mensaje || 'No se pudo guardar la información escolar.'}`);
+          throw new Error(`Error en datos de Alumno: ${resultadoAlumno.error || resultadoAlumno.mensaje || 'No se pudo guardar la información escolar.'}`);
         }
 
-        // 4. Guardar SOLO Allegados NUEVOS (OPCIÓN A APLICADA)
+        // Extraer el id_alumno devuelto por la API o del estado/formulario
+        idAlumnoFinal = 
+          resultadoAlumno.id_alumno || 
+          resultadoAlumno.id || 
+          (resultadoAlumno.data && resultadoAlumno.data.id_alumno) ||
+          pers.id_alumno || 
+          todo.id_alumno;
+
+        // Si es un PUT y la API no lo devuelve en la respuesta, usamos el de la propiedad
+        if (!idAlumnoFinal && isEditMode) {
+          idAlumnoFinal = pers.id_alumno || todo.id_alumno;
+        }
+
+        //console.log(`✅ ID Persona: ${idPersonaFinal} | ID Alumno confirmado: ${idAlumnoFinal}`);
+
+        if (!idAlumnoFinal) {
+          throw new Error("Se guardó el alumno pero no se pudo obtener el 'id_alumno' (ID 135) para vincular los allegados.");
+        }
+
+        // ------------------------------------------------------------------
+        // 4. GUARDAR / ACTUALIZAR ALLEGADOS (POST Y PUT)
+        // ------------------------------------------------------------------
+
+
         if (allegados && allegados.length > 0) {
           
-          // 🎯 FILTRADO EXCLUSIVO: ignora las filas ya persistidas previamente
-          const allegadosNuevos = allegados.filter(all => {
-            const esTemporal = String(all.id_persona).startsWith('temp-');
-            return all.esNuevo || esTemporal;
-          });
+// REEMPLAZAR LA FUNCIÓN EN ItemPersonaDetail.js (alrededor de la línea 488)
+const parseIdPersona = (item) => {
+  if (!item) return null;
 
-          if (allegadosNuevos.length > 0) {
-            const promesasAllegados = allegadosNuevos.map(async (all) => {
-              
-              const urlAllegado = `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`;
+  // Priorizar id_persona o id_persona_real
+  const posiblesIds = [
+    item.id_persona,
+    item.id_persona_real,
+    item.id_persona_allegado,
+    item.id_persona_tutor,
+    item.idPersona
+  ];
 
-              // Helper para convertir enteros o retornar null limpia y explícitamente
-              const parseOrNull = (val) => {
-                const n = Number(val);
-                return isNaN(n) || n === 0 ? null : n;
-              };
+  for (const val of posiblesIds) {
+    if (val !== undefined && val !== null) {
+      const sVal = String(val).trim();
+      // Ignoramos cadenas 'temp-...' pero extraemos el número válido
+      if (!sVal.startsWith('temp-') && !isNaN(Number(sVal)) && Number(sVal) > 0) {
+        return Number(sVal);
+      }
+    }
+  }
+  return null;
+};
 
-              const payloadAllegado = {
-                id_persona: parseOrNull(all.id_persona_real || all.id_persona),
-                id_alumno: Number(pers.id_alumno),
-                id_tipo_allegado: parseOrNull(all.id_tipo_allegado || all.nombre),
-                id_estudio_alcanzado: parseOrNull(all.id_estudio_alcanzado || all.id_nivel_estudio || all.nivel_estudio_tutor),
-                id_ocupacion: parseOrNull(all.id_ocupacion || all.ocupacion_tutor),
-                tutor: all.tutor || 'S',
-                activo: all.activo || 'S'
-              };
+ 
+          // Helper auxiliar dentro de la función de guardado para extraer el ID correcto
+          const resolverId = (val1, val2, val3) => {
+            const n = Number(val1 || val2 || val3);
+            return isNaN(n) || n === 0 ? null : n;
+          };
 
-              const resAllegado = await fetch(urlAllegado, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(payloadAllegado)
-              });
+// En ItemPersonaDetail.js dentro de la función grabar()
 
-              if (!resAllegado.ok) {
-                const errAllegado = await resAllegado.json().catch(() => ({}));
-                throw new Error(`Fallo al insertar allegado: ${errAllegado.error || errAllegado.mensaje || ''}`);
-              }
+// Un allegado es NUEVO (POST) si tiene la marca esNuevo, su id empieza con 'temp-' o NO tiene ID de relación previo
+const allegadosNuevos = allegados.filter(all => 
+  all.esNuevo || 
+  String(all.id_persona || '').startsWith('temp-') || 
+  !all.id_alumno_tutor
+);
+
+// Un allegado es EXISTENTE (PUT) si tiene id_alumno_tutor asignado y NO es una fila nueva
+const allegadosExistentes = allegados.filter(all => 
+  !all.esNuevo && 
+  !String(all.id_persona || '').startsWith('temp-') && 
+  Boolean(all.id_alumno_tutor)
+);
+
+          // A) ALTAS (POST)
+          for (const all of allegadosNuevos) {
+            const idP = parseIdPersona(all);
+
+            if (!idP) {
+              throw new Error(`Uno de los allegados nuevos no tiene un ID de persona válido asignado.`);
+            }
+
+            const payloadPost = {
+              id_persona: idP,
+              id_alumno: Number(idAlumnoFinal),
+              // Resolvemos todas las posibles variaciones de nombres de campos que vienen del backend
+              id_tipo_allegado: resolverId(all.id_tipo_allegado, all.id_parentesco, all.id_tipo_parentesco),
+              id_estudio_alcanzado: resolverId(all.id_estudio_alcanzado, all.id_nivel_estudio, all.id_estudio),
+              id_ocupacion: resolverId(all.id_ocupacion, all.id_ocupacion_tutor),
+              tutor: all.tutor || all.Tutor || 'S',
+              activo: all.activo || 'S'
+            };
+
+            const resPost = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+              },
+              body: JSON.stringify(payloadPost)
             });
 
-            await Promise.all(promesasAllegados);
+            if (!resPost.ok) {
+              const errBody = await resPost.json().catch(() => ({}));
+              throw new Error(`Error al INSERTAR allegado (POST): ${errBody.error || errBody.message || errBody.mensaje || resPost.statusText}`);
+            }
+          }
+
+          // B) ACTUALIZACIONES (PUT)
+          for (const all of allegadosExistentes) {
+            const idRelacion = all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores || all.id;
+
+            // 🎯 SI LA FILA NO FUE EDITADA CON EL LÁPIZ, RESOLVEMOS SUS IDs BUSCANDO POR TEXTO EN LOS CATÁLOGOS/FILA
+            // Si ya existía el id numérico (porque editó la fila) se usa, sino lo busca o rescata de la respuesta
+            const idTipoAllegadoFinal = all.id_tipo_allegado || all.id_parentesco || null;
+            const idEstudioFinal = all.id_estudio_alcanzado || all.id_nivel_estudio || all.id_estudio || null;
+            const idOcupacionFinal = all.id_ocupacion || null;
+
+            const payloadPut = {
+              id_alumno_tutor: idRelacion ? Number(idRelacion) : undefined,
+              id_persona: Number(all.id_persona),
+              id_alumno: Number(idAlumnoFinal),
+              
+              // Si no presionaron el lápiz, idTipoAllegadoFinal será null pero enviamos los fallback numéricos o buscados:
+              id_tipo_allegado: idTipoAllegadoFinal ? Number(idTipoAllegadoFinal) : null,
+              id_estudio_alcanzado: idEstudioFinal ? Number(idEstudioFinal) : null,
+              id_ocupacion: idOcupacionFinal ? Number(idOcupacionFinal) : null,
+              
+              tutor: all.tutor || all.Tutor || 'S',
+              activo: all.activo || 'S'
+            };
+
+            const urlPut = idRelacion 
+              ? `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores/${idRelacion}`
+              : `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`;
+
+            const resPut = await fetch(urlPut, {
+              method: 'PUT',
+              headers: { 
+                'Content-Type': 'application/json', 
+                'Authorization': `Bearer ${token}` 
+              },
+              body: JSON.stringify(payloadPut)
+            });
+
+            if (!resPut.ok) {
+              const errBody = await resPut.json().catch(() => ({}));
+              throw new Error(`Error al ACTUALIZAR allegado (PUT): ${errBody.error || errBody.message || errBody.mensaje || resPut.statusText}`);
+            }
           }
         }
       }
 
-      notificar(isEditMode ? '¡Datos, documentos, alumno y allegados actualizados!' : '¡Registro completo guardado con éxito!', 'exito');
+      //alert("PASO FINAL: ¡Guardado completado exitosamente!");
       navigate('/personas/abm'); 
 
     } catch (error) {
-      console.error('Error en el proceso de guardado:', error); 
-      alert('Hubo un problema al procesar el guardado:\n' + error.message);
+      alert("❌ ERROR EN EL PROCESO DE GUARDADO: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   if (isLoading) return <Spinner />;
 
