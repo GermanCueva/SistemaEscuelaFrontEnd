@@ -61,10 +61,10 @@ const ItemDetailPersona = () => {
       } else if (avisar && typeof avisar.advertencia === 'function') {
         avisar.advertencia(mensaje);
       } else {
-        alert(mensaje);
+        avisar.advertencia(mensaje);
       }
     } catch (e) {
-      alert(mensaje);
+      avisar.error(mensaje);
     }
   };
 
@@ -271,7 +271,7 @@ const ItemDetailPersona = () => {
       return true;
     } catch (error) {
       console.error('Error al eliminar el documento:', error);
-      alert('Hubo un problema al eliminar el documento:\n' + error.message);
+      avisar.error('Hubo un problema al eliminar el documento:\n' + error.message);
       return false;
     } finally {
       setIsLoading(false);
@@ -280,6 +280,9 @@ const ItemDetailPersona = () => {
 
 const eliminarAllegadoBackend = async (idPersonaAllegado) => {
   const token = localStorage.getItem('token');
+
+            const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este allegado?");
+            if (!confirmar) return;
 
   try {
     setIsLoading(true);
@@ -313,7 +316,7 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
 
   } catch (error) {
     console.error("Error al eliminar allegado:", error);
-    alert("Ocurrió un error al eliminar:\n" + error.message);
+    avisar.error("Ocurrió un error al eliminar:\n" + error.message);
   } finally {
     setIsLoading(false);
   }
@@ -383,7 +386,7 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
 
         const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
         if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
-          alert("FRENADO EN PASO 5.B: Alumno no regular sin motivo de deserción");
+          //alert("FRENADO EN PASO 5.B: Alumno no regular sin motivo de deserción");
           notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
           setSubSolapaActiva('alumnos');
           return;
@@ -392,41 +395,72 @@ const eliminarAllegadoBackend = async (idPersonaAllegado) => {
 
       
 // =========================================================================
-  // VALIDADOR ESTRICTO CON TOASTIFY: OBLIGATORIEDAD DE ALLEGADOS
+  // VALIDADOR DE ALLEGADOS SEGURO
   // =========================================================================
+  
+  // Extraemos los allegados asegurando que si es undefined devuelva un array vacío
+  const allegadosParaValidar = pers?.allegados || [];
 
-  const allegadosParaValidar = pers?.allegados;
-
-  if (!allegadosParaValidar || allegadosParaValidar.length === 0) {
-    // 1. Mostrar la alerta flotante de advertencia
+  if (allegadosParaValidar.length === 0) {
     avisar.advertencia('Debe ingresar obligatoriamente al menos un allegado antes de registrar al alumno.');
-    
-    // 2. Redirigir inmediatamente a la pestaña de Allegados
-    // (Reemplazá el 2 por el índice de tu pestaña de Allegados si es necesario)
-    setSubSolapaActiva('alumnoAllegados'); 
-    
+    setSubSolapaActiva('alumnoAllegados');
     return; // Frena la grabación
   }
 
-  // =========================================================================
-  // VALIDADOR DETALLADO: CAMPOS REQUERIDOS DENTRO DE LOS ALLEGADOS
-  // =========================================================================
+  // VALIDACIÓN DE CAMPOS SEGUNDO PASO: 
+  // Modificamos esto para que sea menos estricto con los nombres internos si estás en otra pestaña
   const allegadosIncompletos = allegadosParaValidar.filter(all => {
-    const tieneTipo = Boolean(all.id_tipo_allegado || all.id_parentesco);
-    const tienePersona = Boolean(all.id_persona || all.id_persona_real);
-    return !tieneTipo || !tienePersona;
+    // Si el allegado tiene un nombre o una persona asignada, asumimos que está iniciado
+    const tienePersona = Boolean(all.id_persona || all.id_persona_real || all.nombre || all.apellido || all.id);
+    const tieneTipo = Boolean(all.id_tipo_allegado || all.id_parentesco || all.tipo_allegado || all.parentesco);
+    
+    // Solo lo consideramos incompleto si explícitamente le falta la persona o el tipo
+    return !tienePersona || !tieneTipo;
   });
 
-  if (allegadosIncompletos.length > 0) {
+  // ATENCIÓN ACÁ: Si estás en otra pestaña y te tira falsos positivos,
+  // añadimos la condición de que solo salte si realmente estás viendo la solapa de allegados,
+  // o si el objeto está verdaderamente vacío.
+  if (allegadosIncompletos.length > 0 && subSolapaActiva === 'alumnoAllegados') {
     avisar.advertencia('Por favor, complete los campos obligatorios (Parentesco y Persona) de todos los allegados.');
-    
-    // Redirigir inmediatamente a la pestaña de Allegados
-    setSubSolapaActiva('alumnoAllegados'); 
-    
+    // =========================================================================
+  // VALIDADOR DE ALLEGADOS SEGURO
+  // =========================================================================
+  
+  // Extraemos los allegados asegurando que si es undefined devuelva un array vacío
+  const allegadosParaValidar = pers?.allegados || [];
+
+  if (allegadosParaValidar.length === 0) {
+    avisar.advertencia('Debe ingresar obligatoriamente al menos un allegado antes de registrar al alumno.');
+    setSubSolapaActiva('alumnoAllegados');
     return; // Frena la grabación
   }
 
+  // VALIDACIÓN DE CAMPOS SEGUNDO PASO: 
+  // Modificamos esto para que sea menos estricto con los nombres internos si estás en otra pestaña
+  const allegadosIncompletos = allegadosParaValidar.filter(all => {
+    // Si el allegado tiene un nombre o una persona asignada, asumimos que está iniciado
+    const tienePersona = Boolean(all.id_persona || all.id_persona_real || all.nombre || all.apellido || all.id);
+    const tieneTipo = Boolean(all.id_tipo_allegado || all.id_parentesco || all.tipo_allegado || all.parentesco);
+    
+    // Solo lo consideramos incompleto si explícitamente le falta la persona o el tipo
+    return !tienePersona || !tieneTipo;
+  });
 
+  // ATENCIÓN ACÁ: Si estás en otra pestaña y te tira falsos positivos,
+  // añadimos la condición de que solo salte si realmente estás viendo la solapa de allegados,
+  // o si el objeto está verdaderamente vacío.
+  if (allegadosIncompletos.length > 0 && subSolapaActiva === 'alumnoAllegados') {
+    avisar.advertencia('Por favor, complete los campos obligatorios (Parentesco y Persona) de todos los allegados.');
+        // Redirigir inmediatamente a la pestaña de Allegados
+    setSubSolapaActiva('alumnoAllegados'); 
+    return; // Frena la grabación
+  }
+  }
+
+    
+
+    
 
       //alert("PASO 6: Pasó todas las validaciones. Iniciando guardado en Backend...");
       setIsLoading(true);
@@ -744,7 +778,7 @@ const allegadosExistentes = allegados.filter(all => {
       navigate('/personas/abm'); 
 
     } catch (error) {
-      alert("❌ ERROR EN EL PROCESO DE GUARDADO: " + error.message);
+      avisar.error("❌ ERROR EN EL PROCESO DE GUARDADO: " + error.message);
     } finally {
       setIsLoading(false);
     }

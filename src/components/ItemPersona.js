@@ -8,6 +8,9 @@ const ItemPersona = ({ apellido, nombre, id_persona, tipo_documento, numero, tip
 
   const cambiar_estado = async (e) => {
     e.preventDefault();
+
+        const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta persona?");
+            if (!confirmar) return;
    
   const token = localStorage.getItem('token');
 

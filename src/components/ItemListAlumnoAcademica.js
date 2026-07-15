@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search, Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { avisar } from "../utils/notificaciones";
+
 
 // Helper global totalmente seguro para convertir a minúsculas
 const aTextoLower = (val) => {
@@ -179,7 +181,7 @@ const handleSaveRow = (id_persona_original) => {
   const idOcupacion = Number(editForm.id_ocupacion);
 
   if (!idTipo || !idEstudio || !idOcupacion || !editForm.Tutor || !editForm.activo || !editForm.tutor) {
-    alert("Por favor, complete todos los campos requeridos.");
+    avisar.advertencia("Por favor, complete todos los campos requeridos.");
     return;
   }
 
@@ -189,7 +191,7 @@ const handleSaveRow = (id_persona_original) => {
     : (editForm.id_persona || editForm.id_persona_real);
 
   if (!idPersonaElegida || String(idPersonaElegida).startsWith("temp-")) {
-    alert("Debe seleccionar una persona válida desde la lista desplegable del buscador.");
+    avisar.advertencia("Debe seleccionar una persona válida desde la lista desplegable del buscador.");
     return;
   }
 

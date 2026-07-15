@@ -67,7 +67,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         e.preventDefault();
 
         if (!formData.id_tipo_documento || !formData.numero || !formData.activo) {
-            alert("¡Error! Por favor complete todos los campos obligatorios.");
+            avisar.advertencia("¡Error! Por favor complete todos los campos obligatorios.");
             return;
         }
 
@@ -108,7 +108,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         const esDocumentoPersistido = documentoCompleto.id_persona_tipo_documento && String(documentoCompleto.id_persona_tipo_documento).length < 10;
 
         if (isEditMode && esDocumentoPersistido) {
-            const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este documento del servidor?");
+            const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este documento?");
             if (!confirmar) return;
 
             // Invoca al endpoint pasándole el id del registro intermedio/documento
