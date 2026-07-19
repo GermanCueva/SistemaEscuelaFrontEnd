@@ -1,645 +1,344 @@
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { Link } from "react-router-dom";
-import { Search, Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
 import { avisar } from "../utils/notificaciones";
 
-
-// Helper global totalmente seguro para convertir a minúsculas
-const aTextoLower = (val) => {
-  if (val === null || val === undefined) return "";
-  return String(val).trim().toLowerCase();
-};
-
-const ItemListAlumnoAcademica = ({
-  allegados = [],
-  setAllegados,
-  onEliminarAllegado,
-  onRecargar,
-}) => {
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({});
-  const [listaEstudios, setEstudios] = useState([]);
-  const [listaOcupaciones, setOcupaciones] = useState([]);
-  const [listaTiposAllegados, setTiposAllegados] = useState([]);
-  const [listaPersonas, setListaPersonas] = useState([]);
-  const [personaSeleccionada, setPersonaSeleccionada] = useState(null);
-
+const ItemListAlumnoAcademica = ({ idAlumno, idPersona, onCambioDatos, onEliminarBackend }) => {
+  const [listado, setListado] = useState([]);
+  const [cargando, setCargando] = useState(false);
   const token = localStorage.getItem("token");
+  const idFinal = idAlumno;
 
-// Prevenir errores si allegados no es un array válido (Memorizado para evitar advertencias de React)
-const listaAllegados = useMemo(() => {
-  return Array.isArray(allegados) ? allegados : [];
-}, [allegados]);
+  // Estados para catálogos
+  const [listaGrados, setGrados] = useState([]);
+  const [listaAniosCursado, setAniosCursado] = useState([]);
+  const [listaDivisiones, setDivisiones] = useState([]);
 
+  // Estados para el manejo del CRUD local
+  const [editingId, setEditingId] = useState(null); 
+  const [editForm, setEditForm] = useState({});
+  const [isAdding, setIsAdding] = useState(false);
+  const [newForm, setNewForm] = useState({
+      id_grado: "", id_division: "", id_anio_cursado: "", genero_cargo: "", pago_cargo: ""  
+  });
 
-  // --- CARGA DE CATÁLOGOS ---
-  const obtenerOcupaciones = useCallback(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/ocupacion`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setOcupaciones(Array.isArray(data) ? data : []))
-      .catch(() => setOcupaciones([]));
+  // --- 1. OBTENER CATÁLOGOS ---
+  const obtenerCatalogos = useCallback(async () => {
+    try {
+      const [resGrados, resAnios, resDivisiones] = await Promise.all([
+        fetch(`${process.env.REACT_APP_API_URL}/api/academica/grado`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.REACT_APP_API_URL}/api/academica/aniocursado`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${process.env.REACT_APP_API_URL}/api/academica/division`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+      
+      const g = await resGrados.json().catch(() => []);
+      const a = await resAnios.json().catch(() => []);
+      const d = await resDivisiones.json().catch(() => []);
+
+      setGrados(Array.isArray(g) ? g : (g.data && Array.isArray(g.data) ? g.data : []));
+      setAniosCursado(Array.isArray(a) ? a : (a.data && Array.isArray(a.data) ? a.data : []));
+      setDivisiones(Array.isArray(d) ? d : (d.data && Array.isArray(d.data) ? d.data : []));
+      
+    } catch (err) {
+      console.error("Error al cargar catálogos:", err);
+    }
   }, [token]);
 
-  const obtenerEstudios = useCallback(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/estudio`, {
+  // --- 2. OBTENER LISTADO INICIAL ---
+  const obtenerListado = useCallback((idAlum) => {
+    if (!idAlum) return;
+    setCargando(true);
+    fetch(`${process.env.REACT_APP_API_URL}/api/academica/${idAlum}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
-      .then((data) => setEstudios(Array.isArray(data) ? data : []))
-      .catch(() => setEstudios([]));
-  }, [token]);
-
-  const obtenerTiposAllegado = useCallback(() => {
-    fetch(`${process.env.REACT_APP_API_URL}/api/tipoallegado`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setTiposAllegados(Array.isArray(data) ? data : []))
-      .catch(() => setTiposAllegados([]));
+      .then((data) => {
+        setListado(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setListado([]))
+      .finally(() => setCargando(false));
   }, [token]);
 
   useEffect(() => {
-    obtenerOcupaciones();
-    obtenerEstudios();
-    obtenerTiposAllegado();
-  }, [obtenerOcupaciones, obtenerEstudios, obtenerTiposAllegado]);
+    obtenerCatalogos();
+    if (idFinal) obtenerListado(idFinal);
+  }, [idFinal, obtenerListado, obtenerCatalogos]);
 
-  // --- BÚSQUEDA DINÁMICA DE PERSONAS ---
-  const obtenerDatosTodos = useCallback(
-    (textoABuscar) => {
-      if (!textoABuscar || textoABuscar.trim().length < 2 || textoABuscar.includes("DNI:")) {
-        return;
-      }
+  const handleAddChange = (e) => setNewForm({ ...newForm, [e.target.name]: e.target.value });
+  const handleEditChange = (e) => setEditForm({ ...editForm, [e.target.name]: e.target.value });
 
-      fetch(
-        `${process.env.REACT_APP_API_URL}/api/personsconfiltro/apellidodocumento/${encodeURIComponent(textoABuscar)}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      )
-        .then((res) => res.json())
-        .then((data) => setListaPersonas(Array.isArray(data) ? data : []))
-        .catch(() => setListaPersonas([]));
-    },
-    [token]
-  );
+const guardarNuevo = () => {
 
-  // --- BUSCADORES AUXILIARES DE CATALOGO ---
-const resolverTipoAllegado = useCallback((p) => {
-  const rawId = p.id_tipo_allegado || p.id_parentesco;
-  const rawText = p.nombre_tipo_allegado || p.parentesco || p.nombre;
-
-  return listaTiposAllegados.find(
-    (t) =>
-      (rawId && String(t.id_tipo_allegado || t.id) === String(rawId)) ||
-      (rawText && aTextoLower(t.nombre || t.descripcion) === aTextoLower(rawText))
-  );
-}, [listaTiposAllegados]);
-
-const resolverEstudio = useCallback((p) => {
-  const rawId = p.id_nivel_estudio || p.id_estudio_alcanzado || p.id_estudio;
-  const rawText = p.nivel_estudio_tutor || p.estudio_alcanzado || p.estudio;
-
-  return listaEstudios.find(
-    (e) =>
-      (rawId && String(e.id_nivel_estudio || e.id_estudio || e.id_estudio_alcanzado || e.id) === String(rawId)) ||
-      (rawText && aTextoLower(e.nombre || e.descripcion) === aTextoLower(rawText))
-  );
-}, [listaEstudios]);
-
-const resolverOcupacion = useCallback((p) => {
-  const rawId = p.id_ocupacion;
-  const rawText = p.ocupacion_tutor || p.ocupacion;
-
-  return listaOcupaciones.find(
-    (o) =>
-      (rawId && String(o.id_ocupacion || o.id) === String(rawId)) ||
-      (rawText && aTextoLower(o.nombre || o.descripcion) === aTextoLower(rawText))
-  );
-}, [listaOcupaciones]);
-
-  // --- HANDLER EDICIÓN ---
-  const handleEditClick = (p) => {
-    const targetId = p.id_persona || p.id_persona_allegado || p.id;
-    setEditingId(targetId);
-
-    const tipo = resolverTipoAllegado(p);
-    const estudio = resolverEstudio(p);
-    const ocupacion = resolverOcupacion(p);
-
-    setEditForm({
-      ...p,
-      Tutor: p.Tutor || (p.apellidos ? `${p.apellidos} ${p.nombres} - DNI: ${p.numero || ""}` : ""),
-      id_tipo_allegado: tipo ? String(tipo.id_tipo_allegado || tipo.id) : String(p.id_tipo_allegado || p.id_parentesco || ""),
-      id_nivel_estudio: estudio ? String(estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id) : String(p.id_nivel_estudio || p.id_estudio_alcanzado || p.id_estudio || ""),
-      id_ocupacion: ocupacion ? String(ocupacion.id_ocupacion || ocupacion.id) : String(p.id_ocupacion || ""),
-      tutor: p.tutor ?? "",
-      activo: p.activo ?? "",
-    });
-  };
-
- const handleInputChange = async (field, valor) => {
-  //console.log(field, valor);
-
-  if (field === "Tutor") {
-    // 1. Obtenemos los resultados actualizados de la búsqueda
-    const personasFrenscas = await obtenerDatosTodos(valor); 
-
-    setEditForm((prev) => {
-      const updated = { ...prev, Tutor: valor };
-
-      // 2. Buscamos en la lista recién obtenida o en la existente
-      const listaABuscar = personasFrenscas || listaPersonas;
-      const match = listaABuscar.find((item) => {
-        const fmt = item.descripcion || `${item.apellidos || item.apellido} ${item.nombres || item.nombre} - DNI: ${item.numero || item.numero_dni || item.dni}`;
-        return fmt === valor;
-      });
-
-      if (match) {
-        setPersonaSeleccionada(match);
-        
-        // 3. Guardamos el ID detectando cuál propiedad existe en la respuesta
-        const idEncontrado = match.id_persona || match.id || match.idPersona;
-        
-        updated.id_persona = idEncontrado;
-        updated.id_allegado_persona = idEncontrado; // Por si tu backend usa este campo
-      }
-
-      return updated;
-    });
-  } else {
-    setEditForm((prev) => ({ ...prev, [field]: valor }));
-  }
-};
-
- // REEMPLAZAR handleSaveRow EN ItemListAlumnoAllegados.js
-const handleSaveRow = (id_persona_original) => {
-  const idTipo = Number(editForm.id_tipo_allegado);
-  const idEstudio = Number(editForm.id_nivel_estudio);
-  const idOcupacion = Number(editForm.id_ocupacion);
-
-  if (!idTipo || !idEstudio || !idOcupacion || !editForm.Tutor || !editForm.activo || !editForm.tutor) {
-    avisar.advertencia("Por favor, complete todos los campos requeridos.");
-    return;
-  }
-
-  // 1. Buscamos el ID de la persona elegida en el buscador (o dejamos el que ya tenía)
-  const idPersonaElegida = personaSeleccionada
-    ? (personaSeleccionada.id_persona || personaSeleccionada.id)
-    : (editForm.id_persona || editForm.id_persona_real);
-
-  if (!idPersonaElegida || String(idPersonaElegida).startsWith("temp-")) {
-    avisar.advertencia("Debe seleccionar una persona válida desde la lista desplegable del buscador.");
-    return;
-  }
-
-  // 2. Determinamos si es un alta nueva o si estamos modificando una fila que YA existía en el backend
-  const esAltaNueva = String(id_persona_original).startsWith("temp-") || editForm.esNuevo;
-
-  // Obtener objetos descriptivos para la vista
-  const tipoObj = listaTiposAllegados.find((t) => Number(t.id_tipo_allegado || t.id) === idTipo);
-  const estudioObj = listaEstudios.find((e) => Number(e.id_nivel_estudio || e.id_estudio || e.id_estudio_alcanzado || e.id) === idEstudio);
-  const ocupacionObj = listaOcupaciones.find((o) => Number(o.id_ocupacion || o.id) === idOcupacion);
-
-  const nuevaFilaActualizada = {
-    ...editForm,
-    id_persona: Number(idPersonaElegida),
-    id_persona_real: Number(idPersonaElegida),
-    id_tipo_allegado: idTipo,
-    id_nivel_estudio: idEstudio,
-    id_estudio_alcanzado: idEstudio,
-    id_ocupacion: idOcupacion,
-    
-    // 🎯 CLAVE DE LA SOLUCIÓN:
-    // Mantener explícitamente el ID de la relación con la base de datos si existía previamente
-    id_alumno_tutor: editForm.id_alumno_tutor || editForm.id_persona_allegado || null,
-    esNuevo: esAltaNueva, // Solo será TRUE si la fila se creó desde el botón "Agregar Allegado"
-
-    // Textos para la tabla
-    nombre_tipo_allegado: tipoObj ? (tipoObj.nombre || tipoObj.descripcion) : editForm.nombre_tipo_allegado,
-    nivel_estudio_tutor: estudioObj ? (estudioObj.nombre || estudioObj.descripcion) : editForm.nivel_estudio_tutor,
-    estudio_alcanzado: estudioObj ? (estudioObj.nombre || estudioObj.descripcion) : editForm.estudio_alcanzado,
-    ocupacion_tutor: ocupacionObj ? (ocupacionObj.nombre || ocupacionObj.descripcion) : editForm.ocupacion_tutor,
-  };
-
-  // 3. Reemplazamos la fila editada en el estado comparando contra el ID que tenía al abrir el lápiz
-  const nuevaLista = allegados.map((p) => {
-    const pId = p.id_persona || p.id_persona_allegado || p.id;
-    return pId === id_persona_original ? nuevaFilaActualizada : p;
-  });
-
-  setAllegados(nuevaLista);
-  setEditingId(null);
-  setListaPersonas([]);
-  setPersonaSeleccionada(null);
-};
-
-  const handleCancelRow = (id_persona) => {
-    if (String(id_persona).startsWith("temp-")) {
-      setAllegados(allegados.filter((p) => (p.id_persona || p.id) !== id_persona));
+  // 🛑 Control 2: Validamos que absolutamente TODOS los campos estén completos
+    if (
+      !newForm.id_grado || 
+      !newForm.id_division || 
+      !newForm.anio_cursada || // (o newForm.anio_cursada según lo hayas renombrado)
+      !newForm.genero_cargo || 
+      !newForm.pago_cargo
+    ) {
+      return avisar.advertencia("Por favor, complete todos los campos de la fila antes de continuar.");
     }
-    setEditingId(null);
-    setListaPersonas([]);
-    setPersonaSeleccionada(null);
+
+    // 🛑 CONTROL DE GRADO DUPLICADO
+    const gradoYaExiste = listado.some(
+      item => String(item.id_grado) === String(newForm.id_grado)
+    );
+
+    if (gradoYaExiste) {
+      return avisar.advertencia("⚠️ Este grado ya se encuentra agregado en la lista académica del alumno.");
+    }
+
+  const gradoObj = listaGrados.find(g => String(g.id_grado || g.id) === String(newForm.id_grado));
+  const divisionObj = listaDivisiones.find(d => String(d.id_division || d.id) === String(newForm.id_division));
+  
+  // 🌟 Buscamos en el catálogo usando el nuevo nombre
+  const anioObj = listaAniosCursado.find(a => String(a.id_anio || a.anio_cursada || a.id) === String(newForm.anio_cursada));
+
+  const valorGenero = newForm.genero_cargo || "N";
+  const valorPago = newForm.pago_cargo || "N";
+
+  const itemNuevo = {
+      id_academica: `temp-${Date.now()}`,
+      id_grado: newForm.id_grado,
+      nombre: gradoObj ? (gradoObj.nombre || gradoObj.grado) : "",
+      id_division: newForm.id_division,
+      division: divisionObj ? (divisionObj.division || divisionObj.nombre) : "Única",
+      
+      // 🌟 Asignamos de forma segura el entero para Postgres sin riesgo de NaN
+      anio_cursada: parseInt(newForm.anio_cursada, 10) || 0,
+      anio: anioObj ? (anioObj.anio || anioObj.nombre) : "",
+      
+      genero_costo_inscripcion: valorGenero,
+      genero_cargo: valorGenero,
+      pago_inscripcion: valorPago,
+      pago_cargo: valorPago,
+      id_alumno: idAlumno,
+      esNuevo: true
   };
 
-  const handleDeleteRow = (item) => {
-    const itemId = item.id_persona || item.id_persona_allegado || item.id;
-    const esNuevoSinGrabar = !item.id_persona_allegado || String(itemId).startsWith("temp-") || item.esNuevo;
+  const nuevoListado = [...listado, itemNuevo];
+  setListado(nuevoListado);
+  if (onCambioDatos) onCambioDatos(nuevoListado); 
 
-    if (esNuevoSinGrabar) {
-      if (typeof setAllegados === "function") {
-        setAllegados((prev) => {
-          const actual = Array.isArray(prev) ? prev : [];
-          return actual.filter((a) => (a.id_persona || a.id_persona_allegado || a.id) !== itemId);
-        });
+  setIsAdding(false);
+  // 🌟 Limpiamos el formulario con la propiedad correcta
+  setNewForm({ id_grado: "", id_division: "", anio_cursada: "", genero_cargo: "", pago_cargo: "" });
+  avisar.exito("Fila agregada a la lista.");
+};
+
+  // 🌟 CORRECCIÓN 1: Recibimos y usamos el INDEX de la fila para activar la edición de manera infalible
+  const iniciarEdicion = (item, indexFila) => {
+    setEditingId(indexFila);
+    
+    setEditForm({
+      id_grado: item.id_grado || '',
+      id_division: item.id_division || '',
+      // Mapeamos 'anio_cursada' que es la propiedad real con el ID del año de tu base de datos
+      id_anio: item.anio_cursada || '', 
+      genero_cargo: item.genero_costo_inscripcion || 'N', 
+      pago_cargo: item.pago_inscripcion || 'N'
+    });
+  };
+
+  // 🌟 CORRECCIÓN 2: Guardado adaptado al index y tipado seguro con String
+  const guardarEdicion = (indexFila) => {
+    const gradoObj = listaGrados.find(g => String(g.id_grado || g.id) === String(editForm.id_grado));
+    const divisionObj = listaDivisiones.find(d => String(d.id_division || d.id) === String(editForm.id_division));
+    const anioObj = listaAniosCursado.find(a => String(a.id_anio) === String(editForm.id_anio));
+
+    const nuevoListado = listado.map((item, idx) => {
+      if (idx === indexFila) {
+        const idAnioNuevo = anioObj ? parseInt(anioObj.id_anio) : (parseInt(editForm.id_anio) || item.anio_cursada);
+        const textoAnioNuevo = anioObj ? anioObj.anio : item.anio;
+
+        // 🌟 Forzamos los valores del formulario pase lo que pase
+      const valorGenero = editForm.genero_cargo;
+      const valorPago = editForm.pago_cargo;
+
+        return {
+          ...item,
+          id_grado: editForm.id_grado,
+          nombre: gradoObj?.nombre || item.nombre,
+          id_division: editForm.id_division,
+          division: divisionObj?.division || item.division,
+          anio_cursada: idAnioNuevo, 
+          anio: textoAnioNuevo, 
+// 🔄 Sincronización Total: Asignamos el nuevo valor a AMBOS campos de forma explícita
+        genero_costo_inscripcion: valorGenero,
+        genero_cargo: valorGenero,
+        
+        pago_inscripcion: valorPago,
+        pago_cargo: valorPago
+        };
       }
+      return item;
+    });
+
+    setListado(nuevoListado);
+    if (onCambioDatos) onCambioDatos(nuevoListado); 
+    setEditingId(null);
+    avisar.exito("Fila modificada.");
+  };
+
+  const eliminarRegistro = async (idRegistro) => {
+    if (String(idRegistro).startsWith("temp-")) {
+      const nuevoListado = listado.filter(item => (item.id_academica || item.id) !== idRegistro);
+      setListado(nuevoListado);
+      if (onCambioDatos) onCambioDatos(nuevoListado);
       return;
     }
 
-    if (onEliminarAllegado) {
-      onEliminarAllegado(item.id_persona_allegado || itemId);
+    if (onEliminarBackend) {
+      const eliminadoExitosamente = await onEliminarBackend(idRegistro);
+      if (eliminadoExitosamente) {
+        const nuevoListado = listado.filter(item => (item.id_academica || item.id) !== idRegistro);
+        setListado(nuevoListado);
+        if (onCambioDatos) onCambioDatos(nuevoListado);
+      }
     }
   };
 
-// REEMPLAZAR handleAddRow EN ItemListAlumnoAllegados.js
-const handleAddRow = () => {
-  const tempId = `temp-${Date.now()}`;
-  const nuevaFila = {
-    id_persona: tempId,
-    Tutor: "",
-    id_tipo_allegado: "",
-    id_nivel_estudio: "",
-    id_ocupacion: "",
-    tutor: "",
-    activo: "",
-    esNuevo: true // Indica que es un registro recién añadido en la UI
-  };
+  const formatBoolean = (val) => String(val).toUpperCase() === 'S' ? 'Sí' : 'No';
 
-  setAllegados([...allegados, nuevaFila]);
-  setEditingId(tempId);
-  setEditForm(nuevaFila);
-};
-
-  // --- OBTENCIÓN SEGURA DE NOMBRES PARA MODO LECTURA ---
-  const obtenerNombreTipoAllegado = (p) => {
-    const obj = resolverTipoAllegado(p);
-    if (obj) return obj.nombre || obj.descripcion;
-    return p.nombre_tipo_allegado || p.parentesco || p.nombre || p.id_tipo_allegado || "";
-  };
-
-  const obtenerNombreEstudio = (p) => {
-    const obj = resolverEstudio(p);
-    if (obj) return obj.nombre || obj.descripcion;
-    return p.nivel_estudio_tutor || p.estudio_alcanzado || p.estudio || "";
-  };
-
-  const obtenerNombreOcupacion = (p) => {
-    const obj = resolverOcupacion(p);
-    if (obj) return obj.nombre || obj.descripcion;
-    return p.ocupacion_tutor || p.ocupacion || "";
-  };
-
-  
-// --- AUTO-RESOLVER IDs FALTANTES AL CARGAR CATÁLOGOS O ALLEGADOS ---
-useEffect(() => {
-  if (
-    listaAllegados.length === 0 || 
-    listaTiposAllegados.length === 0 || 
-    listaEstudios.length === 0 || 
-    listaOcupaciones.length === 0
-  ) {
-    return;
+  if (cargando && listado.length === 0) {
+    return <div className="text-center py-4 text-gray-500">Cargando datos académicos...</div>;
   }
 
-  // Solo auto-completamos filas EXISTENTES (no las que se están creando o editando)
-  const hayFilasSinId = listaAllegados.some(p => {
-    const isTemp = String(p.id_persona || p.id || '').startsWith('temp-');
-    return !isTemp && (!p.id_tipo_allegado || !p.id_nivel_estudio || !p.id_ocupacion);
-  });
-
-  if (hayFilasSinId) {
-    const listaAutoCompletada = listaAllegados.map((p) => {
-      const isTemp = String(p.id_persona || p.id || '').startsWith('temp-');
-      if (isTemp) return p; // Dejar la fila nueva en blanco sin alterar
-
-      const tipo = resolverTipoAllegado(p);
-      const estudio = resolverEstudio(p);
-      const ocupacion = resolverOcupacion(p);
-
-      return {
-        ...p,
-        id_persona_real: p.id_persona_real || p.id_persona_allegado || p.id_persona || p.id,
-        id_tipo_allegado: p.id_tipo_allegado || (tipo ? Number(tipo.id_tipo_allegado || tipo.id) : null),
-        id_nivel_estudio: p.id_nivel_estudio || (estudio ? Number(estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id) : null),
-        id_estudio_alcanzado: p.id_estudio_alcanzado || (estudio ? Number(estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id) : null),
-        id_ocupacion: p.id_ocupacion || (ocupacion ? Number(ocupacion.id_ocupacion || ocupacion.id) : null),
-      };
-    });
-
-    setAllegados(listaAutoCompletada);
-  }
-}, [listaAllegados, listaTiposAllegados, listaEstudios, listaOcupaciones, resolverTipoAllegado, resolverEstudio, resolverOcupacion, setAllegados]);
+  const formularioIncompleto = !newForm.id_grado || !newForm.id_division || !newForm.anio_cursada || !newForm.pago_cargo || !newForm.pago_cargo;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* DATALIST DE BÚSQUEDA DINÁMICA */}
-      <datalist id="personas-list">
-        {listaPersonas.map((item, idx) => {
-          const keyVal = item.id_persona || item.id || `opt-${idx}`;
-          const opcionFormateada =
-            item.descripcion || `${item.apellidos} ${item.nombres} - DNI: ${item.numero}`;
-          return <option key={keyVal} value={opcionFormateada} />;
-        })}
-      </datalist>
-
-      <div className="flex justify-end px-2">
-        <button
-          type="button"
-          onClick={handleAddRow}
-          disabled={editingId !== null}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
-        >
-          <Plus size={16} /> Agregar Allegado
+      <div className="flex justify-end">
+        <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+          {isAdding ? <X size={16} /> : <Plus size={16} />}
+          {isAdding ? "Cancelar" : "Nuevo Registro"}
         </button>
       </div>
 
       <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
         <table className="w-full text-sm text-left text-gray-500 bg-white">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b">
             <tr>
-              <th scope="col" className="px-4 py-3">Persona (Buscador)</th>
-              <th scope="col" className="px-4 py-3"><div className="flex justify-center w-full">Tipo de Allegado</div></th>
-              <th scope="col" className="px-4 py-3"><div className="flex justify-center w-full">Estudio Alcanzado</div></th>
-              <th scope="col" className="px-4 py-3"><div className="flex justify-center w-full">Ocupación</div></th>
-              <th scope="col" className="px-2 py-3 w-24"><div className="flex justify-center w-full">¿Tutor?</div></th>
-              <th scope="col" className="px-2 py-3 w-24"><div className="flex justify-center w-full">¿Activo?</div></th>
-              <th scope="col" className="px-4 py-3 text-center">Acciones</th>
+              <th className="px-4 py-3">Grado</th>
+              <th className="px-4 py-3"><div className="flex justify-center w-full">División</div></th>
+              <th className="px-4 py-3"><div className="flex justify-center w-full">Año Cursada</div></th>
+              <th className="px-2 py-3"><div className="flex justify-center w-full">¿Generó Cargo?</div></th>
+              <th className="px-2 py-3"><div className="flex justify-center w-full">¿Pagó Cargo?</div></th>
+              <th className="px-4 py-3 text-center">Acciones</th>
             </tr>
           </thead>
-
           <tbody>
-            {listaAllegados.length > 0 ? (
-              listaAllegados.map((p, index) => {
-                const itemUniqueId = p.id_persona || p.id_persona_allegado || p.id || `allegado-${index}`;
-                const isEditing = editingId === itemUniqueId;
-
-                return (
-                  <tr key={itemUniqueId} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                    
-
-                  <td className="px-4 py-2 text-sm text-gray-700 min-w-[200px]">
-                    {isEditing ? (
-                      <>
-                        <input
-                          type="text"
-                          list="personas-list"
-                          value={editForm.Tutor || ""}
-                  onChange={(e) => {
-                    const valorIngresado = e.target.value;
-
-                    // Buscamos la persona en listaPersonas
-                    const match = listaPersonas.find((item) => {
-                      const fmt = item.descripcion || `${item.apellidos || item.apellido} ${item.nombres || item.nombre} - DNI: ${item.numero || item.numero_dni || item.dni}`;
-                      return fmt === valorIngresado;
-                    });
-
-                    if (match) {
-                    const apellidoStr = match.apellidos || match.apellido || "";
-                    const nombreStr = match.nombres || match.nombre || "";
-                    const dniStr = match.numero || match.numero_dni || match.dni || "";
-                    const textoCompleto = `${apellidoStr} ${nombreStr} - DNI: ${dniStr}`.trim();
-                      // Si hay coincidencia, actualizamos Tutor Y id_persona a la vez
-
-                      // Obtenemos el ID de la persona seleccionada del buscador
-                    const idPersonaElegida = match.id_persona || match.id || match.idPersona;
-
-                      setEditForm((prev) => ({
-                        ...prev,
-                        Tutor: textoCompleto,
-                      id_persona: idPersonaElegida,
-                      idPersona: idPersonaElegida,
-                        }));
-                    } else {
-                      handleInputChange("Tutor", valorIngresado);
-                    }
-                  }}
-        onFocus={() => {
-          setEditForm((prev) => ({ ...prev, Tutor: "" }));
-          setListaPersonas([]);
-        }}
-        placeholder="Buscar por Apellido o DNI..."
-        className="border border-gray-300 rounded px-2 py-1 w-full text-sm focus:outline-blue-500 bg-blue-50"
-      />
-
-                <datalist id="personas-list">
-                  {listaPersonas.map((persona) => (
-                    <option
-                      key={persona.id_persona}
-                      value={persona.id_persona}
-                    >
-                      {`${persona.apellido} ${persona.nombre} - ${persona.tipo_dni || 'DNI'}: ${persona.numero_dni}`}
+            {/* --- FILA DE ALTA --- */}
+            {isAdding && (
+              <tr className="bg-blue-50 border-b">
+                <td className="px-2 py-2">
+                  <select name="id_grado" value={newForm.id_grado} onChange={handleAddChange} className="select select-bordered select-sm w-full">
+                    <option value="">Seleccione...</option>
+                    {listaGrados.map(g => (
+                      <option key={g.id_grado || g.id || 1} value={g.id_grado || g.id}>{g.grado || g.nombre}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-2 py-2">
+                  <select name="id_division" value={newForm.id_division} onChange={handleAddChange} className="select select-bordered select-sm w-full">
+                    <option value="">Seleccione...</option>
+                    {listaDivisiones.map(d => (
+                      <option key={d.id_division || d.id || 1} value={d.id_division || d.id}>{d.division || d.nombre}</option>
+                    ))}
+                  </select>
+                </td>
+                <td className="px-2 py-2">
+                <select 
+                  name="anio_cursada" // 🌟 Cambiado a anio_cursada
+                  value={newForm.anio_cursada} // 🌟 Cambiado a anio_cursada
+                  onChange={handleAddChange} 
+                  className="select select-bordered select-sm w-full"
+                >
+                  <option value="">Seleccione Año...</option>
+                  {listaAniosCursado.map((a) => (
+                    <option key={String(a.id_anio || a.anio_cursada || a.id)} value={String(a.id_anio || a.anio_cursada || a.id)}>
+                      {a.anio}
                     </option>
                   ))}
-                </datalist>
-              </>
-            ) : (
-              p.Tutor || (p.apellidos ? `${p.apellidos} ${p.nombres}` : "")
-            )}
-          </td>
-
-                    {/* TIPO DE ALLEGADO */}
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      <div className="flex justify-center w-full">
-                        {isEditing ? (
-                          <select
-                            value={String(editForm.id_tipo_allegado || "")}
-                            onChange={(e) => handleInputChange("id_tipo_allegado", e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-blue-500 w-full"
-                          >
-                            <option value="" disabled>-- Seleccionar --</option>
-                            {listaTiposAllegados.map((item, idx) => {
-                              const idVal = String(item.id_tipo_allegado || item.id || idx);
-                              return (
-                                <option key={idVal} value={idVal}>
-                                  {item.nombre || item.descripcion}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        ) : (
-                          obtenerNombreTipoAllegado(p)
-                        )}
-                      </div>
-                    </td>
-
-                    {/* ESTUDIO ALCANZADO */}
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      <div className="flex justify-center w-full">
-                        {isEditing ? (
-                          <select
-                            value={String(editForm.id_nivel_estudio || "")}
-                            onChange={(e) => handleInputChange("id_nivel_estudio", e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
-                          >
-                            <option value="" disabled>-- Seleccionar --</option>
-                            {listaEstudios.map((estudio, idx) => {
-                              const idEstudio = String(
-                                estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id || idx
-                              );
-                              return (
-                                <option key={idEstudio} value={idEstudio}>
-                                  {estudio.nombre || estudio.descripcion}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        ) : (
-                          obtenerNombreEstudio(p)
-                        )}
-                      </div>
-                    </td>
-
-                    {/* OCUPACIÓN */}
-                    <td className="px-4 py-2 text-sm text-gray-700">
-                      <div className="flex justify-center w-full">
-                        {isEditing ? (
-                          <select
-                            value={String(editForm.id_ocupacion || "")}
-                            onChange={(e) => handleInputChange("id_ocupacion", e.target.value)}
-                            className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
-                          >
-                            <option value="" disabled>-- Seleccionar --</option>
-                            {listaOcupaciones.map((ocupacion, idx) => {
-                              const idOcup = String(ocupacion.id_ocupacion || ocupacion.id || idx);
-                              return (
-                                <option key={idOcup} value={idOcup}>
-                                  {ocupacion.nombre || ocupacion.descripcion}
-                                </option>
-                              );
-                            })}
-                          </select>
-                        ) : (
-                          obtenerNombreOcupacion(p)
-                        )}
-                      </div>
-                    </td>
-
-                    {/* ¿TUTOR? */}
-                    <td className="px-2 py-2 text-sm text-gray-700 w-24">
-                      <div className="flex justify-center w-full">
-                        {isEditing ? (
-                          <select
-                            value={editForm.tutor || ""}
-                            onChange={(e) => handleInputChange("tutor", e.target.value)}
-                            className="border border-gray-300 rounded px-1 py-1 text-sm focus:outline-blue-500 w-full text-center"
-                          >
-                            <option value="" enabled>--</option>
-                            <option value="S">Sí</option>
-                            <option value="N">No</option>
-                          </select>
-                        ) : (
-                          p.tutor === "S" ? "Sí" : p.tutor === "N" ? "No" : ""
-                        )}
-                      </div>
-                    </td>
-
-                    {/* ¿ACTIVO? */}
-                    <td className="px-2 py-2 text-sm text-gray-700 w-24">
-                      <div className="flex justify-center w-full">
-                        {isEditing ? (
-                          <select
-                            value={editForm.activo || ""}
-                            onChange={(e) => handleInputChange("activo", e.target.value)}
-                            className="border border-gray-300 rounded px-1 py-1 text-sm focus:outline-blue-500 w-full text-center"
-                          >
-                            <option value="" enabled>--</option>
-                            <option value="S">Sí</option>
-                            <option value="N">No</option>
-                          </select>
-                        ) : (
-                          p.activo === "S" ? "Sí" : p.activo === "N" ? "No" : ""
-                        )}
-                      </div>
-                    </td>
-
-                    {/* ACCIONES */}
-                    <td className="px-4 py-2 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {isEditing ? (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => handleSaveRow(itemUniqueId)}
-                              className="p-1 text-green-600 hover:bg-green-100 rounded"
-                              title="Aceptar fila"
-                            >
-                              <Check size={18} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleCancelRow(itemUniqueId)}
-                              className="p-1 text-red-600 hover:bg-red-100 rounded"
-                              title="Cancelar"
-                            >
-                              <X size={18} />
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <Link to={`/personas/${itemUniqueId}`}>
-                              <button
-                                type="button"
-                                className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                                title="Ver detalle"
-                              >
-                                <Search size={18} />
-                              </button>
-                            </Link>
-                            <button
-                              type="button"
-                              onClick={() => handleEditClick(p)}
-                              className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                              title="Editar fila"
-                            >
-                              <Pencil size={18} />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteRow(p)}
-                              className="p-1 text-red-600 hover:bg-red-100 rounded"
-                              title="Eliminar"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={7} className="py-10 text-center text-gray-500 bg-white font-medium">
-                  <h1 className="text-xl font-bold">No hay allegados registrados</h1>
+                </select>
                 </td>
+                <td className="px-2 py-2"><select name="genero_cargo" value={newForm.genero_cargo} onChange={handleAddChange} className="select select-bordered select-sm w-full"><option value="" disabled>Seleccione...</option><option value="S">Sí</option><option value="N">No</option></select></td>
+                <td className="px-2 py-2"><select name="pago_cargo" value={newForm.pago_cargo} onChange={handleAddChange} className="select select-bordered select-sm w-full"><option value="" disabled>Seleccione...</option><option value="S">Sí</option><option value="N">No</option></select></td>
+                <td className="px-2 py-2 text-center"><button onClick={guardarNuevo} disabled={formularioIncompleto} className={formularioIncompleto ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:scale-110 transition-transform"}><Check size={20} /></button></td>
               </tr>
             )}
+
+            {listado.map((item, index) => {
+              const isEditing = editingId === index;
+              const idRegistro = item.id_alumno_dato_cursada || item.id_academica || item.id || `fila-${index}`;
+
+              return (
+                <tr key={idRegistro} className="border-b hover:bg-gray-50">
+                  {isEditing ? (
+                    <>
+                      {/* --- MODO EDICIÓN --- */}
+                      <td className="px-2 py-2">
+                        <select name="id_grado" value={editForm.id_grado} onChange={handleEditChange} className="select select-bordered select-sm w-full">
+                          <option value="">Seleccione...</option>
+                          {listaGrados.map(g => (
+                            <option key={g.id_grado || g.id || 1} value={g.id_grado || g.id}>{g.grado || g.nombre}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        <select name="id_division" value={editForm.id_division} onChange={handleEditChange} className="select select-bordered select-sm w-full">
+                          <option value="">Seleccione...</option>
+                          {listaDivisiones.map(d => (
+                            <option key={d.id_division || d.id || 1} value={d.id_division || d.id}>{d.division || d.nombre}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2">
+                        {/* 🌟 CORRECCIÓN 3: Mapeo y tipado estricto en String para el select de edición */}
+                        <select
+                          className="select select-bordered select-sm w-full"
+                          name="id_anio"
+                          value={editForm.id_anio !== undefined && editForm.id_anio !== null ? String(editForm.id_anio) : ''} 
+                          onChange={(e) => setEditForm({ ...editForm, id_anio: e.target.value })}
+                        >
+                          <option value="">Seleccione Año...</option>
+                          {listaAniosCursado.map((a) => (
+                            <option key={String(a.id_anio)} value={String(a.id_anio)}>
+                              {a.anio}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="px-2 py-2"><select name="genero_cargo" value={editForm.genero_cargo} onChange={handleEditChange} className="select select-bordered select-sm w-full"><option value="S">Sí</option><option value="N">No</option></select></td>
+                      <td className="px-2 py-2"><select name="pago_cargo" value={editForm.pago_cargo} onChange={handleEditChange} className="select select-bordered select-sm w-full"><option value="S">Sí</option><option value="N">No</option></select></td>
+                      <td className="px-4 py-2 text-center flex justify-center gap-2">
+                        <button onClick={() => guardarEdicion(index)} className="text-green-600"><Check size={18} /></button>
+                        <button onClick={() => setEditingId(null)} className="text-gray-500"><X size={18} /></button>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      {/* --- MODO LECTURA --- */}
+                      <td className="px-4 py-3">{item.nombre || item.nombre_grado || item.id_grado}</td>
+                      <td className="px-4 py-3"><div className="flex justify-center w-full">{item.division || item.nombre_division || "Única"}</div></td>
+                      <td className="px-4 py-3"><div className="flex justify-center w-full">{item.anio || item.id_anio}</div></td>
+                      <td className="px-2 py-3"><div className="flex justify-center w-full">
+                        <span className={`px-2 py-1 rounded font-semibold ${item.genero_cargo === 'S' ? 'text-green-700 bg-green-50' : 'text-gray-500'}`}>{formatBoolean(item.genero_costo_inscripcion || 'N')}</span>
+                      </div></td>
+                      <td className="px-2 py-3"><div className="flex justify-center w-full">
+                        <span className={`px-2 py-1 rounded font-semibold ${item.pago_cargo === 'S' ? 'text-green-700 bg-green-50' : 'text-gray-500'}`}>{formatBoolean(item.pago_inscripcion || 'N')}</span>
+                     </div></td>
+                      <td className="px-4 py-3 text-center flex justify-center gap-3">
+                        <button onClick={() => iniciarEdicion(item, index)} className="text-blue-600"><Pencil size={18} /></button>
+                        <button onClick={() => eliminarRegistro(idRegistro)} className="text-red-600"><Trash2 size={18} /></button>
+                      </td>
+                    </>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-      </div>
-
-      <div className="flex justify-end gap-3 mt-4 px-2">
-        <button
-          type="button"
-          onClick={onRecargar}
-          className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded transition-colors text-sm"
-        >
-          Recargar Lista
-        </button>
       </div>
     </div>
   );
