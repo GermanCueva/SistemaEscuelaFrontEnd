@@ -84,8 +84,18 @@ const guardarNuevo = () => {
       item => String(item.id_grado) === String(newForm.id_grado)
     );
 
+
     if (gradoYaExiste) {
       return avisar.advertencia("⚠️ Este grado ya se encuentra agregado en la lista académica del alumno.");
+    }
+
+    // 🛑 CONTROL DE AÑO DUPLICADO
+    const anioYaExiste = listado.some(
+      item => String(item.id_anio) === String(newForm.anio_cursada)
+    );
+
+    if (anioYaExiste) {
+      return avisar.advertencia("⚠️ Este año ya se encuentra agregado en la lista académica del alumno.");
     }
 
   const gradoObj = listaGrados.find(g => String(g.id_grado || g.id) === String(newForm.id_grado));
