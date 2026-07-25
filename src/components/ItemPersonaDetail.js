@@ -7,6 +7,7 @@ import ItemListTutorAlumnos from "./ItemListTutorAlumnos.js";
 import { avisar } from "../utils/notificaciones.js";
 import ItemListAlumnoAllegados from "./ItemListAlumnoAllegados.js";
 import ItemListAlumnoAcademica from "./ItemListAlumnoAcademica.js";
+import ItemListAlumnoFormaPago from "./ItemListAlumnoFormaPago.js";
 
 
 const ItemDetailPersona = () => {
@@ -50,7 +51,8 @@ const ItemDetailPersona = () => {
     direccion_depto: '',
     documentos: [],
     allegados: [],
-    academica: [] // <-- Lista de gestión académica integrada
+    academica: [], 
+    formasPago: [] 
   });
 
 
@@ -106,6 +108,23 @@ const ItemDetailPersona = () => {
     }
   }, []);
 
+  // Carga de Formas de Pago de forma aislada / reutilizable
+  const obtenerFormasPago = useCallback(async (idAlumno) => {
+    if (!idAlumno) return;
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/${idAlumno}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPers(prev => ({ ...prev, formasPago: Array.isArray(data) ? data : [] }));
+      }
+    } catch (err) {
+      console.error("Error al obtener formas de pago:", err);
+    }
+  }, []);
+
   // 2. Cargar Datos del Registro (Modo Edición)
   useEffect(() => {
     if (isEditMode) {
@@ -132,10 +151,13 @@ const ItemDetailPersona = () => {
           const misAllegados = Array.isArray(dataAllegados) ? dataAllegados : [];
 
           let datosAlumno = {};
+          let idAlumnoReal = null;
+
           if (dataAlumno) {
             const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
             if (alumnoObj) {
               datosAlumno = alumnoObj;
+              idAlumnoReal = alumnoObj.id_alumno || alumnoObj.id;
               setHasAlumnoRecord(true);
             }
           }
@@ -147,7 +169,12 @@ const ItemDetailPersona = () => {
             documentos: misDocs,
             allegados: misAllegados,
             academica: prev.academica
-          })); 
+          }));
+
+          // Si obtuvimos el id_alumno, llamamos a la función de formas de pago
+          if (idAlumnoReal) {
+            obtenerFormasPago(idAlumnoReal);
+          }
         }
         setIsLoading(false);
       })
@@ -156,7 +183,7 @@ const ItemDetailPersona = () => {
         setIsLoading(false);
       });
     }
-  }, [id, isEditMode]);
+  }, [id, isEditMode, obtenerFormasPago]);
 
   const calcularEdad = (fechaNacimiento) => {
     const hoy = new Date();
@@ -211,9 +238,13 @@ const ItemDetailPersona = () => {
     setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
   };
 
-  const setAcademicaGlobal = (nuevosDatosAcademicos) => {
+  const setAcademicaGlobal = useCallback((nuevosDatosAcademicos) => {
     setPers(prev => ({ ...prev, academica: nuevosDatosAcademicos }));
-  };
+  }, []);
+
+  const setFormasPagoGlobal = useCallback((nuevasFormas) => {
+    setPers(prev => ({ ...prev, formasPago: nuevasFormas }));
+  }, []);
 
   const setAllegadosGlobal = (nuevaListaOFunction) => {
     setPers(prev => {
@@ -306,7 +337,6 @@ const ItemDetailPersona = () => {
     }
   };
 
-  // NUEVA FUNCIÓN: Eliminación inmediata de filas académicas en base de datos
   const eliminarAcademicaBackend = async (idAcademica) => {
     if (!idAcademica || String(idAcademica).startsWith('temp-')) {
       setPers(prev => ({
@@ -341,6 +371,48 @@ const ItemDetailPersona = () => {
       return true;
     } catch (error) {
       console.error("Error al eliminar registro académico:", error);
+      avisar.error("Ocurrió un error al eliminar:\n" + error.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // DELETE PARA FORMAS DE PAGO
+  const eliminarFormaPagoBackend = async (idFormaPago) => {
+    if (!idFormaPago || String(idFormaPago).startsWith('temp-')) {
+      setPers(prev => ({
+        ...prev,
+        formasPago: (prev.formasPago || []).filter(item => item.id_forma_pago !== idFormaPago && item.id !== idFormaPago)
+      }));
+      return true;
+    }
+
+    const token = localStorage.getItem('token');
+    const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta forma de pago?");
+    if (!confirmar) return false;
+
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/${idFormaPago}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.mensaje || "Error al eliminar la forma de pago.");
+      }
+
+      setPers(prev => ({
+        ...prev,
+        formasPago: (prev.formasPago || []).filter(item => item.id_forma_pago !== idFormaPago && item.id !== idFormaPago)
+      }));
+
+      avisar.advertencia('¡Forma de pago eliminada correctamente!', 'exito');
+      return true;
+    } catch (error) {
+      console.error("Error al eliminar forma de pago:", error);
       avisar.error("Ocurrió un error al eliminar:\n" + error.message);
       return false;
     } finally {
@@ -405,12 +477,11 @@ const ItemDetailPersona = () => {
       }
 
       const allegadosParaValidar = pers?.allegados || [];
-      if (allegadosParaValidar.length === 0) {
+      if (esAlumno && allegadosParaValidar.length === 0) {
         avisar.advertencia('Debe ingresar obligatoriamente al menos un allegado antes de registrar al alumno.');
         setSubSolapaActiva('alumnoAllegados');
         return;
       }
-
 
       const allegadosIncompletos = allegadosParaValidar.filter(all => {
         const tienePersona = Boolean(all.id_persona || all.id_persona_real || all.nombre || all.apellido || all.id);
@@ -425,18 +496,24 @@ const ItemDetailPersona = () => {
       }
 
       // ==========================================
-      // 🛑 NUEVOS CONTROLES DE GESTIÓN ACADÉMICA
+      // CONTROLES DE GESTIÓN ACADÉMICA Y PAGO
       // ==========================================
       const academicaParaValidar = pers?.academica || [];
+      const formasPagoParaValidar = pers?.formasPago || [];
 
-      // 1. Control: Que no esté vacía la lista académica si es alumno
       if (esAlumno && academicaParaValidar.length === 0) {
         avisar.advertencia("⚠️ Error: Debe ingresar obligatoriamente al menos un registro en la Gestión Académica.");
         setSubSolapaActiva('alumnoAcademica');
         return;
       }
 
-      // 2. Control: Que los registros nuevos tengan todos sus campos completos
+      // Si está en modo edición, permitimos avanzar si ya existe en backend incluso si la lista local está vacía por falta de sincronización
+      if (esAlumno && formasPagoParaValidar.length === 0) {
+        avisar.advertencia("⚠️ Error: Debe ingresar obligatoriamente al menos un registro en la Forma de Pago.");
+        setSubSolapaActiva('alumnoFormaPago');
+        return;
+      }
+
       const academicaIncompleta = academicaParaValidar.some(item => {
         return !item.id_grado || !item.id_division || (!item.anio_cursada && !item.id_anio);
       });
@@ -449,7 +526,7 @@ const ItemDetailPersona = () => {
       // ==========================================
 
       setIsLoading(true);
-      const { documentos, allegados, academica, ...todo } = pers;
+      const { documentos, allegados, academica, formasPago, ...todo } = pers;
 
       const datosAlumno = {
         legajo: todo.legajo, extranjero: todo.extranjero, regular: todo.regular,
@@ -606,54 +683,89 @@ const ItemDetailPersona = () => {
           }
         }
 
-// 1. Separar usando la propiedad exacta 'esNuevo'
-const nuevosCrudos = academica.filter(item => item.esNuevo === true);
-const registrosModificados = academica.filter(item => !item.esNuevo);
+        const nuevosCrudos = (academica || []).filter(item => item.esNuevo === true);
+        const registrosModificados = (academica || []).filter(item => !item.esNuevo);
 
-const registrosNuevos = nuevosCrudos.map(item => {
-    const { id_academica, esNuevo, ...resto } = item; 
-    return {
-        ...resto,
-        id_alumno: idAlumnoFinal // Ya viene con id_grado: 8 perfecto desde el hijo
-    };
-});
+        const registrosNuevos = nuevosCrudos.map(item => {
+            const { id_academica, esNuevo, ...resto } = item; 
+            return {
+                ...resto,
+                id_alumno: idAlumnoFinal
+            };
+        });
 
-// 3. Enviar los NUEVOS (POST)
-if (registrosNuevos.length > 0) {
-    const urlAcademicaBulk = `${process.env.REACT_APP_API_URL}/api/academica/`;
-    const resAcademica = await fetch(urlAcademicaBulk, {
-        method: 'POST',
-        headers: { 
-            'Content-Type': 'application/json', 
-            'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ historialAcademico: registrosNuevos })
-    });
+        if (registrosNuevos.length > 0) {
+            const urlAcademicaBulk = `${process.env.REACT_APP_API_URL}/api/academica/`;
+            const resAcademica = await fetch(urlAcademicaBulk, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ historialAcademico: registrosNuevos })
+            });
 
-    if (!resAcademica.ok) throw new Error("Error procesando los nuevos cambios académicos.");
-}
+            if (!resAcademica.ok) throw new Error("Error procesando los nuevos cambios académicos.");
+        }
 
-// 4. Enviar los MODIFICADOS (PUT)
-if (registrosModificados.length > 0) {
+        if (registrosModificados.length > 0) {
+            const modificadosSincronizados = registrosModificados.map(item => ({
+                ...item,
+                id_anio_cursada: item.anio_cursada 
+            }));
 
-    // Normalizamos el array para asegurar que viaje el nombre de campo que el backend parsea
-    const modificadosSincronizados = registrosModificados.map(item => ({
-        ...item,
-        id_anio_cursada: item.anio_cursada 
-    }));
+            const urlAcademicaPut = `${process.env.REACT_APP_API_URL}/api/academica/`;
+            const resAcademicaPut = await fetch(urlAcademicaPut, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ historialAcademico: modificadosSincronizados })
+            });
 
-    const urlAcademicaPut = `${process.env.REACT_APP_API_URL}/api/academica/`;
-    const resAcademicaPut = await fetch(urlAcademicaPut, {
-        method: 'PUT',
-        headers: { 
-            'Content-Type': 'application/json', 
-            'Authorization': `Bearer ${token}` 
-        },
-        body: JSON.stringify({ historialAcademico: modificadosSincronizados }) // Enviamos el array normalizado
-    });
+            if (!resAcademicaPut.ok) throw new Error("Error actualizando los cambios académicos existentes.");
+        }
 
-    if (!resAcademicaPut.ok) throw new Error("Error actualizando los cambios académicos existentes.");
-}
+
+// ==========================================
+    // PROCESAMIENTO DE FORMAS DE PAGO (POST / PUT)
+    // ==========================================
+    for (const pago of (formasPago || [])) {
+      const rawId = pago.id_alumno_tarjeta || pago.id_pago || pago.id_forma_pago || pago.id;
+      const esTemp = String(rawId || '').includes('temp');
+      const tieneIdBDReal = Boolean(rawId) && !esTemp && !pago.esNuevo;
+
+      if (tieneIdBDReal) {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ ...pago, id_alumno: Number(idAlumnoFinal) })
+        });
+       // if (!res.ok) throw new Error("Error en PUT pago");
+       if (!res.ok) {
+          // 🛑 Imprimimos exactamente qué error devolvió el backend
+          const errData = await res.json().catch(() => ({}));
+          console.error(`Error en PUT ${rawId}: HTTP Status ${res.status}`, errData);
+          throw new Error(`Error en PUT pago (${res.status})`);
+        }
+        
+      } else {
+        const payloadPost = { ...pago, id_alumno: Number(idAlumnoFinal) };
+        delete payloadPost.esNuevo;
+        delete payloadPost.id;
+        delete payloadPost.id_pago;
+        delete payloadPost.id_alumno_tarjeta;
+        delete payloadPost.id_forma_pago;
+
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payloadPost)
+        });
+        if (!res.ok) throw new Error("Error en POST pago");
+      }
+    }
       }
 
       avisar.exito("¡Los datos se han guardado con éxito!");
@@ -710,13 +822,21 @@ if (registrosModificados.length > 0) {
             onClick={() => setSubSolapaActiva('alumnoAcademica')} 
             style={subSolapaActiva === 'alumnoAcademica' ? styles.activeSubTab : styles.subTab}
           >
-            Gestión Académica
+            Gestión Académica {pers.academica.length > 0 && `(${pers.academica.length})`}
+          </button>
+        )}  
+
+        {(pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnoFormaPago')} 
+            style={subSolapaActiva === 'alumnoFormaPago' ? styles.activeSubTab : styles.subTab}
+          >
+            Formas de Pago {pers.formasPago.length > 0 && `(${pers.formasPago.length})`}
           </button>
         )}  
      
       </div>
 
-      {/* Renderizado Condicional de Vistas */}
       <div className="contenido-subsolapa">
         {subSolapaActiva === 'documentos' && (
           <ItemDetailPersonaDocumentoAlta 
@@ -752,17 +872,38 @@ if (registrosModificados.length > 0) {
           </div>
         )}
 
-        {/* INTEGRACIÓN DEL HIJO DE GESTIÓN ACADÉMICA CON SUS PROPS DE ESCRITURA Y BORRADO */}
-        {subSolapaActiva === 'alumnoAcademica' && (
-          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
-            <ItemListAlumnoAcademica 
-              idAlumno={pers.id_alumno} 
-              idPersona={id || pers.id_persona} 
-              onCambioDatos={setAcademicaGlobal}
-              onEliminarBackend={eliminarAcademicaBackend}
-            />          
-          </div>
-        )}
+        <div style={{ 
+          padding: '20px', 
+          background: '#f9f9f9', 
+          border: '1px dashed #ccc', 
+          borderRadius: '4px',
+          display: subSolapaActiva === 'alumnoAcademica' ? 'block' : 'none'
+        }}>
+          <ItemListAlumnoAcademica 
+            idAlumno={pers.id_alumno} 
+            idPersona={id || pers.id_persona} 
+            onCambioDatos={setAcademicaGlobal}
+            onEliminarBackend={eliminarAcademicaBackend}
+          />          
+        </div>
+
+        <div style={{ 
+          padding: '20px', 
+          background: '#f9f9f9', 
+          border: '1px dashed #ccc', 
+          borderRadius: '4px',
+          display: subSolapaActiva === 'alumnoFormaPago' ? 'block' : 'none'
+        }}>
+          <ItemListAlumnoFormaPago
+            idAlumno={pers.id_alumno}
+            idPersona={id || pers.id_persona}
+            formasPago={pers.formasPago || []}
+            onCambioDatos={setFormasPagoGlobal}
+            onEliminarBackend={eliminarFormaPagoBackend}
+            onRecargar={() => obtenerFormasPago(pers.id_alumno)}
+          />   
+        </div>
+
       </div>  
   
       {subSolapaActiva === 'alta' && (

@@ -72,6 +72,12 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         }
 
         if (isEditing) {
+            // Validar que no se repita el mismo tipo antes de guardarlo en memoria local
+            const yaExiste = docs.some(d => String(d.id_tipo_documento) === String(formData.id_tipo_documento));
+            if (yaExiste) {
+                avisar.advertencia("Este tipo de documento ya está listado en la grilla temporal.");
+                return;
+            }
             // Modificar elemento en el array del estado del Padre
             const listaModificada = docs.map(d => {
                 const idActual = d.id || d.id_persona_tipo_documento || d.id_tipo_documento;
@@ -224,7 +230,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                             value={formData.id_tipo_documento || ''} 
                             onChange={handleChange}
                             className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white"
-                            disabled={isEditing} 
+                          //disabled={isEditing}
                         >
                             <option value="" disabled>Seleccione</option>
                             {documentos.map((doc) => (

@@ -43,7 +43,7 @@ const ItemListAlumnoAcademica = ({ idAlumno, idPersona, onCambioDatos, onElimina
     }
   }, [token]);
 
-  // --- 2. OBTENER LISTADO INICIAL ---
+// --- 2. OBTENER LISTADO INICIAL ---
   const obtenerListado = useCallback((idAlum) => {
     if (!idAlum) return;
     setCargando(true);
@@ -52,11 +52,20 @@ const ItemListAlumnoAcademica = ({ idAlumno, idPersona, onCambioDatos, onElimina
     })
       .then((res) => res.json())
       .then((data) => {
-        setListado(Array.isArray(data) ? data : []);
+        const datosSeguros = Array.isArray(data) ? data : [];
+        setListado(datosSeguros);
+        
+        // 👈 AQUÍ VA LA LÍNEA QUE FALTA:
+        // Notifica al padre los datos leídos del backend apenas se cargan
+        if (onCambioDatos) onCambioDatos(datosSeguros); 
       })
-      .catch(() => setListado([]))
+      .catch(() => {
+        setListado([]);
+        if (onCambioDatos) onCambioDatos([]);
+      })
       .finally(() => setCargando(false));
-  }, [token]);
+  }, [token, onCambioDatos]); // 👈 Agregamos onCambioDatos a las dependencias
+  
 
   useEffect(() => {
     obtenerCatalogos();
@@ -274,7 +283,18 @@ const guardarNuevo = () => {
                 </td>
                 <td className="px-2 py-2"><select name="genero_cargo" value={newForm.genero_cargo} onChange={handleAddChange} className="select select-bordered select-sm w-full"><option value="" disabled>Seleccione...</option><option value="S">Sí</option><option value="N">No</option></select></td>
                 <td className="px-2 py-2"><select name="pago_cargo" value={newForm.pago_cargo} onChange={handleAddChange} className="select select-bordered select-sm w-full"><option value="" disabled>Seleccione...</option><option value="S">Sí</option><option value="N">No</option></select></td>
-                <td className="px-2 py-2 text-center"><button onClick={guardarNuevo} disabled={formularioIncompleto} className={formularioIncompleto ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:scale-110 transition-transform"}><Check size={20} /></button></td>
+                <td className="px-2 py-2 text-center"><button onClick={guardarNuevo} disabled={formularioIncompleto} className={formularioIncompleto ? "text-gray-300 cursor-not-allowed" : "text-green-600 hover:scale-110 transition-transform"}><Check size={20} /></button>
+                <button 
+                      onClick={() => {
+                        setIsAdding(false);
+                        setNewForm({ id_grado: "", id_division: "", anio_cursada: "", genero_cargo: "", pago_cargo: "" });
+                      }} 
+                      className="text-red-600 hover:text-red-800 hover:scale-110 transition-transform"
+                      title="Cancelar"
+                    >
+                      <X size={20} />
+                    </button>
+                </td>
               </tr>
             )}
 
@@ -321,7 +341,7 @@ const guardarNuevo = () => {
                       </td>
                       <td className="px-2 py-2"><select name="genero_cargo" value={editForm.genero_cargo} onChange={handleEditChange} className="select select-bordered select-sm w-full"><option value="S">Sí</option><option value="N">No</option></select></td>
                       <td className="px-2 py-2"><select name="pago_cargo" value={editForm.pago_cargo} onChange={handleEditChange} className="select select-bordered select-sm w-full"><option value="S">Sí</option><option value="N">No</option></select></td>
-                      <td className="px-4 py-2 text-center flex justify-center gap-2">
+                      <td className="px-4 py-3 text-center flex justify-center gap-2">
                         <button onClick={() => guardarEdicion(index)} className="text-green-600"><Check size={18} /></button>
                         <button onClick={() => setEditingId(null)} className="text-gray-500"><X size={18} /></button>
                       </td>
@@ -329,16 +349,16 @@ const guardarNuevo = () => {
                   ) : (
                     <>
                       {/* --- MODO LECTURA --- */}
-                      <td className="px-4 py-3">{item.nombre || item.nombre_grado || item.id_grado}</td>
-                      <td className="px-4 py-3"><div className="flex justify-center w-full">{item.division || item.nombre_division || "Única"}</div></td>
-                      <td className="px-4 py-3"><div className="flex justify-center w-full">{item.anio || item.id_anio}</div></td>
-                      <td className="px-2 py-3"><div className="flex justify-center w-full">
+                      <td className="px-2 py-1">{item.nombre || item.nombre_grado || item.id_grado}</td>
+                      <td className="px-2 py-1"><div className="flex justify-center w-full">{item.division || item.nombre_division || "Única"}</div></td>
+                      <td className="px-2 py-1"><div className="flex justify-center w-full">{item.anio || item.id_anio}</div></td>
+                      <td className="px-2 py-1"><div className="flex justify-center w-full">
                         <span className={`px-2 py-1 rounded font-semibold ${item.genero_cargo === 'S' ? 'text-green-700 bg-green-50' : 'text-gray-500'}`}>{formatBoolean(item.genero_costo_inscripcion || 'N')}</span>
                       </div></td>
-                      <td className="px-2 py-3"><div className="flex justify-center w-full">
+                      <td className="px-2 py-1"><div className="flex justify-center w-full">
                         <span className={`px-2 py-1 rounded font-semibold ${item.pago_cargo === 'S' ? 'text-green-700 bg-green-50' : 'text-gray-500'}`}>{formatBoolean(item.pago_inscripcion || 'N')}</span>
                      </div></td>
-                      <td className="px-4 py-3 text-center flex justify-center gap-3">
+                      <td className="px-2 py-3 text-center flex justify-center gap-3">
                         <button onClick={() => iniciarEdicion(item, index)} className="text-blue-600"><Pencil size={18} /></button>
                         <button onClick={() => eliminarRegistro(idRegistro)} className="text-red-600"><Trash2 size={18} /></button>
                       </td>

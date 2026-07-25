@@ -141,7 +141,6 @@ const resolverOcupacion = useCallback((p) => {
   };
 
  const handleInputChange = async (field, valor) => {
-  //console.log(field, valor);
 
   if (field === "Tutor") {
     // 1. Obtenemos los resultados actualizados de la búsqueda
