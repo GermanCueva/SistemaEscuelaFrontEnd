@@ -1,6 +1,12 @@
 import { useEffect, useState, useMemo } from "react"
 import ItemListPersonas from './ItemListPersonas'
 import CustomToggle from "../utils/CustomToggle"
+//import { PDFDownloadLink } from '@react-pdf/renderer';
+//import { exportToExcelCustom } from '../utils/excel';
+//import { GenericPDFReport } from '../utils/pdf';
+import { FaFileExcel, FaFilePdf } from 'react-icons/fa'; // Importamos los íconos
+
+
 
 const ItemListContainerPersona = () => {
   // 1. Guardamos la lista completa original cargada de la API
@@ -101,6 +107,77 @@ const ItemListContainerPersona = () => {
     setFiltros(prev => ({ ...prev, [name]: checked }))
   }
 
+  // 2. Configuración para ExcelJS
+  const excelColumns = [
+    { header: 'Apellido', key: 'apellidos', width: 35 },
+    { header: 'Nombres', key: 'nombres', width: 35 },
+    { header: 'Tipo de Documento', key: 'nombre_corto', width: 16 },
+    { header: 'Número', key: 'numero', width: 15 },
+{ header: 'Tipo de Usuario', key: 'es_alumno', width: 15, getValue: (row) => row.es_alumno === 'S' ? 'Alumno' : 'Tutor' },
+  ];
+
+  // 3. Configuración para @react-pdf/renderer (anchos en %)
+  const pdfColumns = [
+    { header: 'Apellido', key: 'apellidos', width: '30%' },
+    { header: 'Nombres', key: 'nombres', width: '30%' },
+    { header: 'Tipo de Documento', key: 'nombre_corto', width: '16%' },
+    { header: 'Número', key: 'numero', width: '12%' },
+{ header: 'Tipo de Usuario', key: 'es_alumno', width: '15%' },
+  ];
+
+  // Creamos una variable con los datos transformados para reusarla en ambos
+const datosFormateados = todasLasPersonas.map(p => ({
+  ...p,
+  es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor'
+}));
+
+  const handleExportExcel = async () => {
+    try {
+    const { exportToExcelCustom } = await import('../utils/excel');
+
+    exportToExcelCustom({
+      columnsConfig: excelColumns,
+      data: datosFormateados,
+      fileName: 'Reporte_Personas',
+      sheetName: 'Reporte de Personas',
+    });
+    } catch (error) {
+    console.error("Error al exportar Excel:", error);
+  }
+  };
+
+  // Función para generar y descargar PDF bajo demanda
+const handleExportPDF = async () => {
+  try {
+    // Carga dinámicamente tu plantilla y la librería pdf
+    const { GenericPDFReport } = await import('../utils/pdf');
+    const { pdf } = await import('@react-pdf/renderer');
+
+    // Aquí usas pdfColumns, lo que eliminará el warning de ESLint:
+    const doc = (
+      <GenericPDFReport 
+        data={datosFormateados} 
+        columns={pdfColumns} 
+        title="Reporte de Personas"
+      />
+    );
+
+    // Genera el blob del PDF en segundo plano al hacer clic
+    const blob = await pdf(doc).toBlob();
+    
+    // Crea la descarga
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'reporte-personas.pdf';
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Error al generar PDF:", error);
+  }
+};
+
+
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-xl font-bold mb-4 text-center">Listado de Personas</h2>
@@ -155,6 +232,59 @@ const ItemListContainerPersona = () => {
           checked={filtros.esActivo}
           onChange={handleToggleChange}
         />
+
+{/* Contenedor de Botones */}
+      <div style={{ display: 'flex', gap: '8px', 
+                    marginTop: '15px',    /* Mueve los botones hacia abajo */
+                    marginLeft: 'auto'    /* Empuja los botones completamente hacia la derecha */ }}>
+        
+        {/* Botón Excel con Ícono */}
+        <button
+          onClick={handleExportExcel}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#16a34a', // Verde Excel
+            color: '#ffffff',
+            padding: '10px 16px',
+            border: 'none',
+            borderRadius: '6px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            fontSize: '14px',
+            transition: 'background-color 0.2s',
+          }}
+        >
+          <FaFileExcel size={18} />
+         {/* Exportar a Excel*/}
+        </button>
+
+
+          {/* Botón PDF (en lugar de PDFDownloadLink) */}
+          <button onClick={handleExportPDF} 
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: '#dc2626', // Rojo PDF (Tailwind Red 600)
+            color: '#ffffff',
+            padding: '10px 16px',
+            border: 'none',
+            borderRadius: '6px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            fontSize: '14px',
+            transition: 'background-color 0.2s',
+          }}
+          >
+            <FaFilePdf size={18}/>
+          </button>
+
+ 
+
+      </div>
+
       </div>
 
       {/* Resultados filtrados al vuelo */}
@@ -164,6 +294,8 @@ const ItemListContainerPersona = () => {
         <ItemListPersonas prods={personasFiltradas} setProds={setTodasLasPersonas} />
       )}
     </div>
+
+    
   )
 }
 
