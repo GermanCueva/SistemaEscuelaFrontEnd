@@ -1,17 +1,15 @@
 import { useEffect, useState, useMemo } from "react"
 import ItemListPersonas from './ItemListPersonas'
 import CustomToggle from "../utils/CustomToggle"
-//import { PDFDownloadLink } from '@react-pdf/renderer';
-//import { exportToExcelCustom } from '../utils/excel';
-//import { GenericPDFReport } from '../utils/pdf';
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa'; // Importamos los íconos
-
 
 
 const ItemListContainerPersona = () => {
   // 1. Guardamos la lista completa original cargada de la API
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [descargando, setDescargando] = useState(false)
+  const [tipoDescarga, setTipoDescarga] = useState('') // 'Excel' o 'PDF'
 
   // 2. Estado para la caja de texto
   const [textoBusqueda, setTextoBusqueda] = useState('')
@@ -107,73 +105,97 @@ const ItemListContainerPersona = () => {
     setFiltros(prev => ({ ...prev, [name]: checked }))
   }
 
-  // 2. Configuración para ExcelJS
-  const excelColumns = [
-    { header: 'Apellido', key: 'apellidos', width: 35 },
-    { header: 'Nombres', key: 'nombres', width: 35 },
-    { header: 'Tipo de Documento', key: 'nombre_corto', width: 16 },
-    { header: 'Número', key: 'numero', width: 15 },
-{ header: 'Tipo de Usuario', key: 'es_alumno', width: 15, getValue: (row) => row.es_alumno === 'S' ? 'Alumno' : 'Tutor' },
-  ];
 
-  // 3. Configuración para @react-pdf/renderer (anchos en %)
-  const pdfColumns = [
-    { header: 'Apellido', key: 'apellidos', width: '30%' },
-    { header: 'Nombres', key: 'nombres', width: '30%' },
-    { header: 'Tipo de Documento', key: 'nombre_corto', width: '16%' },
-    { header: 'Número', key: 'numero', width: '12%' },
-{ header: 'Tipo de Usuario', key: 'es_alumno', width: '15%' },
-  ];
 
-  // Creamos una variable con los datos transformados para reusarla en ambos
-const datosFormateados = todasLasPersonas.map(p => ({
-  ...p,
-  es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor'
-}));
+  // 1. Mapeamos los 711 registros en el instante exacto del click
+  const datosParaEnviar = todasLasPersonas.map(p => ({
+    apellidos: p.apellidos,
+    nombres: p.nombres,
+    nombre_corto: p.nombre_corto,
+    numero: p.numero,
+    es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor'
+  }));
 
-  const handleExportExcel = async () => {
-    try {
-    const { exportToExcelCustom } = await import('../utils/excel');
 
-    exportToExcelCustom({
-      columnsConfig: excelColumns,
-      data: datosFormateados,
-      fileName: 'Reporte_Personas',
-      sheetName: 'Reporte de Personas',
+const handleExportExcel = async () => {
+setDescargando(true);
+setTipoDescarga('Excel');
+
+  try {
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/excel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      // Enviamos el array directo
+      body: JSON.stringify(datosParaEnviar)
     });
-    } catch (error) {
-    console.error("Error al exportar Excel:", error);
+
+    if (!response.ok) {
+      throw new Error(`Error en el servidor: ${response.status}`);
+    }
+
+    // 🟢 2. PROCESAR Y FORZAR LA DESCARGA EN EL NAVEGADOR
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'Reporte_Personas.xlsx'; // Nombre con el que se descarga
+    document.body.appendChild(a);
+    
+    a.click(); // 👈 Esto dispara la descarga en Windows/Firefox
+    
+    // Limpieza
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+  } catch (err) {
+    console.error("Error al exportar a Excel:", err);
+  } finally {
+setDescargando(false);
   }
-  };
+};
 
   // Función para generar y descargar PDF bajo demanda
 const handleExportPDF = async () => {
+  setDescargando(true);
+  setTipoDescarga('PDF');
+
   try {
-    // Carga dinámicamente tu plantilla y la librería pdf
-    const { GenericPDFReport } = await import('../utils/pdf');
-    const { pdf } = await import('@react-pdf/renderer');
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/pdf`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      // Enviamos el array directo
+      body: JSON.stringify(datosParaEnviar)
+    });
 
-    // Aquí usas pdfColumns, lo que eliminará el warning de ESLint:
-    const doc = (
-      <GenericPDFReport 
-        data={datosFormateados} 
-        columns={pdfColumns} 
-        title="Reporte de Personas"
-      />
-    );
+    if (!response.ok) {
+      throw new Error(`Error en el servidor: ${response.status}`);
+    }
 
-    // Genera el blob del PDF en segundo plano al hacer clic
-    const blob = await pdf(doc).toBlob();
+    // 🟢 2. PROCESAR Y FORZAR LA DESCARGA EN EL NAVEGADOR
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.style.display = 'none';
+    a.href = url;
+    a.download = 'Reporte_Personas.pdf'; // Nombre con el que se descarga
+    document.body.appendChild(a);
     
-    // Crea la descarga
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'reporte-personas.pdf';
-    link.click();
-    URL.revokeObjectURL(url);
+    a.click(); // 👈 Esto dispara la descarga en Windows/Firefox
+    
+    // Limpieza
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
   } catch (error) {
     console.error("Error al generar PDF:", error);
+  } finally {
+   setDescargando(false);
   }
 };
 
@@ -293,6 +315,15 @@ const handleExportPDF = async () => {
       ) : (
         <ItemListPersonas prods={personasFiltradas} setProds={setTodasLasPersonas} />
       )}
+
+{/* 🟢 FLOATING DOWNLOAD LOADER (Opción 1) */}
+      {descargando && (
+        <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 bg-gray-900/90 text-white px-5 py-3 rounded-full shadow-2xl backdrop-blur-sm border border-gray-700 animate-fade-in">
+          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          <span className="text-sm font-medium">Generando {tipoDescarga}...</span>
+        </div>
+      )}
+
     </div>
 
     
