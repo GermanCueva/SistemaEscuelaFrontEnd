@@ -1,10 +1,10 @@
 import { useEffect, useState, useMemo } from "react"
-import ItemListPersonas from './ItemListPersonas'
+import ItemListAlumnos from './ItemListAlumnos'
 import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa'; // Importamos los íconos
 
 
-const ItemListContainerPersona = () => {
+const ItemListContainerAlumnos = () => {
   // 1. Guardamos la lista completa original cargada de la API
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -54,6 +54,10 @@ const ItemListContainerPersona = () => {
   const personasFiltradas = useMemo(() => {
     return todasLasPersonas.filter(persona => {
       
+      if (persona.es_alumno !== 'S') {
+      return false;
+    }
+
       // A. Filtro por Texto Libre (Buscador)
       if (textoBusqueda.trim() !== '') {
         const query = textoBusqueda.toLowerCase().trim()
@@ -109,7 +113,8 @@ const ItemListContainerPersona = () => {
 
 
   // 1. Mapeamos los 711 registros en el instante exacto del click
-  const datosParaEnviar = todasLasPersonas.map(p => ({
+  const datosParaEnviar = todasLasPersonas.filter(p => p.es_alumno === 'S') // 👈 Tu condición de filtrado aquí
+   .map(p => ({
     apellidos: p.apellidos,
     nombres: p.nombres,
     nombre_corto: p.nombre_corto,
@@ -203,7 +208,7 @@ const handleExportPDF = async () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-xl font-bold mb-4 text-center">Listado de Personas</h2>
+      <h2 className="text-xl font-bold mb-4 text-center">Listado de Alumnos</h2>
 
       {/* Control de Filtros */}
       <div className="flex flex-wrap items-center justify-center gap-6 mb-6 bg-gray-100 p-4 rounded-xl shadow-sm">
@@ -235,7 +240,7 @@ const handleExportPDF = async () => {
         <div className="h-8 border-r border-gray-300 hidden sm:block"></div>
 
         {/* Interruptores */}
-        <CustomToggle 
+    {/*    <CustomToggle 
           label="Alumno"
           name="esAlumno"
           checked={filtros.esAlumno}
@@ -247,7 +252,7 @@ const handleExportPDF = async () => {
           name="esTutor"
           checked={filtros.esTutor}
           onChange={handleToggleChange}
-        />
+        />*/}
 
         <CustomToggle 
           label={filtros.esActivo ? "Alumno Activo" : "Alumno Pasivo"}
@@ -314,7 +319,7 @@ const handleExportPDF = async () => {
       {cargando ? (
         <p className="text-center font-semibold my-4">Cargando datos iniciales...</p>
       ) : (
-        <ItemListPersonas prods={personasFiltradas} setProds={setTodasLasPersonas} />
+        <ItemListAlumnos prods={personasFiltradas} setProds={setTodasLasPersonas} />
       )}
 
 {/* 🟢 FLOATING DOWNLOAD LOADER (Opción 1) */}
@@ -331,4 +336,4 @@ const handleExportPDF = async () => {
   )
 }
 
-export default ItemListContainerPersona
+export default ItemListContainerAlumnos
