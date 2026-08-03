@@ -11,6 +11,7 @@ import ItemListContainerPersona from "./components/ItemListContainerPersonas";
 import ItemPersonaDetail from "./components/ItemPersonaDetail";
 import ItemListContainerAlumnos from "./components/ItemListContainerAlumnos";
 import ItemListContainerTutores from "./components/ItemListContainerTutores";
+import ItemListContainerAlumnosPagos from "./components/ItemListContainerAlumnosPagos";
 
 
 import { useAuth } from "./context/AuthContext";
@@ -234,7 +235,7 @@ function App() {
           {/* Gestión de Pagos */}
           <Route path="gestion">
            <Route path="cargos" element={<GestionPagos />} /> 
-            <Route path="pagosmanual" element={<ItemListContainerAlumnos />} />
+            <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
            <Route path="pagosmasiva" element={<GestionPagos />} /> 
            <Route path="actualizarimporte" element={<GestionPagos />} /> 
           </Route>
