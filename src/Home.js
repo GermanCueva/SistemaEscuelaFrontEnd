@@ -9,8 +9,8 @@ const Home = () => {
   const tabs = {
     "/": "Inicio",
     "/personas": "Personas",
+    "/gestion": "Gestión de Pagos",
     "/tutor": "Tutor",
-    "/gestion": "Gestión",
     "/reportes": "Reportes",
     "/admin": "Administración",
   };
@@ -51,14 +51,117 @@ const Home = () => {
 
           <button
             style={
-              location.pathname === "/personas/gestion"
+              location.pathname === "/personas/alumnos"
                 ? styles.activeSubTab
                 : styles.subTab
             }
-            onClick={() => navigate("/personas/gestion")}
+            onClick={() => navigate("/personas/alumnos")}
           >
-            Gestión académica de alumnos
+            Alumnos
           </button>
+
+          <button
+            style={
+              location.pathname === "/personas/tutores"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/personas/tutores")}
+          >
+            Tutores
+          </button>
+
+        </div>
+      )}
+
+
+      {/* 🔹 Subtabs SOLO para Gestión de Archivos y Cobros */}
+      {location.pathname.startsWith("/gestion") && (
+        <div style={styles.subTabHeader}>
+          <button
+            style={
+              location.pathname === "/gestion/cargos"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/gestion/cargos")}
+          >
+            Generar Cargos a Alumnos
+          </button>
+
+          <button
+            style={
+              location.pathname === "/gestion/pagosmanual"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/gestion/pagosmanual")}
+          >
+            Alta manual de Pagos
+          </button>
+
+          <button
+            style={
+              location.pathname === "/gestion/pagosmasiva"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/gestion/pagosmasiva")}
+          >
+            Alta masiva de Pagos
+          </button>
+
+          <button
+            style={
+              location.pathname === "/gestion/actualizarimporte"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/gestion/actualizarimporte")}
+          >
+            Actualizar importe cuotas impagas
+          </button>
+
+        </div>
+      )}
+
+
+      {/* 🔹 Subtabs SOLO para Administración */}
+      {location.pathname.startsWith("/admin") && (
+        <div style={styles.subTabHeader}>
+          <button
+            style={
+              location.pathname === "/admin/instituciones"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/admin/instituciones")}
+          >
+            ABM de Instituciones
+          </button>
+
+          <button
+            style={
+              location.pathname === "/admin/usuarios"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/admin/usuarios")}
+          >
+            Gestión de Usuarios
+          </button>
+
+          <button
+            style={
+              location.pathname === "/admin/parametros"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/admin/parametros")}
+          >
+            Parámetros
+          </button>
+
         </div>
       )}
 

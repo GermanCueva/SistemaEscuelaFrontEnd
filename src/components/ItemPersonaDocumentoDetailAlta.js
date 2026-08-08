@@ -67,11 +67,17 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         e.preventDefault();
 
         if (!formData.id_tipo_documento || !formData.numero || !formData.activo) {
-            alert("¡Error! Por favor complete todos los campos obligatorios.");
+            avisar.advertencia("¡Error! Por favor complete todos los campos obligatorios.");
             return;
         }
 
         if (isEditing) {
+            // Validar que no se repita el mismo tipo antes de guardarlo en memoria local
+            const yaExiste = docs.some(d => String(d.id_tipo_documento) === String(formData.id_tipo_documento));
+            if (yaExiste) {
+                avisar.advertencia("Este tipo de documento ya está listado en la grilla temporal.");
+                return;
+            }
             // Modificar elemento en el array del estado del Padre
             const listaModificada = docs.map(d => {
                 const idActual = d.id || d.id_persona_tipo_documento || d.id_tipo_documento;
@@ -108,7 +114,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         const esDocumentoPersistido = documentoCompleto.id_persona_tipo_documento && String(documentoCompleto.id_persona_tipo_documento).length < 10;
 
         if (isEditMode && esDocumentoPersistido) {
-            const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este documento del servidor?");
+            const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este documento?");
             if (!confirmar) return;
 
             // Invoca al endpoint pasándole el id del registro intermedio/documento
@@ -224,7 +230,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                             value={formData.id_tipo_documento || ''} 
                             onChange={handleChange}
                             className="w-full h-12 border border-gray-300 rounded-md px-3 bg-white"
-                            disabled={isEditing} 
+                          //disabled={isEditing}
                         >
                             <option value="" disabled>Seleccione</option>
                             {documentos.map((doc) => (

@@ -3,7 +3,7 @@ import { Search } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 
 
-const ItemPersona = ({ apellido, nombre, id_persona, tipo_documento, numero, tipo_usuario, activo, motivo_desercion, regular, setProds }) => {
+const ItemPersonaPagos = ({ apellido, nombre, id_persona, tipo_documento, numero, tipo_usuario, activo, motivo_desercion, regular, setProds }) => {
 
 
   const cambiar_estado = async (e) => {
@@ -123,4 +123,4 @@ return (
     );
 }
 
-export default ItemPersona;
+export default ItemPersonaPagos;

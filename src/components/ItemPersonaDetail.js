@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import Spinner from './Spinner';
 import ItemDetailPersonaDocumentoAlta from './ItemPersonaDocumentoDetailAlta'; 
@@ -6,17 +6,19 @@ import ItemPersonaAlumnoDetailAlta from './ItemPersonaAlumnoDetailAlta';
 import ItemListTutorAlumnos from "./ItemListTutorAlumnos.js";
 import { avisar } from "../utils/notificaciones.js";
 import ItemListAlumnoAllegados from "./ItemListAlumnoAllegados.js";
-//import { ActivitySquare } from "lucide-react";
+import ItemListAlumnoAcademica from "./ItemListAlumnoAcademica.js";
+import ItemListAlumnoFormaPago from "./ItemListAlumnoFormaPago.js";
+
 
 const ItemDetailPersona = () => {
 
   const { id } = useParams();
   const navigate = useNavigate();
 
-    // Resetear la pestaña activa a 'alta' cada vez que cambie el ID de la persona en la URL
-useEffect(() => {
-  setSubSolapaActiva('alta');
-}, [id]);
+  // Resetear la pestaña activa a 'alta' cada vez que cambie el ID de la persona en la URL
+  useEffect(() => {
+    setSubSolapaActiva('alta');
+  }, [id]);
   
   const isEditMode = Boolean(id) && id !== "alta" && id !== "undefined";
 
@@ -47,8 +49,12 @@ useEffect(() => {
     direccion_numero: '',
     direccion_piso: '',
     direccion_depto: '',
-    documentos: [] 
+    documentos: [],
+    allegados: [],
+    academica: [], 
+    formasPago: [] 
   });
+
 
   // Helper seguro para mostrar notificaciones garantizadas
   const notificar = (mensaje, tipo = 'advertencia') => {
@@ -58,10 +64,10 @@ useEffect(() => {
       } else if (avisar && typeof avisar.advertencia === 'function') {
         avisar.advertencia(mensaje);
       } else {
-        alert(mensaje);
+        avisar.advertencia(mensaje);
       }
     } catch (e) {
-      alert(mensaje);
+      avisar.error(mensaje);
     }
   };
 
@@ -86,6 +92,39 @@ useEffect(() => {
     cargarCatalogos();
   }, [isEditMode]);
 
+  // Carga de Allegados de forma aislada / reutilizable
+  const obtenerAllegados = useCallback(async (idAlumno) => {
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${idAlumno}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPers(prev => ({ ...prev, allegados: Array.isArray(data) ? data : [] }));
+      }
+    } catch (err) {
+      console.error("Error al obtener allegados:", err);
+    }
+  }, []);
+
+  // Carga de Formas de Pago de forma aislada / reutilizable
+  const obtenerFormasPago = useCallback(async (idAlumno) => {
+    if (!idAlumno) return;
+    const token = localStorage.getItem('token');
+    try {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/${idAlumno}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPers(prev => ({ ...prev, formasPago: Array.isArray(data) ? data : [] }));
+      }
+    } catch (err) {
+      console.error("Error al obtener formas de pago:", err);
+    }
+  }, []);
+
   // 2. Cargar Datos del Registro (Modo Edición)
   useEffect(() => {
     if (isEditMode) {
@@ -101,17 +140,24 @@ useEffect(() => {
         }).then(res => res.json()).catch(() => []),
         fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.ok ? res.json() : null).catch(() => null)
+        }).then(res => res.ok ? res.json() : null).catch(() => null),
+        fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(res => res.json()).catch(() => [])
       ])
-      .then(([dataPersona, dataDocs, dataAlumno]) => {
+      .then(([dataPersona, dataDocs, dataAlumno, dataAllegados]) => {
         if (dataPersona && dataPersona.length > 0) {
           const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
-          
+          const misAllegados = Array.isArray(dataAllegados) ? dataAllegados : [];
+
           let datosAlumno = {};
+          let idAlumnoReal = null;
+
           if (dataAlumno) {
             const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
             if (alumnoObj) {
               datosAlumno = alumnoObj;
+              idAlumnoReal = alumnoObj.id_alumno || alumnoObj.id;
               setHasAlumnoRecord(true);
             }
           }
@@ -120,8 +166,15 @@ useEffect(() => {
             ...prev,
             ...dataPersona[0],
             ...datosAlumno,
-            documentos: misDocs 
-          })); 
+            documentos: misDocs,
+            allegados: misAllegados,
+            academica: prev.academica
+          }));
+
+          // Si obtuvimos el id_alumno, llamamos a la función de formas de pago
+          if (idAlumnoReal) {
+            obtenerFormasPago(idAlumnoReal);
+          }
         }
         setIsLoading(false);
       })
@@ -130,8 +183,7 @@ useEffect(() => {
         setIsLoading(false);
       });
     }
-  }, [id, isEditMode]);
-
+  }, [id, isEditMode, obtenerFormasPago]);
 
   const calcularEdad = (fechaNacimiento) => {
     const hoy = new Date();
@@ -139,24 +191,22 @@ useEffect(() => {
     let edad = hoy.getFullYear() - nacimiento.getFullYear();
     const mes = hoy.getMonth() - nacimiento.getMonth();
 
-    // Ajuste si aún no ha cumplido años en el año actual
     if (mes < 0 || (mes === 0 && hoy.getDate() < nacimiento.getDate())) {
       edad--;
     }
     return edad;
-};
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === 'fecha_nacimiento' && value) {
-    const edad = calcularEdad(value);
-
-    if (edad < 4) {
-      avisar.error("El alumno debe tener al menos 4 años de edad.");
-      return; // O puedes guardar un mensaje de error en el estado
+      const edad = calcularEdad(value);
+      if (edad < 4) {
+        avisar.error("El alumno debe tener al menos 4 años de edad.");
+        return; 
+      }
     }
-  }
     
     setPers((prev) => {
       if (name === 'es_alumno' && value === 'S') {
@@ -184,9 +234,45 @@ useEffect(() => {
     setPhoneError(v !== "" && !regexPhone.test(v) ? "Formato de teléfono inválido." : ""); 
   };
 
-
   const setDocumentosGlobal = (nuevosDocumentos) => {
     setPers(prev => ({ ...prev, documentos: nuevosDocumentos }));
+  };
+
+  const setAcademicaGlobal = useCallback((nuevosDatosAcademicos) => {
+    setPers(prev => ({ ...prev, academica: nuevosDatosAcademicos }));
+  }, []);
+
+  const setFormasPagoGlobal = useCallback((nuevasFormas) => {
+    setPers(prev => ({ ...prev, formasPago: nuevasFormas }));
+  }, []);
+
+  const setAllegadosGlobal = (nuevaListaOFunction) => {
+    setPers(prev => {
+      const allegadosActuales = Array.isArray(prev.allegados) ? prev.allegados : [];
+      const resultado = typeof nuevaListaOFunction === 'function' 
+        ? nuevaListaOFunction(allegadosActuales)
+        : nuevaListaOFunction;
+
+      const nuevaListaBruta = Array.isArray(resultado) ? resultado : [];
+      const listaSinDuplicados = [];
+      const idsVistos = new Set();
+
+      for (const item of nuevaListaBruta) {
+        if (!item) continue;
+        const idPersonaUnico = String(item.id_persona_real || item.id_persona || '');
+
+        if (idPersonaUnico) {
+          if (idsVistos.has(idPersonaUnico)) {
+            notificar('⚠️ Esta persona ya se encuentra agregada en la lista de allegados.', 'advertencia');
+            continue; 
+          }
+          idsVistos.add(idPersonaUnico);
+        }
+        listaSinDuplicados.push(item);
+      }
+
+      return { ...prev, allegados: listaSinDuplicados };
+    });
   };
 
   const eliminarDocumentoBackend = async (idDocumento) => {
@@ -195,9 +281,7 @@ useEffect(() => {
       setIsLoading(true);
       const res = await fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${idDocumento}`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (!res.ok) {
@@ -209,84 +293,246 @@ useEffect(() => {
       return true;
     } catch (error) {
       console.error('Error al eliminar el documento:', error);
-      alert('Hubo un problema al eliminar el documento:\n' + error.message);
+      avisar.error('Hubo un problema al eliminar el documento:\n' + error.message);
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-// 📥 FUNCIÓN CENTRAL DE GUARDADO
-const grabar = async (e) => {
-  if (e) e.preventDefault();
+  const eliminarAllegadoBackend = async (idPersonaAllegado) => {
+    const token = localStorage.getItem('token');
+    const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este allegado?");
+    if (!confirmar) return;
 
-  try {
-    const token = localStorage.getItem('token'); 
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores/${idPersonaAllegado}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-    // 1. Validar campos obligatorios básicos de la Persona
-    if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
-       avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!", 'advertencia');
-       setSubSolapaActiva('alta');
-       return;
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.mensaje || "Error al eliminar de la base de datos.");
+      }
+
+      setPers(prev => {
+        const listaActual = Array.isArray(prev.allegados) ? prev.allegados : [];
+        return {
+          ...prev,
+          allegados: listaActual.filter(item => 
+            item.id_persona_allegado !== idPersonaAllegado && 
+            item.id_persona !== idPersonaAllegado
+          )
+        };
+      });
+
+      avisar.advertencia('¡Allegado eliminado correctamente!', 'exito');
+    } catch (error) {
+      console.error("Error al eliminar allegado:", error);
+      avisar.error("Ocurrió un error al eliminar:\n" + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const eliminarAcademicaBackend = async (idAcademica) => {
+    if (!idAcademica || String(idAcademica).startsWith('temp-')) {
+      setPers(prev => ({
+        ...prev,
+        academica: (prev.academica || []).filter(item => item.id_academica !== idAcademica && item.id !== idAcademica)
+      }));
+      return true;
     }
 
-    // 2. Validar que se haya indicado si "Es alumno"
-    if (!pers.es_alumno || String(pers.es_alumno).trim() === '') {
-       notificar("⚠️ Error: Selecciona una opción en el campo 'Es alumno' (Sí / No) antes de continuar.", 'advertencia');
-       setSubSolapaActiva('alta');
-       return;
+    const token = localStorage.getItem('token');
+    const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente este registro académico?");
+    if (!confirmar) return false;
+
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/academica/${idAcademica}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.mensaje || "Error al eliminar de la base de datos.");
+      }
+
+      setPers(prev => ({
+        ...prev,
+        academica: (prev.academica || []).filter(item => item.id_academica !== idAcademica && item.id !== idAcademica)
+      }));
+
+      avisar.advertencia('¡Registro académico eliminado correctamente!', 'exito');
+      return true;
+    } catch (error) {
+      console.error("Error al eliminar registro académico:", error);
+      avisar.error("Ocurrió un error al eliminar:\n" + error.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // DELETE PARA FORMAS DE PAGO
+  const eliminarFormaPagoBackend = async (idFormaPago) => {
+    if (!idFormaPago || String(idFormaPago).startsWith('temp-')) {
+      setPers(prev => ({
+        ...prev,
+        formasPago: (prev.formasPago || []).filter(item => item.id_forma_pago !== idFormaPago && item.id !== idFormaPago)
+      }));
+      return true;
     }
 
-    // 3. Validar Formatos (Email / Teléfono)
-    if (emailError || phoneError) { 
-      notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
-      setSubSolapaActiva('alta');
-      return;
+    const token = localStorage.getItem('token');
+    const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta forma de pago?");
+    if (!confirmar) return false;
+
+    try {
+      setIsLoading(true);
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/${idFormaPago}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || errData.mensaje || "Error al eliminar la forma de pago.");
+      }
+
+      setPers(prev => ({
+        ...prev,
+        formasPago: (prev.formasPago || []).filter(item => item.id_forma_pago !== idFormaPago && item.id !== idFormaPago)
+      }));
+
+      avisar.advertencia('¡Forma de pago eliminada correctamente!', 'exito');
+      return true;
+    } catch (error) {
+      console.error("Error al eliminar forma de pago:", error);
+      avisar.error("Ocurrió un error al eliminar:\n" + error.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const grabar = async (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
     }
 
-    // 4. Validar DOCUMENTOS PRIMERO (Antes de Alumno)
-    if (!pers.documentos || pers.documentos.length === 0) {
-      notificar("⚠️ Error: Debes ir a la solapa 'Documentos' y agregar al menos un Documento a la grilla antes de continuar.", 'advertencia');
-      setSubSolapaActiva('documentos'); // <--- Ahora redirigirá a Documentos primero
-      return;
-    }
+    try {
+      const token = localStorage.getItem('token'); 
 
-    // Normalización para saber si es Alumno ('S', 's', true, 1)
-    const esAlumno = pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1;
+      if (!pers.apellidos || !pers.nombres || !pers.id_sexo || !pers.fecha_nacimiento || !pers.correo_electronico || !pers.telefono) {
+          avisar.advertencia("⚠️ Error: ¡Por favor, completa todos los campos obligatorios en la solapa de Datos de la Persona!", 'advertencia');
+          setSubSolapaActiva('alta');
+          return;
+      }
 
-    // 5. Validaciones si ES ALUMNO (Desplazado al final)
-    if (esAlumno) {
-      if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
-        notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno (Legajo, Extranjero, Regularidad, Celiaquía y Dirección)!", 'advertencia');
-        setSubSolapaActiva('alumnos');
+      if (pers.es_alumno === undefined || pers.es_alumno === null || String(pers.es_alumno).trim() === '') {
+          notificar("⚠️ Error: Selecciona una opción en el campo 'Es alumno' (Sí / No) antes de continuar.", 'advertencia');
+          setSubSolapaActiva('alta');
+          return;
+      }
+
+      const esAlumno = String(pers.es_alumno).toUpperCase() === 'S' || pers.es_alumno === true || pers.es_alumno === 1 || Boolean(pers.legajo);
+
+      if (!esAlumno && (String(pers.usuario || '').trim() === '')) {
+          notificar("⚠️ Error: Debe ingresar un valor de Usuario antes de continuar.", 'advertencia');
+          setSubSolapaActiva('alta');
+          return;
+      }
+
+      if (emailError || phoneError) { 
+        notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
+        setSubSolapaActiva('alta');
         return;
       }
 
-      const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
-
-      if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
-        notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
-        setSubSolapaActiva('alumnos');
+      if (!pers.documentos || pers.documentos.length === 0) {
+        notificar("⚠️ Error: Debes ir a la solapa 'Documentos' y agregar al menos un Documento a la grilla antes de continuar.", 'advertencia');
+        setSubSolapaActiva('documentos');
         return;
       }
-    }
 
-    setIsLoading(true);
-    
-    // ... RESTO DEL CÓDIGO DE GRABAR SIN CAMBIOS ...
-      
-      const { documentos, ...todo } = pers;
+      if (esAlumno) {
+        if (!pers.legajo || !pers.extranjero || !pers.regular || !pers.es_celiaco || !pers.direccion_calle || !pers.direccion_numero) {
+          notificar("⚠️ Error: ¡Por favor, completa todos los datos obligatorios del Alumno!", 'advertencia');
+          setSubSolapaActiva('alumnos');
+          return;
+        }
+
+        const esNoRegular = pers.regular === 'N' || pers.regular === 'n' || pers.regular === false || pers.regular === 0;
+        if (esNoRegular && (!pers.id_motivo_desercion || String(pers.id_motivo_desercion).trim() === '')) {
+          notificar("⚠️ Error: El alumno no es regular. ¡Debes seleccionar un Motivo de Deserción!", 'advertencia');
+          setSubSolapaActiva('alumnos');
+          return;
+        }
+      }
+
+      const allegadosParaValidar = pers?.allegados || [];
+      if (esAlumno && allegadosParaValidar.length === 0) {
+        avisar.advertencia('Debe ingresar obligatoriamente al menos un allegado antes de registrar al alumno.');
+        setSubSolapaActiva('alumnoAllegados');
+        return;
+      }
+
+      const allegadosIncompletos = allegadosParaValidar.filter(all => {
+        const tienePersona = Boolean(all.id_persona || all.id_persona_real || all.nombre || all.apellido || all.id);
+        const tieneTipo = Boolean(all.id_tipo_allegado || all.id_parentesco || all.tipo_allegado || all.parentesco);
+        return !tienePersona || !tieneTipo;
+      });
+
+      if (allegadosIncompletos.length > 0 && subSolapaActiva === 'alumnoAllegados') {
+        avisar.advertencia('Por favor, complete los campos obligatorios (Parentesco y Persona) de todos los allegados.');
+        setSubSolapaActiva('alumnoAllegados'); 
+        return;
+      }
+
+      // ==========================================
+      // CONTROLES DE GESTIÓN ACADÉMICA Y PAGO
+      // ==========================================
+      const academicaParaValidar = pers?.academica || [];
+      const formasPagoParaValidar = pers?.formasPago || [];
+
+      if (esAlumno && academicaParaValidar.length === 0) {
+        avisar.advertencia("⚠️ Error: Debe ingresar obligatoriamente al menos un registro en la Gestión Académica.");
+        setSubSolapaActiva('alumnoAcademica');
+        return;
+      }
+
+      // Si está en modo edición, permitimos avanzar si ya existe en backend incluso si la lista local está vacía por falta de sincronización
+      if (esAlumno && formasPagoParaValidar.length === 0) {
+        avisar.advertencia("⚠️ Error: Debe ingresar obligatoriamente al menos un registro en la Forma de Pago.");
+        setSubSolapaActiva('alumnoFormaPago');
+        return;
+      }
+
+      const academicaIncompleta = academicaParaValidar.some(item => {
+        return !item.id_grado || !item.id_division || (!item.anio_cursada && !item.id_anio);
+      });
+
+      if (academicaIncompleta) {
+        avisar.advertencia("⚠️ Error: Hay registros académicos incompletos. Por favor, revísalos.");
+        setSubSolapaActiva('alumnoAcademica');
+        return;
+      }
+      // ==========================================
+
+      setIsLoading(true);
+      const { documentos, allegados, academica, formasPago, ...todo } = pers;
 
       const datosAlumno = {
-        legajo: todo.legajo,
-        extranjero: todo.extranjero,
-        regular: todo.regular,
+        legajo: todo.legajo, extranjero: todo.extranjero, regular: todo.regular,
         id_motivo_desercion: todo.id_motivo_desercion ? Number(todo.id_motivo_desercion) : null,
-        es_celiaco: todo.es_celiaco,
-        direccion_calle: todo.direccion_calle,
-        direccion_numero: todo.direccion_numero,
-        direccion_piso: todo.direccion_piso,
-        direccion_depto: todo.direccion_depto
+        es_celiaco: todo.es_celiaco, direccion_calle: todo.direccion_calle,
+        direccion_numero: todo.direccion_numero, direccion_piso: todo.direccion_piso, direccion_depto: todo.direccion_depto
       };
 
       const datosPersona = { ...todo };
@@ -303,82 +549,51 @@ const grabar = async (e) => {
 
       const methodPersona = isEditMode ? 'PUT' : 'POST'; 
 
-      // 1. Guardar Persona
       const responsePersona = await fetch(urlPersona, {
         method: methodPersona,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` 
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(datosPersona), 
       });
 
       const resultadoPersona = await responsePersona.json();
-
-      if (!responsePersona.ok) {
-        throw new Error(resultadoPersona.error || resultadoPersona.message || 'No se pudo procesar la persona.');
-      }
+      if (!responsePersona.ok) throw new Error(resultadoPersona.error || resultadoPersona.message || 'No se pudo procesar la persona.');
 
       let idPersonaFinal = isEditMode ? id : null;
-      
       if (!isEditMode && resultadoPersona) {
-        idPersonaFinal = 
-          resultadoPersona.id_persona || 
-          resultadoPersona.id ||
-          (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona) || 
-          (resultadoPersona.rows && resultadoPersona.rows[0]?.id) ||
-          resultadoPersona.data?.id_persona || 
-          resultadoPersona.data?.id ||
-          (Array.isArray(resultadoPersona) ? resultadoPersona[0]?.id_persona : null) ||
-          (Array.isArray(resultadoPersona) ? resultadoPersona[0] : null);
+        idPersonaFinal = resultadoPersona.id_persona || resultadoPersona.id || (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona);
       }
+      if (!idPersonaFinal) idPersonaFinal = id;
 
-      if (!idPersonaFinal && typeof resultadoPersona === 'object') {
-         const valoresObjeto = Object.values(resultadoPersona);
-         const posibleId = valoresObjeto.find(v => typeof v === 'number');
-         if (posibleId) idPersonaFinal = posibleId;
-      }
-
-      if (!idPersonaFinal) {
-        throw new Error(`El backend guardó la persona pero no devolvió un ID reconocible.`);
-      }
-
-      // 2. Guardar Documentos
       const promesasDocumentos = documentos.map(async (doc) => {
-        const esNuevoDocumento = !isEditMode || !doc.id_persona;
+        const idRelacionDoc = doc.id_persona_tipo_documento || doc.id_documento || doc.id;
+        const esNuevoDocumento = !isEditMode || !idRelacionDoc || Number(idRelacionDoc) > 1000000000000; 
+
         const urlDoc = esNuevoDocumento
           ? `${process.env.REACT_APP_API_URL}/api/documentos`
-          : `${process.env.REACT_APP_API_URL}/api/documentos/${doc.id_persona_tipo_documento || doc.id}`;
+          : `${process.env.REACT_APP_API_URL}/api/documentos/${idRelacionDoc}`;
 
-        const methodDoc = esNuevoDocumento ? 'POST' : 'PUT';
-
-        const datosAEnviarDoc = {
+        const metodo = esNuevoDocumento ? 'POST' : 'PUT';
+        const payloadDoc = {
           id_persona: Number(idPersonaFinal), 
           id_tipo_documento: Number(doc.id_tipo_documento),
-          numero: String(doc.numero),
-          activo: doc.activo || 'S',
-          id_persona_tipo_documento: doc.id_persona_tipo_documento || doc.id_tipo_documento
+          numero: String(doc.numero).trim(), activo: doc.activo || 'S'
         };
 
+        if (!esNuevoDocumento) payloadDoc.id_persona_tipo_documento = Number(idRelacionDoc);
+
         const resDoc = await fetch(urlDoc, {
-          method: methodDoc,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify(datosAEnviarDoc)
+          method: metodo,
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payloadDoc)
         });
 
-        if (!resDoc.ok) {
-          const errData = await resDoc.json().catch(() => ({}));
-          throw new Error(`Documento N° ${doc.numero}: ${errData.error || errData.mensaje || 'Fallo al procesar'}`);
-        }
-        return resDoc.json();
+        if (!resDoc.ok) throw new Error(`Error al guardar documento.`);
+        return resDoc;
       });
 
       await Promise.all(promesasDocumentos);
 
-      // 3. Guardar Alumno
+      let idAlumnoFinal = null;
       if (esAlumno) {
         const esNuevoAlumno = !isEditMode || !hasAlumnoRecord;
         const urlAlumno = esNuevoAlumno 
@@ -390,29 +605,178 @@ const grabar = async (e) => {
 
         const resAlumno = await fetch(urlAlumno, {
           method: methodAlumno,
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
           body: JSON.stringify(datosAlumno)
         });
 
-        if (!resAlumno.ok) {
-          const errAlumno = await resAlumno.json().catch(() => ({}));
-          throw new Error(`Error en datos de Alumno: ${errAlumno.error || errAlumno.mensaje || 'No se pudo guardar la información escolar.'}`);
+        const resultadoAlumno = await resAlumno.json().catch(() => ({}));
+        if (!resAlumno.ok) throw new Error(`Error en datos de Alumno.`);
+
+        idAlumnoFinal = resultadoAlumno.id_alumno || resultadoAlumno.id || (resultadoAlumno.data && resultadoAlumno.data.id_alumno) || pers.id_alumno || todo.id_alumno;
+        if (!idAlumnoFinal && isEditMode) idAlumnoFinal = pers.id_alumno || todo.id_alumno;
+
+        if (!idAlumnoFinal) throw new Error("No se pudo obtener el 'id_alumno'.");
+
+        if (allegados && allegados.length > 0) {
+          const parseIdPersona = (item) => {
+            if (!item) return null;
+            const posiblesIds = [item.id_persona, item.id_persona_real, item.id_persona_allegado, item.id_persona_tutor, item.idPersona];
+            for (const val of posiblesIds) {
+              if (val !== undefined && val !== null) {
+                const sVal = String(val).trim();
+                if (!sVal.startsWith('temp-') && !isNaN(Number(sVal)) && Number(sVal) > 0) return Number(sVal);
+              }
+            }
+            return null;
+          };
+
+          const resolverId = (val1, val2, val3) => {
+            const n = Number(val1 || val2 || val3);
+            return isNaN(n) || n === 0 ? null : n;
+          };
+
+          const allegadosNuevos = allegados.filter(all => {
+            const tieneRelacionPrevia = Boolean(all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores);
+            return all.esNuevo || String(all.id_persona || '').startsWith('temp-') || !tieneRelacionPrevia;
+          });
+
+          const allegadosExistentes = allegados.filter(all => {
+            const tieneRelacionPrevia = Boolean(all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores);
+            const esTemporal = String(all.id_persona || '').startsWith('temp-');
+            return !all.esNuevo && !esTemporal && tieneRelacionPrevia;
+          });
+
+          for (const all of allegadosNuevos) {
+            const idP = parseIdPersona(all);
+            if (!idP) throw new Error(`Uno de los allegados nuevos no tiene un ID válido.`);
+
+            const payloadPost = {
+              id_persona: idP, id_alumno: Number(idAlumnoFinal),
+              id_tipo_allegado: resolverId(all.id_tipo_allegado, all.id_parentesco, all.id_tipo_parentesco),
+              id_estudio_alcanzado: resolverId(all.id_estudio_alcanzado, all.id_nivel_estudio, all.id_estudio),
+              id_ocupacion: resolverId(all.id_ocupacion, all.id_ocupacion_tutor),
+              tutor: all.tutor || all.Tutor || 'S', activo: all.activo || 'S'
+            };
+
+            await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(payloadPost)
+            });
+          }
+
+          for (const all of allegadosExistentes) {
+            const idRelacion = all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores || all.id;
+            const payloadPut = {
+              id_alumno_tutor: idRelacion ? Number(idRelacion) : undefined,
+              id_persona: Number(all.id_persona), id_alumno: Number(idAlumnoFinal),
+              id_tipo_allegado: all.id_tipo_allegado || all.id_parentesco || null,
+              id_estudio_alcanzado: all.id_estudio_alcanzado || all.id_nivel_estudio || all.id_estudio || null,
+              id_ocupacion: all.id_ocupacion || null, tutor: all.tutor || all.Tutor || 'S', activo: all.activo || 'S'
+            };
+
+            await fetch(idRelacion ? `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores/${idRelacion}` : `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(payloadPut)
+            });
+          }
         }
+
+        const nuevosCrudos = (academica || []).filter(item => item.esNuevo === true);
+        const registrosModificados = (academica || []).filter(item => !item.esNuevo);
+
+        const registrosNuevos = nuevosCrudos.map(item => {
+            const { id_academica, esNuevo, ...resto } = item; 
+            return {
+                ...resto,
+                id_alumno: idAlumnoFinal
+            };
+        });
+
+        if (registrosNuevos.length > 0) {
+            const urlAcademicaBulk = `${process.env.REACT_APP_API_URL}/api/academica/`;
+            const resAcademica = await fetch(urlAcademicaBulk, {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ historialAcademico: registrosNuevos })
+            });
+
+            if (!resAcademica.ok) throw new Error("Error procesando los nuevos cambios académicos.");
+        }
+
+        if (registrosModificados.length > 0) {
+            const modificadosSincronizados = registrosModificados.map(item => ({
+                ...item,
+                id_anio_cursada: item.anio_cursada 
+            }));
+
+            const urlAcademicaPut = `${process.env.REACT_APP_API_URL}/api/academica/`;
+            const resAcademicaPut = await fetch(urlAcademicaPut, {
+                method: 'PUT',
+                headers: { 
+                    'Content-Type': 'application/json', 
+                    'Authorization': `Bearer ${token}` 
+                },
+                body: JSON.stringify({ historialAcademico: modificadosSincronizados })
+            });
+
+            if (!resAcademicaPut.ok) throw new Error("Error actualizando los cambios académicos existentes.");
+        }
+
+
+// ==========================================
+    // PROCESAMIENTO DE FORMAS DE PAGO (POST / PUT)
+    // ==========================================
+    for (const pago of (formasPago || [])) {
+      const rawId = pago.id_alumno_tarjeta || pago.id_pago || pago.id_forma_pago || pago.id;
+      const esTemp = String(rawId || '').includes('temp');
+      const tieneIdBDReal = Boolean(rawId) && !esTemp && !pago.esNuevo;
+
+      if (tieneIdBDReal) {
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify({ ...pago, id_alumno: Number(idAlumnoFinal) })
+        });
+       // if (!res.ok) throw new Error("Error en PUT pago");
+       if (!res.ok) {
+          // 🛑 Imprimimos exactamente qué error devolvió el backend
+          const errData = await res.json().catch(() => ({}));
+          console.error(`Error en PUT ${rawId}: HTTP Status ${res.status}`, errData);
+          throw new Error(`Error en PUT pago (${res.status})`);
+        }
+        
+      } else {
+        const payloadPost = { ...pago, id_alumno: Number(idAlumnoFinal) };
+        delete payloadPost.esNuevo;
+        delete payloadPost.id;
+        delete payloadPost.id_pago;
+        delete payloadPost.id_alumno_tarjeta;
+        delete payloadPost.id_forma_pago;
+
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+          body: JSON.stringify(payloadPost)
+        });
+        if (!res.ok) throw new Error("Error en POST pago");
+      }
+    }
       }
 
-      notificar(isEditMode ? '¡Datos, documentos y legajo de alumno actualizados!' : '¡Persona, Documentos y Alumno guardados con éxito!', 'exito');
+      avisar.exito("¡Los datos se han guardado con éxito!");
       navigate('/personas/abm'); 
-
     } catch (error) {
-      console.error('Error en el proceso de guardado:', error); 
-      alert('Hubo un problema al procesar el guardado:\n' + error.message);
+      avisar.error("❌ ERROR EN EL PROCESO DE GUARDADO: " + error.message);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   if (isLoading) return <Spinner />;
 
@@ -449,13 +813,30 @@ const grabar = async (e) => {
             onClick={() => setSubSolapaActiva('alumnoAllegados')} 
             style={subSolapaActiva === 'alumnoAllegados' ? styles.activeSubTab : styles.subTab}
           >
-            Allegados
+            Allegados {pers.allegados.length > 0 && `(${pers.allegados.length})`}
           </button>
         )}  
 
+        {(pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnoAcademica')} 
+            style={subSolapaActiva === 'alumnoAcademica' ? styles.activeSubTab : styles.subTab}
+          >
+            Gestión Académica {pers.academica.length > 0 && `(${pers.academica.length})`}
+          </button>
+        )}  
+
+        {(pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
+          <button 
+            onClick={() => setSubSolapaActiva('alumnoFormaPago')} 
+            style={subSolapaActiva === 'alumnoFormaPago' ? styles.activeSubTab : styles.subTab}
+          >
+            Formas de Pago {pers.formasPago.length > 0 && `(${pers.formasPago.length})`}
+          </button>
+        )}  
+     
       </div>
 
-      {/* Renderizado Condicional de Vistas */}
       <div className="contenido-subsolapa">
         {subSolapaActiva === 'documentos' && (
           <ItemDetailPersonaDocumentoAlta 
@@ -474,22 +855,56 @@ const grabar = async (e) => {
           </div>
         )}
 
-      {subSolapaActiva === 'alumnosTutor' && (
+        {subSolapaActiva === 'alumnosTutor' && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
-           <ItemListTutorAlumnos
-              id={id || pers.id_persona} 
+           <ItemListTutorAlumnos id={id || pers.id_persona} />          
+          </div>
+        )}
+
+        {subSolapaActiva === 'alumnoAllegados' && (
+          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+            <ItemListAlumnoAllegados
+              allegados={pers.allegados}
+              setAllegados={setAllegadosGlobal}
+              onEliminarAllegado={eliminarAllegadoBackend}
+              onRecargar={() => obtenerAllegados(id || pers.id_persona)}
             />          
           </div>
         )}
 
-      {subSolapaActiva === 'alumnoAllegados' && (
-          <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
-           <ItemListAlumnoAllegados
-              id={id || pers.id_persona} 
-            />          
-          </div>
-        )}
-      </div>
+        <div style={{ 
+          padding: '20px', 
+          background: '#f9f9f9', 
+          border: '1px dashed #ccc', 
+          borderRadius: '4px',
+          display: subSolapaActiva === 'alumnoAcademica' ? 'block' : 'none'
+        }}>
+          <ItemListAlumnoAcademica 
+            idAlumno={pers.id_alumno} 
+            idPersona={id || pers.id_persona} 
+            onCambioDatos={setAcademicaGlobal}
+            onEliminarBackend={eliminarAcademicaBackend}
+          />          
+        </div>
+
+        <div style={{ 
+          padding: '20px', 
+          background: '#f9f9f9', 
+          border: '1px dashed #ccc', 
+          borderRadius: '4px',
+          display: subSolapaActiva === 'alumnoFormaPago' ? 'block' : 'none'
+        }}>
+          <ItemListAlumnoFormaPago
+            idAlumno={pers.id_alumno}
+            idPersona={id || pers.id_persona}
+            formasPago={pers.formasPago || []}
+            onCambioDatos={setFormasPagoGlobal}
+            onEliminarBackend={eliminarFormaPagoBackend}
+            onRecargar={() => obtenerFormasPago(pers.id_alumno)}
+          />   
+        </div>
+
+      </div>  
   
       {subSolapaActiva === 'alta' && (
         <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
@@ -501,20 +916,19 @@ const grabar = async (e) => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-4">
-                
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Apellido:</span>
-                  <input type="text" name="apellidos" value={pers.apellidos || ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }} />
+                  <input type="text" name="apellidos" value={pers.apellidos || ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }} />
                 </label>
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Nombres:</span>
-                  <input type="text" name="nombres" value={pers.nombres || ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }} />
+                  <input type="text" name="nombres" value={pers.nombres || ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }} />
                 </label>
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Sexo:</span>
-                  <select name="id_sexo" value={pers.id_sexo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="id_sexo" value={pers.id_sexo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una opción</option>
                     <option value="1">Masculino</option>
                     <option value="2">Femenino</option>
@@ -523,18 +937,18 @@ const grabar = async (e) => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Fecha de Nacimiento:</span>
-                  <input type="date" name="fecha_nacimiento" value={pers.fecha_nacimiento ? pers.fecha_nacimiento.split('T')[0] : ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }} />
+                  <input type="date" name="fecha_nacimiento" value={pers.fecha_nacimiento ? pers.fecha_nacimiento.split('T')[0] : ''} onChange={handleChange} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }} />
                 </label>
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Email:</span>
-                  <input type="email" name="correo_electronico" value={pers.correo_electronico || ''} onChange={handleChangeEmail} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }} />
+                  <input type="email" name="correo_electronico" value={pers.correo_electronico || ''} onChange={handleChangeEmail} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }} />
                   {emailError && <span style={{ color: 'red', fontSize: '12px', display: 'block', textAlign: 'left' }}>{emailError}</span>}
                 </label>
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Recibe Notificaciones por Correo:</span>
-                  <select name="recibe_notif_x_correo" value={pers.recibe_notif_x_correo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="recibe_notif_x_correo" value={pers.recibe_notif_x_correo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una opción</option>
                     <option value="S">Si</option>
                     <option value="N">No</option>
@@ -543,13 +957,13 @@ const grabar = async (e) => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Teléfono:</span>
-                  <input type="text" name="telefono" value={pers.telefono || ''} onChange={handleChangePhone} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }} />
+                  <input type="text" name="telefono" value={pers.telefono || ''} onChange={handleChangePhone} className="input input-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }} />
                   {phoneError && <span style={{ color: 'red', fontSize: '12px', display: 'block', textAlign: 'left' }}>{phoneError}</span>}
                 </label>
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Localidad de Nacimiento:</span>
-                  <select name="id_localidad_nacimiento" value={pers.id_localidad_nacimiento || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="id_localidad_nacimiento" value={pers.id_localidad_nacimiento || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una localidad</option>
                     {localidades.map((loc) => (<option key={loc.id_localidad} value={loc.id_localidad}>{loc.nombre}</option>))}
                   </select>
@@ -557,7 +971,7 @@ const grabar = async (e) => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Localidad de Residencia:</span>
-                  <select name="id_localidad_residencia" value={pers.id_localidad_residencia || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="id_localidad_residencia" value={pers.id_localidad_residencia || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una localidad</option>
                     {localidades.map((loc) => (<option key={loc.id_localidad} value={loc.id_localidad}>{loc.nombre}</option>))}
                   </select>
@@ -565,7 +979,7 @@ const grabar = async (e) => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Nacionalidad:</span>
-                  <select name="id_nacionalidad" value={pers.id_nacionalidad || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="id_nacionalidad" value={pers.id_nacionalidad || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una nacionalidad</option>
                     {nacionalidades.map((nac) => (<option key={nac.id_nacionalidad} value={nac.id_nacionalidad}>{nac.nombre}</option>))}
                   </select>
@@ -573,7 +987,7 @@ const grabar = async (e) => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Estado:</span>
-                  <select name="activo" value={pers.activo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="activo" value={pers.activo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una opción</option>
                     <option value="N">Inactivo</option>
                     <option value="S">Activo</option>
@@ -582,7 +996,7 @@ const grabar = async (e) => {
 
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Es alumno:</span>
-                  <select name="es_alumno" value={pers.es_alumno || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}>
+                  <select name="es_alumno" value={pers.es_alumno || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
                     <option value="" disabled>Seleccione una opción</option>
                     <option value="S">Si</option>
                     <option value="N">No</option>
@@ -592,17 +1006,10 @@ const grabar = async (e) => {
                 <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Usuario:</span>
                   <input 
-                    type="text" 
-                    name="usuario" 
-                    value={pers.usuario || ''} 
-                    onChange={handleChange} 
-                    className="input input-bordered w-full" 
+                    type="text" name="usuario" value={pers.usuario || ''} onChange={handleChange} className="input input-bordered w-full" 
                     disabled={pers.es_alumno === 'S'} 
                     style={{ 
-                      border: '1px solid #ccc', 
-                      padding: '8px', 
-                      borderRadius: '4px', 
-                      width: '100%',
+                      border: '1px solid #ccc', padding: '8px', borderRadius: '4px',
                       backgroundColor: pers.es_alumno === 'S' ? '#e9ecef' : '#ffffff',
                       cursor: pers.es_alumno === 'S' ? 'not-allowed' : 'text'
                     }} 
@@ -614,7 +1021,7 @@ const grabar = async (e) => {
         </div>
       )}
 
-      {/* BOTONES GLOBALES */}
+      {/* BOTONES GLOBALES CENTRALES */}
       <div className="max-w-4xl mx-auto flex justify-end mt-4 gap-4 px-8">
         <Link to={'/personas/abm'}>
           <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>

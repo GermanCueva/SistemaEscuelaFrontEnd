@@ -1,415 +1,647 @@
-import { useCallback, useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
-import { Search, Pencil, Trash2, Check, X, Plus } from 'lucide-react';
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
+import { Search, Pencil, Trash2, Check, X, Plus } from "lucide-react";
+import { avisar } from "../utils/notificaciones";
 
 
-const ItemListAlumnoAllegados = () => {
-    const { id } = useParams();
-    const [pers, setpers] = useState([]);
-    const [editingId, setEditingId] = useState(null);
-    const [editForm, setEditForm] = useState({});
-    const [listaEstudios, setEstudios] = useState([]);
-    const [listaOcupaciones, setOcupaciones] = useState([]);
-    const [listaTiposAllegados, setTiposAllegados] = useState([]);
+// Helper global totalmente seguro para convertir a minúsculas
+const aTextoLower = (val) => {
+  if (val === null || val === undefined) return "";
+  return String(val).trim().toLowerCase();
+};
+
+const ItemListAlumnoAllegados = ({
+  allegados = [],
+  setAllegados,
+  onEliminarAllegado,
+  onRecargar,
+}) => {
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [listaEstudios, setEstudios] = useState([]);
+  const [listaOcupaciones, setOcupaciones] = useState([]);
+  const [listaTiposAllegados, setTiposAllegados] = useState([]);
+  const [listaPersonas, setListaPersonas] = useState([]);
+  const [personaSeleccionada, setPersonaSeleccionada] = useState(null);
+
+  const token = localStorage.getItem("token");
+
+// Prevenir errores si allegados no es un array válido (Memorizado para evitar advertencias de React)
+const listaAllegados = useMemo(() => {
+  return Array.isArray(allegados) ? allegados : [];
+}, [allegados]);
 
 
-    // Catálogo para el buscador dinámico de personas
-    const [listaPersonas, setListaPersonas] = useState([]);
+  // --- CARGA DE CATÁLOGOS ---
+  const obtenerOcupaciones = useCallback(() => {
+    fetch(`${process.env.REACT_APP_API_URL}/api/ocupacion`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setOcupaciones(Array.isArray(data) ? data : []))
+      .catch(() => setOcupaciones([]));
+  }, [token]);
 
+  const obtenerEstudios = useCallback(() => {
+    fetch(`${process.env.REACT_APP_API_URL}/api/estudio`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setEstudios(Array.isArray(data) ? data : []))
+      .catch(() => setEstudios([]));
+  }, [token]);
 
-    const token = localStorage.getItem('token');
+  const obtenerTiposAllegado = useCallback(() => {
+    fetch(`${process.env.REACT_APP_API_URL}/api/tipoallegado`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => setTiposAllegados(Array.isArray(data) ? data : []))
+      .catch(() => setTiposAllegados([]));
+  }, [token]);
 
+  useEffect(() => {
+    obtenerOcupaciones();
+    obtenerEstudios();
+    obtenerTiposAllegado();
+  }, [obtenerOcupaciones, obtenerEstudios, obtenerTiposAllegado]);
 
-    // --- OPCIONES PARA LOS COMBOS (ESTUDIO Y OCUPACIÓN) ---
+  // --- BÚSQUEDA DINÁMICA DE PERSONAS ---
+  const obtenerDatosTodos = useCallback(
+    (textoABuscar) => {
+      if (!textoABuscar || textoABuscar.trim().length < 2 || textoABuscar.includes("DNI:")) {
+        return;
+      }
 
-        const obtenerOcupaciones = useCallback(() => {
-          fetch(`${process.env.REACT_APP_API_URL}/api/ocupacion`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` 
-            }
-          })
-          .then(response => response.json())
-          .then(data => setOcupaciones(data));
-        }, [token]); // <--- Agregas 'token' como dependencia
-
-        
-        const obtenerEstudios = useCallback(() => {
-          fetch(`${process.env.REACT_APP_API_URL}/api/estudio`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` 
-            }
-          })
-          .then(response => response.json())
-          .then(data => setEstudios(data));
-        }, [token]); // <--- Agregas 'token' como dependencia
-
-        
-        const obtenerTiposAllegado = useCallback(() => {
-          fetch(`${process.env.REACT_APP_API_URL}/api/tipoallegado`, {
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}` 
-            }
-          })
-          .then(response => response.json())
-          .then(data => setTiposAllegados(data));
-        }, [token]); // <--- Agregas 'token' como dependencia
-        
-          useEffect(() => {     
-             obtenerOcupaciones();
-             obtenerEstudios();
-             obtenerTiposAllegado();
-            }, [obtenerOcupaciones, obtenerEstudios, obtenerTiposAllegado]);
-
-
-    const obtenerDatos = useCallback(() => {
-        fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${id}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => response.json())
-        .then(data => setpers(Array.isArray(data) ? data : []));
-    }, [id, token]);
-
-    // Busca dinámicamente en el backend (admite Apellido o DNI según tu nueva lógica)
-    const obtenerDatosTodos = useCallback((textoABuscar) => {
-        // SEGURIDAD: Si no hay texto, es muy corto, o contiene "DNI:" (porque se seleccionó de la lista), NO busca.
-        if (!textoABuscar || textoABuscar.trim().length < 2 || textoABuscar.includes("DNI:")) {
-            setListaPersonas([]); 
-            return;
+      fetch(
+        `${process.env.REACT_APP_API_URL}/api/personsconfiltro/apellidodocumento/${encodeURIComponent(textoABuscar)}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
+      )
+        .then((res) => res.json())
+        .then((data) => setListaPersonas(Array.isArray(data) ? data : []))
+        .catch(() => setListaPersonas([]));
+    },
+    [token]
+  );
 
-        fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/apellidodocumento/${textoABuscar}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            // SEGURIDAD: Validamos que la API devuelva un Array para evitar que falle el .map()
-            if (Array.isArray(data)) {
-                setListaPersonas(data);
-            } else {
-                setListaPersonas([]);
-            }
-        })
-        .catch(err => {
-            console.error("Error buscando personas:", err);
-            setListaPersonas([]);
+  // --- BUSCADORES AUXILIARES DE CATALOGO ---
+const resolverTipoAllegado = useCallback((p) => {
+  const rawId = p.id_tipo_allegado || p.id_parentesco;
+  const rawText = p.nombre_tipo_allegado || p.parentesco || p.nombre;
+
+  return listaTiposAllegados.find(
+    (t) =>
+      (rawId && String(t.id_tipo_allegado || t.id) === String(rawId)) ||
+      (rawText && aTextoLower(t.nombre || t.descripcion) === aTextoLower(rawText))
+  );
+}, [listaTiposAllegados]);
+
+const resolverEstudio = useCallback((p) => {
+  const rawId = p.id_nivel_estudio || p.id_estudio_alcanzado || p.id_estudio;
+  const rawText = p.nivel_estudio_tutor || p.estudio_alcanzado || p.estudio;
+
+  return listaEstudios.find(
+    (e) =>
+      (rawId && String(e.id_nivel_estudio || e.id_estudio || e.id_estudio_alcanzado || e.id) === String(rawId)) ||
+      (rawText && aTextoLower(e.nombre || e.descripcion) === aTextoLower(rawText))
+  );
+}, [listaEstudios]);
+
+const resolverOcupacion = useCallback((p) => {
+  const rawId = p.id_ocupacion;
+  const rawText = p.ocupacion_tutor || p.ocupacion;
+
+  return listaOcupaciones.find(
+    (o) =>
+      (rawId && String(o.id_ocupacion || o.id) === String(rawId)) ||
+      (rawText && aTextoLower(o.nombre || o.descripcion) === aTextoLower(rawText))
+  );
+}, [listaOcupaciones]);
+
+  // --- HANDLER EDICIÓN ---
+  const handleEditClick = (p) => {
+    const targetId = p.id_persona || p.id_persona_allegado || p.id;
+    setEditingId(targetId);
+
+    const tipo = resolverTipoAllegado(p);
+    const estudio = resolverEstudio(p);
+    const ocupacion = resolverOcupacion(p);
+
+    setEditForm({
+      ...p,
+      Tutor: p.Tutor || (p.apellidos ? `${p.apellidos} ${p.nombres} - DNI: ${p.numero || ""}` : ""),
+      id_tipo_allegado: tipo ? String(tipo.id_tipo_allegado || tipo.id) : String(p.id_tipo_allegado || p.id_parentesco || ""),
+      id_nivel_estudio: estudio ? String(estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id) : String(p.id_nivel_estudio || p.id_estudio_alcanzado || p.id_estudio || ""),
+      id_ocupacion: ocupacion ? String(ocupacion.id_ocupacion || ocupacion.id) : String(p.id_ocupacion || ""),
+      tutor: p.tutor ?? "",
+      activo: p.activo ?? "",
+    });
+  };
+
+ const handleInputChange = async (field, valor) => {
+
+  if (field === "Tutor") {
+    // 1. Obtenemos los resultados actualizados de la búsqueda
+    const personasFrenscas = await obtenerDatosTodos(valor); 
+
+    setEditForm((prev) => {
+      const updated = { ...prev, Tutor: valor };
+
+      // 2. Buscamos en la lista recién obtenida o en la existente
+      const listaABuscar = personasFrenscas || listaPersonas;
+      const match = listaABuscar.find((item) => {
+        const fmt = item.descripcion || `${item.apellidos || item.apellido} ${item.nombres || item.nombre} - DNI: ${item.numero || item.numero_dni || item.dni}`;
+        return fmt === valor;
+      });
+
+      if (match) {
+        setPersonaSeleccionada(match);
+        
+        // 3. Guardamos el ID detectando cuál propiedad existe en la respuesta
+        const idEncontrado = match.id_persona || match.id || match.idPersona;
+        
+        updated.id_persona = idEncontrado;
+        updated.id_allegado_persona = idEncontrado; // Por si tu backend usa este campo
+      }
+
+      return updated;
+    });
+  } else {
+    setEditForm((prev) => ({ ...prev, [field]: valor }));
+  }
+};
+
+ // REEMPLAZAR handleSaveRow EN ItemListAlumnoAllegados.js
+const handleSaveRow = (id_persona_original) => {
+  const idTipo = Number(editForm.id_tipo_allegado);
+  const idEstudio = Number(editForm.id_nivel_estudio);
+  const idOcupacion = Number(editForm.id_ocupacion);
+
+  if (!idTipo || !idEstudio || !idOcupacion || !editForm.Tutor || !editForm.activo || !editForm.tutor) {
+    avisar.advertencia("Por favor, complete todos los campos requeridos.");
+    return;
+  }
+
+  // 1. Buscamos el ID de la persona elegida en el buscador (o dejamos el que ya tenía)
+  const idPersonaElegida = personaSeleccionada
+    ? (personaSeleccionada.id_persona || personaSeleccionada.id)
+    : (editForm.id_persona || editForm.id_persona_real);
+
+  if (!idPersonaElegida || String(idPersonaElegida).startsWith("temp-")) {
+    avisar.advertencia("Debe seleccionar una persona válida desde la lista desplegable del buscador.");
+    return;
+  }
+
+  // 2. Determinamos si es un alta nueva o si estamos modificando una fila que YA existía en el backend
+  const esAltaNueva = String(id_persona_original).startsWith("temp-") || editForm.esNuevo;
+
+  // Obtener objetos descriptivos para la vista
+  const tipoObj = listaTiposAllegados.find((t) => Number(t.id_tipo_allegado || t.id) === idTipo);
+  const estudioObj = listaEstudios.find((e) => Number(e.id_nivel_estudio || e.id_estudio || e.id_estudio_alcanzado || e.id) === idEstudio);
+  const ocupacionObj = listaOcupaciones.find((o) => Number(o.id_ocupacion || o.id) === idOcupacion);
+
+  const nuevaFilaActualizada = {
+    ...editForm,
+    id_persona: Number(idPersonaElegida),
+    id_persona_real: Number(idPersonaElegida),
+    id_tipo_allegado: idTipo,
+    id_nivel_estudio: idEstudio,
+    id_estudio_alcanzado: idEstudio,
+    id_ocupacion: idOcupacion,
+    
+    // 🎯 CLAVE DE LA SOLUCIÓN:
+    // Mantener explícitamente el ID de la relación con la base de datos si existía previamente
+    id_alumno_tutor: editForm.id_alumno_tutor || editForm.id_persona_allegado || null,
+    esNuevo: esAltaNueva, // Solo será TRUE si la fila se creó desde el botón "Agregar Allegado"
+
+    // Textos para la tabla
+    nombre_tipo_allegado: tipoObj ? (tipoObj.nombre || tipoObj.descripcion) : editForm.nombre_tipo_allegado,
+    nivel_estudio_tutor: estudioObj ? (estudioObj.nombre || estudioObj.descripcion) : editForm.nivel_estudio_tutor,
+    estudio_alcanzado: estudioObj ? (estudioObj.nombre || estudioObj.descripcion) : editForm.estudio_alcanzado,
+    ocupacion_tutor: ocupacionObj ? (ocupacionObj.nombre || ocupacionObj.descripcion) : editForm.ocupacion_tutor,
+  };
+
+  // 3. Reemplazamos la fila editada en el estado comparando contra el ID que tenía al abrir el lápiz
+  const nuevaLista = allegados.map((p) => {
+    const pId = p.id_persona || p.id_persona_allegado || p.id;
+    return pId === id_persona_original ? nuevaFilaActualizada : p;
+  });
+
+  setAllegados(nuevaLista);
+  setEditingId(null);
+  setListaPersonas([]);
+  setPersonaSeleccionada(null);
+};
+
+  const handleCancelRow = (id_persona) => {
+    if (String(id_persona).startsWith("temp-")) {
+      setAllegados(allegados.filter((p) => (p.id_persona || p.id) !== id_persona));
+    }
+    setEditingId(null);
+    setListaPersonas([]);
+    setPersonaSeleccionada(null);
+  };
+
+  const handleDeleteRow = (item) => {
+    const itemId = item.id_persona || item.id_persona_allegado || item.id;
+    const esNuevoSinGrabar = !item.id_persona_allegado || String(itemId).startsWith("temp-") || item.esNuevo;
+
+    if (esNuevoSinGrabar) {
+      if (typeof setAllegados === "function") {
+        setAllegados((prev) => {
+          const actual = Array.isArray(prev) ? prev : [];
+          return actual.filter((a) => (a.id_persona || a.id_persona_allegado || a.id) !== itemId);
         });
-    }, [token]);
+      }
+      return;
+    }
 
+    if (onEliminarAllegado) {
+      onEliminarAllegado(item.id_persona_allegado || itemId);
+    }
+  };
 
-    useEffect(() => {
-        obtenerDatos();
-    }, [obtenerDatos]);
+// REEMPLAZAR handleAddRow EN ItemListAlumnoAllegados.js
+const handleAddRow = () => {
+  const tempId = `temp-${Date.now()}`;
+  const nuevaFila = {
+    id_persona: tempId,
+    Tutor: "",
+    id_tipo_allegado: "",
+    id_nivel_estudio: "",
+    id_ocupacion: "",
+    tutor: "",
+    activo: "",
+    esNuevo: true // Indica que es un registro recién añadido en la UI
+  };
 
+  setAllegados([...allegados, nuevaFila]);
+  setEditingId(tempId);
+  setEditForm(nuevaFila);
+};
 
+  // --- OBTENCIÓN SEGURA DE NOMBRES PARA MODO LECTURA ---
+  const obtenerNombreTipoAllegado = (p) => {
+    const obj = resolverTipoAllegado(p);
+    if (obj) return obj.nombre || obj.descripcion;
+    return p.nombre_tipo_allegado || p.parentesco || p.nombre || p.id_tipo_allegado || "";
+  };
 
-    // --- ACCIONES LOCALES ---
-    const handleEditClick = (p) => {
-        setEditingId(p.id_persona);
-        setEditForm({ ...p });
-        // Al editar no disparamos la búsqueda porque ya viene con el nombre resuelto
-    };
+  const obtenerNombreEstudio = (p) => {
+    const obj = resolverEstudio(p);
+    if (obj) return obj.nombre || obj.descripcion;
+    return p.nivel_estudio_tutor || p.estudio_alcanzado || p.estudio || "";
+  };
 
-    const handleInputChange = (e, field) => {
-        const valor = e.target.value;
-        
-        setEditForm({
-            ...editForm,
-            [field]: valor
-        });
+  const obtenerNombreOcupacion = (p) => {
+    const obj = resolverOcupacion(p);
+    if (obj) return obj.nombre || obj.descripcion;
+    return p.ocupacion_tutor || p.ocupacion || "";
+  };
 
-        // Dispara la búsqueda en tiempo real si se modifica el campo de la persona
-        if (field === 'Tutor') {
-            obtenerDatosTodos(valor);
-        }
-    };
+  
+// --- AUTO-RESOLVER IDs FALTANTES AL CARGAR CATÁLOGOS O ALLEGADOS ---
+useEffect(() => {
+  if (
+    listaAllegados.length === 0 || 
+    listaTiposAllegados.length === 0 || 
+    listaEstudios.length === 0 || 
+    listaOcupaciones.length === 0
+  ) {
+    return;
+  }
 
-const handleSaveRow = (id_persona) => {
-        // 1. Buscamos si el texto ingresado coincide exactamente con alguna opción válida del datalist
-        const esValido = listaPersonas.some(item => {
-            const opcionFormateada = item.descripcion || `${item.apellidos} ${item.nombres} - DNI: ${item.numero}`;
-            return editForm.Tutor === opcionFormateada;
-        });
+  // Solo auto-completamos filas EXISTENTES (no las que se están creando o editando)
+  const hayFilasSinId = listaAllegados.some(p => {
+    const isTemp = String(p.id_persona || p.id || '').startsWith('temp-');
+    return !isTemp && (!p.id_tipo_allegado || !p.id_nivel_estudio || !p.id_ocupacion);
+  });
 
-        // 2. Si el campo está vacío o no es una opción válida del buscador, bloqueamos el guardado
-        if (!editForm.Tutor || editForm.Tutor.trim() === "") {
-            alert("Por favor, seleccione una persona utilizando el buscador.");
-            return;
-        }
+  if (hayFilasSinId) {
+    const listaAutoCompletada = listaAllegados.map((p) => {
+      const isTemp = String(p.id_persona || p.id || '').startsWith('temp-');
+      if (isTemp) return p; // Dejar la fila nueva en blanco sin alterar
 
-        if (!esValido) {
-            alert("Persona no válida. Debe seleccionar una de las opciones sugeridas en el buscador.");
-            return;
-        }
+      const tipo = resolverTipoAllegado(p);
+      const estudio = resolverEstudio(p);
+      const ocupacion = resolverOcupacion(p);
 
-        // 3. Si pasa las validaciones, guarda normalmente
-        setpers(pers.map(p => p.id_persona === id_persona ? editForm : p));
-        setEditingId(null);
-        setListaPersonas([]); 
-    };
+      return {
+        ...p,
+        id_persona_real: p.id_persona_real || p.id_persona_allegado || p.id_persona || p.id,
+        id_tipo_allegado: p.id_tipo_allegado || (tipo ? Number(tipo.id_tipo_allegado || tipo.id) : null),
+        id_nivel_estudio: p.id_nivel_estudio || (estudio ? Number(estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id) : null),
+        id_estudio_alcanzado: p.id_estudio_alcanzado || (estudio ? Number(estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id) : null),
+        id_ocupacion: p.id_ocupacion || (ocupacion ? Number(ocupacion.id_ocupacion || ocupacion.id) : null),
+      };
+    });
 
-    const handleCancelRow = () => {
-        setEditingId(null);
-        setListaPersonas([]); 
-    };
+    setAllegados(listaAutoCompletada);
+  }
+}, [listaAllegados, listaTiposAllegados, listaEstudios, listaOcupaciones, resolverTipoAllegado, resolverEstudio, resolverOcupacion, setAllegados]);
 
-    const handleDeleteRow = (id_persona) => {
-        if (window.confirm("¿Seguro que deseas remover este allegado de la lista?")) {
-            setpers(pers.filter(p => p.id_persona !== id_persona));
-        }
-    };
+  return (
+    <div className="flex flex-col gap-4">
+      {/* DATALIST DE BÚSQUEDA DINÁMICA */}
+      <datalist id="personas-list">
+        {listaPersonas.map((item, idx) => {
+          const keyVal = item.id_persona || item.id || `opt-${idx}`;
+          const opcionFormateada =
+            item.descripcion || `${item.apellidos} ${item.nombres} - DNI: ${item.numero}`;
+          return <option key={keyVal} value={opcionFormateada} />;
+        })}
+      </datalist>
 
-    const handleAddRow = () => {
-        const nuevoIdTemporal = Date.now();
-        const nuevaFila = {
-            id_persona: nuevoIdTemporal,
-            Tutor: "", 
-            nombre: "Madre",
-            nivel_estudio_tutor: listaEstudios[3],
-            ocupacion_tutor: listaOcupaciones[0],  
-            tutor: "N",
-            activo: "S"
-        };
-        setpers([nuevaFila, ...pers]);
-        setEditingId(nuevoIdTemporal);
-        setEditForm(nuevaFila);
-        setListaPersonas([]);
-    };
+      <div className="flex justify-end px-2">
+        <button
+          type="button"
+          onClick={handleAddRow}
+          disabled={editingId !== null}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
+        >
+          <Plus size={16} /> Agregar Allegado
+        </button>
+      </div>
 
-    const handleGuardarCambiosTotales = () => {
-        console.log("Datos finales listos para la API:", pers);
-        alert("¡Cambios guardados correctamente!");
-    };
+      <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
+        <table className="w-full text-sm text-left text-gray-500 bg-white">
+          <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
+            <tr>
+              <th scope="col" className="px-4 py-3">Persona (Buscador)</th>
+              <th scope="col" className="px-4 py-3"><div className="flex justify-center w-full">Tipo de Allegado</div></th>
+              <th scope="col" className="px-4 py-3"><div className="flex justify-center w-full">Estudio Alcanzado</div></th>
+              <th scope="col" className="px-4 py-3"><div className="flex justify-center w-full">Ocupación</div></th>
+              <th scope="col" className="px-2 py-3 w-24"><div className="flex justify-center w-full">¿Tutor?</div></th>
+              <th scope="col" className="px-2 py-3 w-24"><div className="flex justify-center w-full">¿Activo?</div></th>
+              <th scope="col" className="px-4 py-3 text-center">Acciones</th>
+            </tr>
+          </thead>
 
-    return (
-        <div className="flex flex-col gap-4">
-            
-            {/* Buscador de personas asociado al datalist con formato Apellido Nombre - DNI */}
-            <datalist id="personas-list">
-                {listaPersonas && listaPersonas.map((item) => {
-                    const opcionFormateada = item.descripcion || `${item.apellidos} ${item.nombres} - DNI: ${item.numero}`;
-                    return (
-                        <option 
-                            key={item.id_persona || item.id} 
-                            value={opcionFormateada} 
-                        />
-                    );
-                })}
-            </datalist>
+          <tbody>
+            {listaAllegados.length > 0 ? (
+              listaAllegados.map((p, index) => {
+                const itemUniqueId = p.id_persona || p.id_persona_allegado || p.id || `allegado-${index}`;
+                const isEditing = editingId === itemUniqueId;
 
-            {/* Botón Agregar */}
-            <div className="flex justify-end px-2">
-                <button 
-                    onClick={handleAddRow}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded transition-colors text-sm"
-                >
-                    <Plus size={16} /> Agregar Allegado
-                </button>
-            </div>
+                return (
+                  <tr key={itemUniqueId} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                    
 
-            <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-                <table className="w-full text-sm text-left text-gray-500 bg-white">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
-                        <tr>
-                            <th scope="col" className="px-6 py-3">Persona (Buscador)</th>
-                            <th scope="col" className="px-6 py-3 text-center">Tipo de Allegado</th>
-                            <th scope="col" className="px-6 py-3 text-center">Estudio Alcanzado</th>
-                            <th scope="col" className="px-6 py-3 text-center">Ocupación</th>
-                            <th scope="col" className="px-3 py-3 text-center">¿Tutor?</th>
-                            <th scope="col" className="px-3 py-3 text-center">¿Activo?</th>
-                            <th scope="col" className="px-6 py-3 text-center">Acciones</th>
-                        </tr>
-                    </thead>
+                  <td className="px-4 py-2 text-sm text-gray-700 min-w-[200px]">
+                    {isEditing ? (
+                      <>
+                        <input
+                          type="text"
+                          list="personas-list"
+                          value={editForm.Tutor || ""}
+                  onChange={(e) => {
+                    const valorIngresado = e.target.value;
 
-                    <tbody>
-                        {pers && pers.length > 0 ? (
-                            pers.map((p, index) => {
-                                const isEditing = editingId === p.id_persona;
+                    // Buscamos la persona en listaPersonas
+                    const match = listaPersonas.find((item) => {
+                      const fmt = item.descripcion || `${item.apellidos || item.apellido} ${item.nombres || item.nombre} - DNI: ${item.numero || item.numero_dni || item.dni}`;
+                      return fmt === valorIngresado;
+                    });
 
-                                return (
-                                    <tr key={p.id_persona || index} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
-                                        
-                                        {/* Persona (Buscador Dinámico por Apellido o DNI) */}
-                                        <td className="px-6 py-2 text-sm text-gray-700 min-w-[240px]">
-                                            {isEditing ? (
-                                            <input 
-                                                type="text" 
-                                                list="personas-list" 
-                                                value={editForm.Tutor || ""} 
-                                                onChange={(e) => handleInputChange(e, 'Tutor')}
-                                                // 👇 AGREGA ESTA LÍNEA AQUÍ
-                                                onFocus={(e) => {
-                                                    // Al hacer foco, vaciamos el campo para buscar de cero
-                                                    setEditForm({ ...editForm, Tutor: "" });
-                                                    setListaPersonas([]);
-                                                }}
-                                                placeholder="Buscar por Apellido o DNI..."
-                                                className="border border-gray-300 rounded px-2 py-1 w-full text-sm focus:outline-blue-500 bg-blue-50"
-                                            />
-                                            ) : p.Tutor}
-                                        </td>
+                    if (match) {
+                    const apellidoStr = match.apellidos || match.apellido || "";
+                    const nombreStr = match.nombres || match.nombre || "";
+                    const dniStr = match.numero || match.numero_dni || match.dni || "";
+                    const textoCompleto = `${apellidoStr} ${nombreStr} - DNI: ${dniStr}`.trim();
+                      // Si hay coincidencia, actualizamos Tutor Y id_persona a la vez
 
-                                        {/* Tipo de Allegado (Combo) */}
-                                        <td className="px-6 py-2 text-sm text-gray-700 text-center">
-                                            {isEditing ? (
-                                                <select 
-                                                    value={editForm.nombre} 
-                                                    onChange={(e) => handleInputChange(e, 'nombre')}
-                                                    className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-blue-500"
-                                                >
-                                                    {listaTiposAllegados.map((allegado, i) => (
-                                                        <option key={i} value={allegado.nombre}>{allegado.nombre}</option>
-                                                    ))}
+                      // Obtenemos el ID de la persona seleccionada del buscador
+                    const idPersonaElegida = match.id_persona || match.id || match.idPersona;
 
-                                                </select>
-                                            ) : p.nombre}
-                                        </td>
+                      setEditForm((prev) => ({
+                        ...prev,
+                        Tutor: textoCompleto,
+                      id_persona: idPersonaElegida,
+                      idPersona: idPersonaElegida,
+                        }));
+                    } else {
+                      handleInputChange("Tutor", valorIngresado);
+                    }
+                  }}
+        onFocus={() => {
+          setEditForm((prev) => ({ ...prev, Tutor: "" }));
+          setListaPersonas([]);
+        }}
+        placeholder="Buscar por Apellido o DNI..."
+        className="border border-gray-300 rounded px-2 py-1 w-full text-sm focus:outline-blue-500 bg-blue-50"
+      />
 
-                                        {/* Estudio Alcanzado */}
-                                        <td className="px-6 py-2 text-sm text-gray-700 text-center min-w-[180px]">
-                                            {isEditing ? (
-                                                <select 
-                                                    value={editForm.nivel_estudio_tutor} 
-                                                    onChange={(e) => handleInputChange(e, 'nivel_estudio_tutor')}
-                                                    className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
-                                                >
-                                                    {listaEstudios.map((estudio, i) => (
-                                                        <option key={i} value={estudio.nombre}>{estudio.nombre}</option>
-                                                    ))}
-                                                </select>
-                                            ) : p.nivel_estudio_tutor}
-                                        </td>
+                <datalist id="personas-list">
+                  {listaPersonas.map((persona) => (
+                    <option
+                      key={persona.id_persona}
+                      value={persona.id_persona}
+                    >
+                      {`${persona.apellido} ${persona.nombre} - ${persona.tipo_dni || 'DNI'}: ${persona.numero_dni}`}
+                    </option>
+                  ))}
+                </datalist>
+              </>
+            ) : (
+              p.Tutor || (p.apellidos ? `${p.apellidos} ${p.nombres}` : "")
+            )}
+          </td>
 
-                                        {/* Ocupación */}
-                                        <td className="px-6 py-2 text-sm text-gray-700 text-center min-w-[220px]">
-                                            {isEditing ? (
-                                                <select 
-                                                    value={editForm.ocupacion_tutor} 
-                                                    onChange={(e) => handleInputChange(e, 'ocupacion_tutor')}
-                                                    className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
-                                                >
-                                                    {listaOcupaciones.map((ocupacion, i) => (
-                                                        <option key={i} value={ocupacion.nombre}>{ocupacion.nombre}</option>
-                                                    ))}
-                                                </select>
-                                            ) : p.ocupacion_tutor}
-                                        </td>
-
-                                        {/* ¿Tutor? */}
-                                        <td className="px-3 py-2 text-sm text-gray-700 text-center">
-                                            {isEditing ? (
-                                                <select 
-                                                    value={editForm.tutor} 
-                                                    onChange={(e) => handleInputChange(e, 'tutor')}
-                                                    className="border border-gray-300 rounded px-1 py-1 text-sm focus:outline-blue-500"
-                                                >
-                                                    <option value="S">Sí</option>
-                                                    <option value="N">No</option>
-                                                </select>
-                                            ) : (p.tutor === 'S' ? 'Sí' : 'No')}
-                                        </td>
-
-                                        {/* ¿Activo? */}
-                                        <td className="px-3 py-2 text-sm text-gray-700 text-center">
-                                            {isEditing ? (
-                                                <select 
-                                                    value={editForm.activo} 
-                                                    onChange={(e) => handleInputChange(e, 'activo')}
-                                                    className="border border-gray-300 rounded px-1 py-1 text-sm focus:outline-blue-500"
-                                                >
-                                                    <option value="S">Sí</option>
-                                                    <option value="N">No</option>
-                                                </select>
-                                            ) : (p.activo === 'S' ? 'Sí' : 'No')}
-                                        </td>
-
-                                        {/* Acciones */}
-                                        <td className="px-6 py-2 text-center">
-                                            <div className="flex items-center justify-center gap-2">
-                                                {isEditing ? (
-                                                    <>
-                                                        <button 
-                                                            onClick={() => handleSaveRow(p.id_persona)}
-                                                            className="p-1 text-green-600 hover:bg-green-100 rounded"
-                                                        >
-                                                            <Check size={18} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={handleCancelRow}
-                                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                        >
-                                                            <X size={18} />
-                                                        </button>
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <Link to={'/personas/' + p.id_persona}>
-                                                            <button className="p-1 text-blue-600 hover:bg-blue-100 rounded">
-                                                                <div className="inline-flex items-center justify-center p-1 rounded-md text-blue-600 hover:text-blue-800 hover:bg-blue-100 transition-colors">
-                                                                    <Search size={20} className="mr-2" />
-                                                                </div>
-                                                            </button>
-                                                        </Link>
-                                                        <button 
-                                                            onClick={() => handleEditClick(p)}
-                                                            className="p-1 text-blue-600 hover:bg-blue-100 rounded"
-                                                        >
-                                                            <Pencil size={18} />
-                                                        </button>
-                                                        <button 
-                                                            onClick={() => handleDeleteRow(p.id_persona)}
-                                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                        >
-                                                            <Trash2 size={18} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })
+                    {/* TIPO DE ALLEGADO */}
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      <div className="flex justify-center w-full">
+                        {isEditing ? (
+                          <select
+                            value={String(editForm.id_tipo_allegado || "")}
+                            onChange={(e) => handleInputChange("id_tipo_allegado", e.target.value)}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm focus:outline-blue-500 w-full"
+                          >
+                            <option value="" disabled>-- Seleccionar --</option>
+                            {listaTiposAllegados.map((item, idx) => {
+                              const idVal = String(item.id_tipo_allegado || item.id || idx);
+                              return (
+                                <option key={idVal} value={idVal}>
+                                  {item.nombre || item.descripcion}
+                                </option>
+                              );
+                            })}
+                          </select>
                         ) : (
-                            <tr>
-                                <td colSpan={7} className="py-10 text-center text-gray-500 bg-white font-medium"> 
-                                    <h1 className="text-xl font-bold">No hay datos</h1>
-                                </td>
-                            </tr>
+                          obtenerNombreTipoAllegado(p)
                         )}
-                    </tbody>
-                </table>
-            </div>
+                      </div>
+                    </td>
 
-            {/* Botones de acción finales */}
-            <div className="flex justify-end gap-3 mt-4 px-2">
-                <button 
-                    onClick={obtenerDatos} 
-                    className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded transition-colors text-sm"
-                >
-                    Cancelar
-                </button>
-                <button 
-                    onClick={handleGuardarCambiosTotales}
-                    className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded transition-colors text-sm"
-                >
-                    Guardar Cambios Totales
-                </button>
-            </div>
-        </div>
-    );
+                    {/* ESTUDIO ALCANZADO */}
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      <div className="flex justify-center w-full">
+                        {isEditing ? (
+                          <select
+                            value={String(editForm.id_nivel_estudio || "")}
+                            onChange={(e) => handleInputChange("id_nivel_estudio", e.target.value)}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
+                          >
+                            <option value="" disabled>-- Seleccionar --</option>
+                            {listaEstudios.map((estudio, idx) => {
+                              const idEstudio = String(
+                                estudio.id_nivel_estudio || estudio.id_estudio || estudio.id_estudio_alcanzado || estudio.id || idx
+                              );
+                              return (
+                                <option key={idEstudio} value={idEstudio}>
+                                  {estudio.nombre || estudio.descripcion}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        ) : (
+                          obtenerNombreEstudio(p)
+                        )}
+                      </div>
+                    </td>
+
+                    {/* OCUPACIÓN */}
+                    <td className="px-4 py-2 text-sm text-gray-700">
+                      <div className="flex justify-center w-full">
+                        {isEditing ? (
+                          <select
+                            value={String(editForm.id_ocupacion || "")}
+                            onChange={(e) => handleInputChange("id_ocupacion", e.target.value)}
+                            className="border border-gray-300 rounded px-2 py-1 text-sm w-full focus:outline-blue-500"
+                          >
+                            <option value="" disabled>-- Seleccionar --</option>
+                            {listaOcupaciones.map((ocupacion, idx) => {
+                              const idOcup = String(ocupacion.id_ocupacion || ocupacion.id || idx);
+                              return (
+                                <option key={idOcup} value={idOcup}>
+                                  {ocupacion.nombre || ocupacion.descripcion}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        ) : (
+                          obtenerNombreOcupacion(p)
+                        )}
+                      </div>
+                    </td>
+
+                    {/* ¿TUTOR? */}
+                    <td className="px-2 py-2 text-sm text-gray-700 w-24">
+                      <div className="flex justify-center w-full">
+                        {isEditing ? (
+                          <select
+                            value={editForm.tutor || ""}
+                            onChange={(e) => handleInputChange("tutor", e.target.value)}
+                            className="border border-gray-300 rounded px-1 py-1 text-sm focus:outline-blue-500 w-full text-center"
+                          >
+                            <option value="" enabled>--</option>
+                            <option value="S">Sí</option>
+                            <option value="N">No</option>
+                          </select>
+                        ) : (
+                          p.tutor === "S" ? "Sí" : p.tutor === "N" ? "No" : ""
+                        )}
+                      </div>
+                    </td>
+
+                    {/* ¿ACTIVO? */}
+                    <td className="px-2 py-2 text-sm text-gray-700 w-24">
+                      <div className="flex justify-center w-full">
+                        {isEditing ? (
+                          <select
+                            value={editForm.activo || ""}
+                            onChange={(e) => handleInputChange("activo", e.target.value)}
+                            className="border border-gray-300 rounded px-1 py-1 text-sm focus:outline-blue-500 w-full text-center"
+                          >
+                            <option value="" enabled>--</option>
+                            <option value="S">Sí</option>
+                            <option value="N">No</option>
+                          </select>
+                        ) : (
+                          p.activo === "S" ? "Sí" : p.activo === "N" ? "No" : ""
+                        )}
+                      </div>
+                    </td>
+
+                    {/* ACCIONES */}
+                    <td className="px-4 py-2 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {isEditing ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleSaveRow(itemUniqueId)}
+                              className="p-1 text-green-600 hover:bg-green-100 rounded"
+                              title="Aceptar fila"
+                            >
+                              <Check size={18} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCancelRow(itemUniqueId)}
+                              className="p-1 text-red-600 hover:bg-red-100 rounded"
+                              title="Cancelar"
+                            >
+                              <X size={18} />
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <Link to={`/personas/${itemUniqueId}`}>
+                              <button
+                                type="button"
+                                className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                                title="Ver detalle"
+                              >
+                                <Search size={18} />
+                              </button>
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => handleEditClick(p)}
+                              className="p-1 text-blue-600 hover:bg-blue-100 rounded"
+                              title="Editar fila"
+                            >
+                              <Pencil size={18} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRow(p)}
+                              className="p-1 text-red-600 hover:bg-red-100 rounded"
+                              title="Eliminar"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={7} className="py-10 text-center text-gray-500 bg-white font-medium">
+                  <h1 className="text-xl font-bold">No hay allegados registrados</h1>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-end gap-3 mt-4 px-2">
+        <button
+          type="button"
+          onClick={onRecargar}
+          className="bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-6 rounded transition-colors text-sm"
+        >
+          Recargar Lista
+        </button>
+      </div>
+    </div>
+  );
 };
 
 export default ItemListAlumnoAllegados;

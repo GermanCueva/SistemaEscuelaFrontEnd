@@ -7,6 +7,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
         fetch(`${process.env.REACT_APP_API_URL}/api/desercion`)
             .then(res => res.json())
             .then(data => {
+                console.log("Respuesta raw del backend:", data); // Mira la estructura exacta
                 const listaDesercion = Array.isArray(data) ? data : data.desercion || data.data || [];
                 setDesercion(listaDesercion);
             })

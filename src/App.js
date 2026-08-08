@@ -9,6 +9,9 @@ import Login from "./Login";
 
 import ItemListContainerPersona from "./components/ItemListContainerPersonas";
 import ItemPersonaDetail from "./components/ItemPersonaDetail";
+import ItemListContainerAlumnos from "./components/ItemListContainerAlumnos";
+import ItemListContainerTutores from "./components/ItemListContainerTutores";
+import ItemListContainerAlumnosPagos from "./components/ItemListContainerAlumnosPagos";
 
 
 import { useAuth } from "./context/AuthContext";
@@ -21,7 +24,7 @@ import { LogOut } from "lucide-react";
 //import ProtectedRoute from "./routes/ProtectedRoute";
 //import RoleRoute from "./routes/RoleRoute";
 
-const GestionAlumnos = () => <div>Gestión Académica</div>;
+const GestionPagos = () => <div>Gestión de Pagos</div>;
 
 function App() {
   const navigate = useNavigate();
@@ -223,17 +226,26 @@ function App() {
           {/* Personas */}
           <Route path="personas">
             <Route path="abm" element={<ItemListContainerPersona />} />
-            <Route path="gestion" element={<GestionAlumnos />} />
+            <Route path="alumnos" element={<ItemListContainerAlumnos />} />
+            <Route path="tutores" element={<ItemListContainerTutores />} /> 
             <Route path="alta" element={<ItemPersonaDetail />} />
             <Route path=":id" element={<ItemPersonaDetail />} />
+          </Route>
+
+          {/* Gestión de Pagos */}
+          <Route path="gestion">
+           <Route path="cargos" element={<GestionPagos />} /> 
+            <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
+           <Route path="pagosmasiva" element={<GestionPagos />} /> 
+           <Route path="actualizarimporte" element={<GestionPagos />} /> 
           </Route>
 
           {/* Perfil */}
           <Route path="perfil" element={<div>Editar perfil</div>} />
 
           {/* Otros módulos */}
+          <Route path="gestion" element={<div>Contenido Gestión de Pagos</div>} />
           <Route path="tutor" element={<div>Contenido Tutor</div>} />
-          <Route path="gestion" element={<div>Contenido Gestión</div>} />
           <Route path="reportes" element={<div>Contenido Reportes</div>} />
           <Route path="admin" element={<div>Contenido Admin</div>} />
         </Route>
