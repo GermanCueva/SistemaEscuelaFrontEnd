@@ -1,8 +1,8 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { jwtDecode } from "jwt-decode";
-import { ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 import Home from "./Home";
 import Login from "./Login";
@@ -13,6 +13,8 @@ import ItemListContainerAlumnos from "./components/ItemListContainerAlumnos";
 import ItemListContainerTutores from "./components/ItemListContainerTutores";
 import ItemListContainerAlumnosPagos from "./components/ItemListContainerAlumnosPagos";
 import ItemPagos from "./components/ItemPagos";
+import ItemGeneracionDebito from "./components/ItemGeneracionDebito";
+import ItemGestionPagoMasivo from "./components/ItemGestionPagoMasivo"
 
 import { useAuth } from "./context/AuthContext";
 
@@ -20,6 +22,7 @@ import { useAuth } from "./context/AuthContext";
 import "./App.css";
 
 import { LogOut } from "lucide-react";
+
 
 //import ProtectedRoute from "./routes/ProtectedRoute";
 //import RoleRoute from "./routes/RoleRoute";
@@ -177,9 +180,8 @@ headers: {
     gap: "10px",
     textAlign: "left",
   };
-  
-    return (
-      
+
+  return (
     <div className="App">
       <header
         className="App-header"
@@ -273,7 +275,7 @@ headers: {
           <Route path="personas">
             <Route path="abm" element={<ItemListContainerPersona />} />
             <Route path="alumnos" element={<ItemListContainerAlumnos />} />
-            <Route path="tutores" element={<ItemListContainerTutores />} /> 
+            <Route path="tutores" element={<ItemListContainerTutores />} />
             <Route path="alta" element={<ItemPersonaDetail />} />
             <Route path=":id" element={<ItemPersonaDetail />} />
           </Route>
@@ -293,13 +295,27 @@ headers: {
            <Route path="instituciones" element={<Administracion />} /> 
            <Route path="usuarios" element={<Administracion />} />
            <Route path="parametros" element={<Administracion />} /> 
+            <Route path="cargos" element={<GestionPagos />} />
+            <Route
+              path="pagosmanual"
+              element={<ItemListContainerAlumnosPagos />}
+            />
+            <Route path="pagosmasiva" element={<ItemGestionPagoMasivo />} />
+            <Route path="actualizarimporte" element={<GestionPagos />} />
+            <Route
+              path="generacionarchivosdebito"
+              element={<ItemGeneracionDebito />}
+            />
           </Route>
 
           {/* Perfil */}
           <Route path="perfil" element={<div>Editar perfil</div>} />
 
           {/* Otros módulos */}
-          <Route path="gestion" element={<div>Contenido Gestión de Pagos</div>} />
+          <Route
+            path="gestion"
+            element={<div>Contenido Gestión de Pagos</div>}
+          />
           <Route path="tutor" element={<div>Contenido Tutor</div>} />
           <Route path="reportes" element={<div>Contenido Reportes</div>} />
           <Route path="admin" element={<div>Contenido Admin</div>} />
@@ -310,7 +326,6 @@ headers: {
       </Routes>
       <ToastContainer />
     </div>
-    
   );
 }
 

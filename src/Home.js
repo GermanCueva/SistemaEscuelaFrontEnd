@@ -70,10 +70,8 @@ const Home = () => {
           >
             Tutores
           </button>
-
         </div>
       )}
-
 
       {/* 🔹 Subtabs SOLO para Gestión de Archivos y Cobros */}
       {location.pathname.startsWith("/gestion") && (
@@ -88,7 +86,6 @@ const Home = () => {
           >
             Generar Cargos a Alumnos
           </button>
-
           <button
             style={
               location.pathname === "/gestion/pagosmanual"
@@ -99,7 +96,6 @@ const Home = () => {
           >
             Alta manual de Pagos
           </button>
-
           <button
             style={
               location.pathname === "/gestion/pagosmasiva"
@@ -110,7 +106,6 @@ const Home = () => {
           >
             Alta masiva de Pagos
           </button>
-
           <button
             style={
               location.pathname === "/gestion/actualizarimporte"
@@ -121,10 +116,20 @@ const Home = () => {
           >
             Actualizar importe cuotas impagas
           </button>
-
+          
+          <button
+            style={
+              location.pathname === "/gestion/generacionarchivosdebito"
+                ? styles.activeSubTab
+                : styles.subTab
+            }
+            onClick={() => navigate("/gestion/generacionarchivosdebito")}
+          >
+            Generación Archivos de Débito
+          </button>
+          
         </div>
       )}
-
 
       {/* 🔹 Subtabs SOLO para Administración */}
       {location.pathname.startsWith("/admin") && (
@@ -161,7 +166,6 @@ const Home = () => {
           >
             Parámetros
           </button>
-
         </div>
       )}
 
