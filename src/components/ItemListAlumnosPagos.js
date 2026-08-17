@@ -2,6 +2,7 @@ import ItemPersonaPagos from './ItemPersonaPagos'
 
 
 const ItemListAlumnosPagos = ({ prods, setProds }) => {
+
     return (
         <div className="overflow-x-auto">
 {/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
@@ -30,7 +31,6 @@ const ItemListAlumnosPagos = ({ prods, setProds }) => {
                         </th>
                     </tr>
                 </thead>
-
                 {/* Los datos siempre deben ir en <tbody> */}
                 <tbody>
                     {prods.length ? (
@@ -38,6 +38,7 @@ const ItemListAlumnosPagos = ({ prods, setProds }) => {
                             <ItemPersonaPagos 
                                 key={p.id_persona} // Corregido: Key única para React
                                 id_persona={p.id_persona} // Siempre usa una key única en React
+                                id_alumno={p.id_alumno} // Siempre usa una key única en React
                                 apellido={p.apellidos} 
                                 nombre={p.nombres} 
                                 tipo_documento={p.nombre_corto} 
