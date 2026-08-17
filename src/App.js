@@ -12,11 +12,11 @@ import ItemPersonaDetail from "./components/ItemPersonaDetail";
 import ItemListContainerAlumnos from "./components/ItemListContainerAlumnos";
 import ItemListContainerTutores from "./components/ItemListContainerTutores";
 import ItemListContainerAlumnosPagos from "./components/ItemListContainerAlumnosPagos";
-
+import ItemPagos from "./components/ItemPagos";
 
 import { useAuth } from "./context/AuthContext";
 
-import logo from "./logoEscuelaTransparente.png";
+//import logo from "./logoEscuelaTransparente.png";
 import "./App.css";
 
 import { LogOut } from "lucide-react";
@@ -25,8 +25,20 @@ import { LogOut } from "lucide-react";
 //import RoleRoute from "./routes/RoleRoute";
 
 const GestionPagos = () => <div>Gestión de Pagos</div>;
+const Administracion = () => <div>Administracion</div>;
+
+//const logo = 'logogenericotransparente.png'
+const logo = 'logoEscuelaTransparente.ico'
 
 function App() {
+
+      const [escuelaInfo, setEscuelaInfo] = useState({
+    //nombre: "Cargando...",
+    nombre: "Escuela Sagrada Familia",
+    logo: logo
+  });
+
+
   const navigate = useNavigate();
 
   const { user, isAuth, logout } = useAuth();
@@ -47,6 +59,7 @@ function App() {
     };
   }, []);
 
+
   //=====================================
   // VERIFICAR TOKEN
   //=====================================
@@ -62,6 +75,8 @@ function App() {
       navigate("/login");
     };
 
+
+    
     const verificarToken = () => {
       const token = localStorage.getItem("token");
 
@@ -88,6 +103,7 @@ function App() {
       }
     };
 
+    
     const reiniciarTemporizador = () => {
       clearTimeout(inactivityTimeout);
 
@@ -107,6 +123,8 @@ function App() {
 
     reiniciarTemporizador();
 
+
+
     return () => {
       clearInterval(interval);
 
@@ -118,6 +136,34 @@ function App() {
       window.removeEventListener("scroll", reiniciarTemporizador);
     };
   }, [logout, navigate]);
+
+const token = localStorage.getItem('token'); // O donde guardes tu JWT
+      // Petición a la BD cuando la App se monta
+  useEffect(() => {
+    if (isAuth) {
+    fetch(`${process.env.REACT_APP_API_URL}/api/escuela`, {
+headers: {
+    'Authorization': `Bearer ${token}`,
+    'Content-Type': 'application/json'
+  }  })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log(data)
+        setEscuelaInfo({
+          nombre: data.entidadeducativa,
+          logo: data.logo //|| logo
+        });
+      })
+      .catch((err) => {
+        console.error("Error al obtener datos de la escuela:", err);
+        // Fallback en caso de error
+        setEscuelaInfo({
+          nombre: "Escuela Sagrada Familia ERROR",
+          logo: logo
+        });
+      });
+      }
+  }, [isAuth, token]);
 
   const menuStyle = {
     width: "100%",
@@ -144,7 +190,7 @@ function App() {
         }}
       >
         <div className="header-top">
-          <img src={logo} className="App-logo" alt="logo" />
+          <img src={escuelaInfo.logo} className="App-logo" alt="logo" />
 
           {isAuth && (
             <div
@@ -205,7 +251,7 @@ function App() {
           )}
         </div>
 
-        <p>Bienvenidos al Sistema de Gestión de Escuela Sagrada Familia</p>
+        <p>Bienvenidos al Sistema de Gestión de {escuelaInfo.nombre}</p>
       </header>
 
       <Routes>
@@ -232,12 +278,21 @@ function App() {
             <Route path=":id" element={<ItemPersonaDetail />} />
           </Route>
 
+  
           {/* Gestión de Pagos */}
           <Route path="gestion">
            <Route path="cargos" element={<GestionPagos />} /> 
-            <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
+           <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
            <Route path="pagosmasiva" element={<GestionPagos />} /> 
            <Route path="actualizarimporte" element={<GestionPagos />} /> 
+           <Route path="SaldoAlumno/:id_alumno" element={<ItemPagos />} />
+          </Route>
+
+          {/* Administracion */}
+          <Route path="administracion">
+           <Route path="instituciones" element={<Administracion />} /> 
+           <Route path="usuarios" element={<Administracion />} />
+           <Route path="parametros" element={<Administracion />} /> 
           </Route>
 
           {/* Perfil */}

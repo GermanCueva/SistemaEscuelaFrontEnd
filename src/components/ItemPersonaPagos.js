@@ -1,42 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import { Trash2 } from 'lucide-react';
 
 
-const ItemPersonaPagos = ({ apellido, nombre, id_persona, tipo_documento, numero, tipo_usuario, activo, motivo_desercion, regular, setProds }) => {
+const ItemPersonaPagos = ({ apellido, nombre, id_persona, id_alumno, tipo_documento, numero, tipo_usuario, activo, motivo_desercion, regular, setProds }) => {
 
 
-  const cambiar_estado = async (e) => {
-    e.preventDefault();
-
-        const confirmar = window.confirm("¿Estás seguro de que deseas eliminar permanentemente esta persona?");
-            if (!confirmar) return;
-   
-  const token = localStorage.getItem('token');
-
-  
-    try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/${id_persona}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Le pasamos el token de la línea 13
-        }
-      });
-
-     // const data = await response.json();
-
-      if (response.ok) {
-           setProds(prevProds => prevProds.filter(persona => persona.id_persona !== id_persona));      
-        } else {
-       // setMensaje(`Error: ${data.message || 'No se pudo actualizar'}`);
-      }
-    } catch (error) {
-      console.error('Error al conectar con el servidor:', error);
-     // setMensaje('Error de red al intentar actualizar.');
-    }
-
-  };
 
 
 return (
@@ -108,16 +76,12 @@ return (
             {/* Botones de Acciones */}
             <td className="px-6 py-2 text-sm text-center bg-white">
                 <div className="flex items-center justify-center gap-2">
-                    <Link to={'/personas/' + id_persona}>
+                    <Link to={'/gestion/SaldoAlumno/' + id_alumno}>
                         <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
                             <Search size={20} className="mr-2" />
                         </button>
                     </Link>
-  
-                    <button onClick={(e) => cambiar_estado(e)} className="flex items-center bg-red-500 text-white p-2 rounded hover:bg-red-600">
-                        <Trash2 size={17} className="mr-2" />
-                    </button>
-               </div>
+                </div>
             </td>
         </tr>
     );

@@ -14,6 +14,7 @@
     "formik": "^2.4.9",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.16.0",
+    "numero-a-letras": "^1.0.6",
     "or": "^0.2.0",
     "react": "^19.2.5",
     "react-daisyui": "^5.0.5",
