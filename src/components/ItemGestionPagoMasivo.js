@@ -67,6 +67,7 @@ const ItemAfectacionDebito = () => {
 
     case "DEBLIMC":
       return "http://localhost:8080/api/pagos/afectar/mastercardCredito";
+      
 
     default:
       return null;
