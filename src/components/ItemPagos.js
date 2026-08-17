@@ -2,22 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, FileText, Check, FileX } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { NumerosALetras } from 'numero-a-letras';
+import { saveAs } from 'file-saver';
+
 
 // Función helper para construir el QR oficial en Base64 de AFIP / ARCA
 const generarUrlQrAfip = (row) => {
   try {
-    const fechaEmision = row.fecha_transaccion 
-      ? new Date(row.fecha_transaccion).toISOString().split('T')[0] 
-      : '';
-
     const jsonPayload = {
       ver: 1,
-      fecha: fechaEmision, // Formato YYYY-MM-DD
-      cuit: Number(String(row.cuit_institucion || '').replace(/\D/g, '')),
-      ptoVta: Number(row.punto_venta || 1),
-      tipoCmp: 11, // 11 = Factura C
-      nroCmp: Number(row.comprobante_numero || 0),
-      importe: Math.abs(Number(row.importe)) || 0,
+      fecha: row.fechaEmision || new Date().toISOString().split('T')[0], // YYYY-MM-DD
+      cuit: Number(String(row.cuit_emisor || '30123456789').replace(/\D/g, '')),
+      ptoVta: Number(row.puntoVenta || 3),
+      tipoCmp: Number(row.tipoComprobanteCode || 11), // 11 = Factura C
+      nroCmp: Number(row.numeroComprobante || 1),
+      importe: Number(row.total || 0),
       moneda: "PES",
       ctz: 1,
       tipoDocRec: row.cuil_tutor ? 80 : 99, // 80 = CUIT/CUIL, 99 = Consumidor Final
@@ -26,7 +24,10 @@ const generarUrlQrAfip = (row) => {
       codAut: Number(row.cae || '75428641460732')
     };
 
-    const base64Json = btoa(JSON.stringify(jsonPayload));
+    // Convertir a JSON -> UTF-8 -> Base64 compatible con AFIP y JavaScript
+    const jsonString = JSON.stringify(jsonPayload);
+    const base64Json = btoa(unescape(encodeURIComponent(jsonString)));
+
     return `https://www.afip.gob.ar/fe/qr/?p=${base64Json}`;
   } catch (error) {
     console.error('Error al armar la URL del QR:', error);
@@ -66,7 +67,7 @@ const ItemPagos = () => {
         const data = await response.json();
         setMovimientos(Array.isArray(data) ? data : []);
 
-      } catch (error) {
+       } catch (error) {
         console.error('Error cargando movimientos:', error);
         setMovimientos([]);
       } finally {
@@ -194,6 +195,10 @@ const ItemPagos = () => {
 
       // 3. Recibir el stream/buffer y convertir a Blob
       const blob = await response.blob();
+
+      const nombreArchivo = `Factura_${response.punto_venta}-${response.comprobante_numero}.pdf`
+
+      saveAs(blob, nombreArchivo);
 
       // 4. Crear URL de objeto y abrir en pestaña nueva
       const fileURL = URL.createObjectURL(blob);

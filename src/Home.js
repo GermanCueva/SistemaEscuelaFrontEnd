@@ -114,7 +114,7 @@ const Home = () => {
             }
             onClick={() => navigate("/gestion/actualizarimporte")}
           >
-            Actualizar importe cuotas impagas
+            Actualizar importe cuotas
           </button>
           
           <button
