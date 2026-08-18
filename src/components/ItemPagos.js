@@ -135,8 +135,20 @@ const ItemPagos = () => {
         vencimientoPago: row.fecha_transaccion 
           ? new Date(row.fecha_transaccion).toLocaleDateString('es-AR', { timeZone: 'UTC' }) 
           : '',
-        concepto: (row.cuota) + '/' + (row.anio)
-      },
+        concepto: (() => {
+          const anioCuota = row.anio_cuota || '';
+
+          if (anioCuota.includes('Inscripci')) {
+            return anioCuota.substring(0, 30);
+          }
+          
+          if (anioCuota.includes('Material')) {
+            return anioCuota.substring(0, 23);
+          }
+
+          return `${row.cuota}/${row.anio}`;
+        })()
+    },
       receptor: {
         cuil: row.cuil_tutor, 
         razonSocial: row.persona_allegada,
@@ -176,7 +188,7 @@ const ItemPagos = () => {
       }
     };
 
-  //  console.log(payloadFactura)
+    //console.log(payloadFactura)
 
     try {
       // 2. Enviar petición POST con el payload
@@ -196,13 +208,16 @@ const ItemPagos = () => {
       // 3. Recibir el stream/buffer y convertir a Blob
       const blob = await response.blob();
 
-      const nombreArchivo = `Factura_${response.punto_venta}-${response.comprobante_numero}.pdf`
+      const nombreArchivo = `Factura_${payloadFactura.emisor.puntoVenta}-${payloadFactura.emisor.numeroComprobante}.pdf`
 
+          //5
       saveAs(blob, nombreArchivo);
 
       // 4. Crear URL de objeto y abrir en pestaña nueva
-      const fileURL = URL.createObjectURL(blob);
-      window.open(fileURL, '_blank');
+    //  const fileURL = URL.createObjectURL(blob);
+    //  window.open(fileURL, '_blank');
+
+
 
     } catch (error) {
       console.error('Error al generar la factura:', error);
@@ -238,7 +253,8 @@ const ItemPagos = () => {
             </tr>
           </thead>
           <tbody>
-            {movimientos.map((row, index) => {
+            {movimientos.length > 0 ? (
+            movimientos.map((row, index) => {
               const esCuotaGenerada = Number(row.importe) > 0;
               const claveCuota = row.anio_cuota || row.concepto || row.cuota;
 
@@ -326,11 +342,20 @@ const ItemPagos = () => {
                   </td>
                 </tr>
               );
-            })}
+            })
+          
+          ) : (
+    <tr>
+      <td colSpan={8} className="p-4 text-center text-gray-500 font-medium italic bg-white">
+        El alumno no tiene cargos generados
+      </td>
+    </tr>
+  )}
           </tbody>
         </table>
       </div>
-
+{movimientos.length > 0 && (
+  <>
       {/* Fila del Total */}
       <div className="flex justify-end items-center p-2 bg-gray-200 font-bold border-t border-gray-300">
         <span className="mr-4">Saldo Total:</span>
@@ -352,6 +377,8 @@ const ItemPagos = () => {
           />
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 };
