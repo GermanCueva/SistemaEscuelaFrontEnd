@@ -14,7 +14,7 @@ import ItemListContainerTutores from "./components/ItemListContainerTutores";
 import ItemListContainerAlumnosPagos from "./components/ItemListContainerAlumnosPagos";
 import ItemPagos from "./components/ItemPagos";
 import ItemGeneracionDebito from "./components/ItemGeneracionDebito";
-import ItemGestionPagoMasivo from "./components/ItemGestionPagoMasivo"
+import ItemGestionPagoMasivo from "./components/ItemGestionPagoMasivo";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -23,7 +23,6 @@ import "./App.css";
 
 import { LogOut } from "lucide-react";
 
-
 //import ProtectedRoute from "./routes/ProtectedRoute";
 //import RoleRoute from "./routes/RoleRoute";
 
@@ -31,16 +30,14 @@ const GestionPagos = () => <div>Gestión de Pagos</div>;
 const Administracion = () => <div>Administracion</div>;
 
 //const logo = 'logogenericotransparente.png'
-const logo = 'logoEscuelaTransparente.ico'
+const logo = "logoEscuelaTransparente.ico";
 
 function App() {
-
-      const [escuelaInfo, setEscuelaInfo] = useState({
+  const [escuelaInfo, setEscuelaInfo] = useState({
     //nombre: "Cargando...",
     nombre: "Escuela Sagrada Familia",
-    logo: logo
+    logo: logo,
   });
-
 
   const navigate = useNavigate();
 
@@ -62,7 +59,6 @@ function App() {
     };
   }, []);
 
-
   //=====================================
   // VERIFICAR TOKEN
   //=====================================
@@ -78,8 +74,6 @@ function App() {
       navigate("/login");
     };
 
-
-    
     const verificarToken = () => {
       const token = localStorage.getItem("token");
 
@@ -106,7 +100,6 @@ function App() {
       }
     };
 
-    
     const reiniciarTemporizador = () => {
       clearTimeout(inactivityTimeout);
 
@@ -126,8 +119,6 @@ function App() {
 
     reiniciarTemporizador();
 
-
-
     return () => {
       clearInterval(interval);
 
@@ -140,32 +131,33 @@ function App() {
     };
   }, [logout, navigate]);
 
-const token = localStorage.getItem('token'); // O donde guardes tu JWT
-      // Petición a la BD cuando la App se monta
+  const token = localStorage.getItem("token"); // O donde guardes tu JWT
+  // Petición a la BD cuando la App se monta
   useEffect(() => {
     if (isAuth) {
-    fetch(`${process.env.REACT_APP_API_URL}/api/escuela`, {
-headers: {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  }  })
-      .then((res) => res.json())
-      .then((data) => {
-        console.log(data)
-        setEscuelaInfo({
-          nombre: data.entidadeducativa,
-          logo: data.logo //|| logo
-        });
+      fetch(`${process.env.REACT_APP_API_URL}/api/escuela`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
       })
-      .catch((err) => {
-        console.error("Error al obtener datos de la escuela:", err);
-        // Fallback en caso de error
-        setEscuelaInfo({
-          nombre: "Escuela Sagrada Familia ERROR",
-          logo: logo
+        .then((res) => res.json())
+        .then((data) => {
+          console.log(data);
+          setEscuelaInfo({
+            nombre: data.entidadeducativa,
+            logo: data.logo, //|| logo
+          });
+        })
+        .catch((err) => {
+          console.error("Error al obtener datos de la escuela:", err);
+          // Fallback en caso de error
+          setEscuelaInfo({
+            nombre: "Escuela Sagrada Familia ERROR",
+            logo: logo,
+          });
         });
-      });
-      }
+    }
   }, [isAuth, token]);
 
   const menuStyle = {
@@ -280,21 +272,31 @@ headers: {
             <Route path=":id" element={<ItemPersonaDetail />} />
           </Route>
 
-  
-          {/* Gestión de Pagos */}
           <Route path="gestion">
-           <Route path="cargos" element={<GestionPagos />} /> 
-           <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
-           <Route path="pagosmasiva" element={<GestionPagos />} /> 
-           <Route path="actualizarimporte" element={<GestionPagos />} /> 
-           <Route path="SaldoAlumno/:id_alumno" element={<ItemPagos />} />
+            <Route path="cargos" element={<GestionPagos />} />
+
+            <Route
+              path="pagosmanual"
+              element={<ItemListContainerAlumnosPagos />}
+            />
+
+            <Route path="pagosmasiva" element={<ItemGestionPagoMasivo />} />
+
+            <Route path="actualizarimporte" element={<GestionPagos />} />
+
+            <Route
+              path="generacionarchivosdebito"
+              element={<ItemGeneracionDebito />}
+            />
+
+            <Route path="SaldoAlumno/:id_alumno" element={<ItemPagos />} />
           </Route>
 
           {/* Administracion */}
           <Route path="administracion">
-           <Route path="instituciones" element={<Administracion />} /> 
-           <Route path="usuarios" element={<Administracion />} />
-           <Route path="parametros" element={<Administracion />} /> 
+            <Route path="instituciones" element={<Administracion />} />
+            <Route path="usuarios" element={<Administracion />} />
+            <Route path="parametros" element={<Administracion />} />
             <Route path="cargos" element={<GestionPagos />} />
             <Route
               path="pagosmanual"
@@ -310,7 +312,6 @@ headers: {
 
           {/* Perfil */}
           <Route path="perfil" element={<div>Editar perfil</div>} />
-
           {/* Otros módulos */}
           <Route
             path="gestion"
@@ -319,6 +320,10 @@ headers: {
           <Route path="tutor" element={<div>Contenido Tutor</div>} />
           <Route path="reportes" element={<div>Contenido Reportes</div>} />
           <Route path="admin" element={<div>Contenido Admin</div>} />
+          <Route
+            path="generacionarchivosdebito"
+            element={<ItemGeneracionDebito />}
+          />
         </Route>
 
         {/* Fallback */}

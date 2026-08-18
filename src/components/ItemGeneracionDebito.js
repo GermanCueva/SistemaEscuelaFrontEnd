@@ -73,7 +73,7 @@ const ItemGeneracionDebito = () => {
       // Llamada al backend
       // ==========================================
       const response = await axios.put(
-        "http://localhost:8080/api/pagos/archivoDebito",
+        `${process.env.REACT_APP_API_URL}/api/pagos/archivoDebito`,
         {},
         {
           headers: {
