@@ -7,6 +7,7 @@ import { saveAs } from 'file-saver';
 
 // Función helper para construir el QR oficial en Base64 de AFIP / ARCA
 const generarUrlQrAfip = (row) => {
+  //console.log(row)
   try {
     const jsonPayload = {
       ver: 1,
@@ -15,7 +16,7 @@ const generarUrlQrAfip = (row) => {
       ptoVta: Number(row.puntoVenta || 3),
       tipoCmp: Number(row.tipoComprobanteCode || 11), // 11 = Factura C
       nroCmp: Number(row.numeroComprobante || 1),
-      importe: Number(row.total || 0),
+      importe: Math.abs(parseFloat(row.saldocuota)),
       moneda: "PES",
       ctz: 1,
       tipoDocRec: row.cuil_tutor ? 80 : 99, // 80 = CUIT/CUIL, 99 = Consumidor Final
