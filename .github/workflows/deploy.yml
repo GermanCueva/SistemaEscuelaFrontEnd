@@ -1,26 +1,33 @@
 name: Deploy Frontend React
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 jobs:
-deploy:
-runs-on: ubuntu-latest
-steps:
-- name: Actualizar y compilar Frontend vía SSH
-uses: appleboy/ssh-action@v1.0.3
-with:
-host: ${{ secrets.VPS_HOST }}
-username: ${{ secrets.VPS_USERNAME }}
-key: ${{ secrets.VPS_SSH_KEY }}
-port: ${{ secrets.VPS_PORT }}
-script: |
-if [ ! -d "/var/www/sistemaescuelas-frontend/.git" ]; then
-git clone git@github.com:tu-usuario/tu-repo-frontend.git /var/www/sistemaescuelas-frontend
-fi
-cd /var/www/sistemaescuelas-frontend
-git pull origin main
-# Inyectar variables de entorno para el Build
-echo "REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}" > .env.production
-npm ci
-npm run build
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Actualizar y compilar Frontend vía SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            # 1. Si no existe el repo localmente en la VPS, se clona
+            if [ ! -d "/var/www/sistemaescuelas-frontend/.git" ]; then
+              git clone https://github.com/cuevabros-droid/sistemaescuelas-frontend.git /var/www/sistemaescuelas-frontend
+            fi
+
+            # 2. Entra a la carpeta y actualiza el código
+            cd /var/www/sistemaescuelas-frontend
+            git checkout main
+            git pull origin main
+
+            # 3. Inyecta las variables para la compilación de React
+            echo "REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}" > .env.production
+
+            # 4. Instala dependencias y genera los archivos estáticos en /build
+            npm install
+            npm run build
