@@ -131,10 +131,11 @@ function App() {
     };
   }, [logout, navigate]);
 
-  const token = localStorage.getItem("token"); // O donde guardes tu JWT
   // Petición a la BD cuando la App se monta
   useEffect(() => {
     if (isAuth) {
+        const token = localStorage.getItem("token"); // O donde guardes tu JWT
+
       fetch(`${process.env.REACT_APP_API_URL}/api/escuela`, {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -158,7 +159,7 @@ function App() {
           });
         });
     }
-  }, [isAuth, token]);
+  }, [isAuth]);
 
   const menuStyle = {
     width: "100%",

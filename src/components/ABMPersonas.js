@@ -5,7 +5,7 @@ const ABMPersonas = () =>{
         <div>
             <strong>Componente ABM Personas</strong>
         </div>
-  
+  //PARA VER SI SUBE
       )
    
 }
