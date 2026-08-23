@@ -16,8 +16,9 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             cd /var/www/sistemaescuelas-frontend
-            git checkout main
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             echo "REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}" > .env.production
             npm install
             npm run build
+            sudo systemctl reload nginx
