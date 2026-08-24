@@ -4,36 +4,85 @@ import { useParams } from 'react-router-dom';
 import { NumerosALetras } from 'numero-a-letras';
 import { saveAs } from 'file-saver';
 
-
-// Función helper para construir el QR oficial en Base64 de AFIP / ARCA
-const generarUrlQrAfip = (row) => {
+// Función helper para consultar AFIP/ARCA y construir la URL oficial del QR
+const obtenerDatosAfipYQr = async (row) => {
+  //console.log("datos row")
   //console.log(row)
+  const token = localStorage.getItem("token");
+
+  // 1. Extraer identificadores del comprobante
+  const ptoVta = row.punto_venta || row.puntoVenta || 3;
+  const tipoCmp = row.comprobante_tipo || row.tipoComprobanteCode || 11;
+  const nroCmp = row.comprobante_numero || row.numeroComprobante || 1;
+
+  let datosArca = {};
+
+  // 2. Consultar datos reales de AFIP/ARCA desde el backend (incluyendo Bearer token)
   try {
-    const jsonPayload = {
-      ver: 1,
-      fecha: row.fechaEmision || new Date().toISOString().split('T')[0], // YYYY-MM-DD
-      cuit: Number(String(row.cuit_emisor || '30123456789').replace(/\D/g, '')),
-      ptoVta: Number(row.puntoVenta || 3),
-      tipoCmp: Number(row.tipoComprobanteCode || 11), // 11 = Factura C
-      nroCmp: Number(row.numeroComprobante || 1),
-      importe: Math.abs(parseFloat(row.saldocuota)),
-      moneda: "PES",
-      ctz: 1,
-      tipoDocRec: row.cuil_tutor ? 80 : 99, // 80 = CUIT/CUIL, 99 = Consumidor Final
-      nroDocRec: Number(String(row.cuil_tutor || 0).replace(/\D/g, '')),
-      tipoCodAut: "E", // E = CAE
-      codAut: Number(row.cae || '75428641460732')
-    };
-
-    // Convertir a JSON -> UTF-8 -> Base64 compatible con AFIP y JavaScript
-    const jsonString = JSON.stringify(jsonPayload);
-    const base64Json = btoa(unescape(encodeURIComponent(jsonString)));
-
-    return `https://www.afip.gob.ar/fe/qr/?p=${base64Json}`;
-  } catch (error) {
-    console.error('Error al armar la URL del QR:', error);
-    return '';
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/consultar-factura-directa?ptoVta=${ptoVta}&tipoCmp=${tipoCmp}&nroCmp=${nroCmp}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    );
+    if (response.ok) {
+      datosArca = await response.json();
+      console.log("Datos reales obtenidos de ARCA:", datosArca);
+    }
+  } catch (err) {
+    console.warn("Fallo al conectar con la API de AFIP, se usarán datos locales.", err);
   }
+
+  // 3. Formatear la fecha (YYYY-MM-DD para AFIP)
+  let fechaFinal = new Date().toISOString().split('T')[0];
+  if (datosArca.fechaEmision) {
+    const f = String(datosArca.fechaEmision);
+    fechaFinal = `${f.substring(0, 4)}-${f.substring(4, 6)}-${f.substring(6, 8)}`;
+  } else if (row.fecha_pago || row.fecha_transaccion) {
+    fechaFinal = String(row.fecha_pago || row.fecha_transaccion).split('T')[0];
+  }
+
+  // 4. Limpieza de CUIT y Documento del Receptor
+  const cuitEmisor = Number(String(row.cuit_institucion || 30670917688).replace(/\D/g, ''));
+
+  const caeFinal = datosArca.cae || row.cae || "75428641460732";
+ // console.log("datos Arca")
+ // console.log(datosArca)
+
+  // 5. Armar el JSON Payload oficial de AFIP
+
+  // Mapeo dinámico de datos recibidos desde AFIP/ARCA
+
+  const jsonPayload = {
+    ver: 1,
+    fecha: fechaFinal,
+    cuit: cuitEmisor,
+    ptoVta: Number(ptoVta),
+    tipoCmp: Number(tipoCmp),
+    nroCmp: Number(nroCmp),
+    //importe: Math.abs(Number(parseFloat(row.importe).toFixed(2))),
+    importe: Math.abs(Number(parseFloat(datosArca.importeTotal).toFixed(2))),
+    moneda: "PES",
+    ctz: 1,
+    tipoDocRec: Number(datosArca.docTipo),
+    nroDocRec: Number(datosArca.docNro),
+    tipoCodAut: "E",
+    codAut: Number(caeFinal)
+  };
+
+  // 6. Convertir a Base64
+  const jsonString = JSON.stringify(jsonPayload);
+  const base64Json = btoa(unescape(encodeURIComponent(jsonString)));
+  const urlQr = `https://www.afip.gob.ar/fe/qr/?p=${base64Json}`;
+
+  return {
+    urlQr,
+    cae: caeFinal,
+    fechaVencimientoCae: datosArca.fchVto || datosArca.vencimientoCae,
+    datosArca
+  };
 };
 
 const ItemPagos = () => {
@@ -99,13 +148,15 @@ const ItemPagos = () => {
   const handleDescargarPDF = async (row) => {
     const token = localStorage.getItem("token");
 
-    // 1. Mapear los datos de la fila de la tabla a la estructura del objeto 'data'
+    // Esperar los datos asincrónicos de AFIP / ARCA y QR
+    const afipResult = await obtenerDatosAfipYQr(row);
+
     const payloadFactura = {
       emisor: {
         logoUrl: row.logo,
         razonSocial: row.entidad_educativa,
-        domicilio: (row.direccion) + ' ' + (row.numero), 
-        localidad_provincia: (row.localidad_nombre) + ' - ' + (row.provincia_nombre), 
+        domicilio: (row.direccion || '') + ' ' + (row.numero || ''), 
+        localidad_provincia: (row.localidad_nombre || '') + ' - ' + (row.provincia_nombre || ''), 
         condicionIva: row.condicion_iva,
         tipoComprobante: 'C',
         codigoComprobante: '11',
@@ -122,14 +173,14 @@ const ItemPagos = () => {
         desde: row.fecha_transaccion 
           ? (() => {
               const d = new Date(row.fecha_transaccion);
-              d.setUTCDate(1); // Cambia el día al 1 (en UTC)
+              d.setUTCDate(1);
               return d.toLocaleDateString('es-AR', { timeZone: 'UTC' });
             })()
           : '',
         hasta: row.fecha_transaccion 
           ? (() => {
               const d = new Date(row.fecha_transaccion);
-              d.setUTCDate(30); // Cambia el día al 30 (en UTC)
+              d.setUTCDate(30);
               return d.toLocaleDateString('es-AR', { timeZone: 'UTC' });
             })()
           : '',
@@ -138,23 +189,17 @@ const ItemPagos = () => {
           : '',
         concepto: (() => {
           const anioCuota = row.anio_cuota || '';
-
-          if (anioCuota.includes('Inscripci')) {
-            return anioCuota.substring(0, 30);
-          }
-          
-          if (anioCuota.includes('Material')) {
-            return anioCuota.substring(0, 23);
-          }
-
+          if (anioCuota.includes('Inscripci')) return anioCuota.substring(0, 30);
+          if (anioCuota.includes('Material')) return anioCuota.substring(0, 23);
           return `${row.cuota}/${row.anio}`;
         })()
-    },
+      },
       receptor: {
-        cuil: row.cuil_tutor, 
+        cuil: afipResult.datosArca.docNroReceptor || row.cuil_tutor || row.dni_tutor || '', 
+        tipoDoc: afipResult.datosArca.docTipoReceptor || (row.cuil_tutor ? 'CUIL' : 'DNI'),
         razonSocial: row.persona_allegada,
-        condicionIva: row.condicion_iva,
-        domicilio: row.direccion_alumno,
+        condicionIva: row.condicion_iva || 'Consumidor Final',
+        domicilio: row.direccion_alumno || '',
         condicionVenta: 'Contado'
       },
       items: [
@@ -174,25 +219,22 @@ const ItemPagos = () => {
           singular: 'peso',
           centPlural: 'centavos',
           centSingular: 'centavo'
-        }).replace(' M.N.', ' centavos') // Remueve la sigla M.N.
+        }).replace(' M.N.', ' centavos')
       },
       afip: {
-        qrUrl: generarUrlQrAfip(row), // Genera la URL codificada en Base64 para ARCA
-        cae: row.cae || '75428641460732',  
-        vencimientoCae: row.fecha_transaccion 
+        qrUrl: afipResult.urlQr,
+        cae: afipResult.cae,
+        vencimientoCae: afipResult.fechaVencimientoCae || (row.fecha_transaccion 
           ? (() => {
               const d = new Date(row.fecha_transaccion);
               d.setUTCDate(d.getUTCDate() + 10);
               return d.toLocaleDateString('es-AR', { timeZone: 'UTC' });
             })()
-          : ''
+          : '')
       }
     };
 
-    //console.log(payloadFactura)
-
     try {
-      // 2. Enviar petición POST con el payload
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/factura-pdf`, {
         method: 'POST',
         headers: {
@@ -202,23 +244,11 @@ const ItemPagos = () => {
         body: JSON.stringify(payloadFactura)
       });
 
-      if (!response.ok) {
-        throw new Error(`Error HTTP: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`Error HTTP: ${response.status}`);
 
-      // 3. Recibir el stream/buffer y convertir a Blob
       const blob = await response.blob();
-
-      const nombreArchivo = `Factura_${payloadFactura.emisor.puntoVenta}-${payloadFactura.emisor.numeroComprobante}.pdf`
-
-          //5
+      const nombreArchivo = `Factura_${payloadFactura.emisor.puntoVenta}-${payloadFactura.emisor.numeroComprobante}.pdf`;
       saveAs(blob, nombreArchivo);
-
-      // 4. Crear URL de objeto y abrir en pestaña nueva
-    //  const fileURL = URL.createObjectURL(blob);
-    //  window.open(fileURL, '_blank');
-
-
 
     } catch (error) {
       console.error('Error al generar la factura:', error);
@@ -255,130 +285,125 @@ const ItemPagos = () => {
           </thead>
           <tbody>
             {movimientos.length > 0 ? (
-            movimientos.map((row, index) => {
-              const esCuotaGenerada = Number(row.importe) > 0;
-              const claveCuota = row.anio_cuota || row.concepto || row.cuota;
+              movimientos.map((row, index) => {
+                const esCuotaGenerada = Number(row.importe) > 0;
+                const claveCuota = row.anio_cuota || row.concepto || row.cuota;
 
-              // Saldo neto calculado de la suma de importes de esa cuota
-              const saldoNetoCuota = saldoPorCuotaMap[claveCuota] ?? Number(row.saldocuota || row.importe);
+                const saldoNetoCuota = saldoPorCuotaMap[claveCuota] ?? Number(row.saldocuota || row.importe);
 
-              // La cuota se considera pagada si la suma acumulada es <= 0 o su estado es pagada/saldada
-              const estaPagada = 
-                saldoNetoCuota <= 0 || 
-                row.id_estado_cuota === 2 || 
-                row.estado_cuota === "Saldada" || 
-                row.estado_cuota === "Pagada";
+                const estaPagada = 
+                  saldoNetoCuota <= 0 || 
+                  row.id_estado_cuota === 2 || 
+                  row.estado_cuota === "Saldada" || 
+                  row.estado_cuota === "Pagada";
 
-              // Verificación de existencia de comprobante/factura
-              const tieneComprobante = 
-                row.comprobante_numero !== null && 
-                row.comprobante_numero !== undefined && 
-                String(row.comprobante_numero).trim() !== '' &&
-                row.comprobante_numero !== 'null';
+                const tieneComprobante = 
+                  row.comprobante_numero !== null && 
+                  row.comprobante_numero !== undefined && 
+                  String(row.comprobante_numero).trim() !== '' &&
+                  row.comprobante_numero !== 'null';
 
-              return (
-                <tr 
-                  key={row.id_transaccion_cc || index} 
-                  className={`border-b border-gray-200 hover:bg-blue-50/50 ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                  }`}
-                >
-                  <td className="p-2 border-r border-gray-200 font-mono">
-                    {row.fecha_transaccion 
-                      ? new Date(row.fecha_transaccion).toLocaleDateString('es-AR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                          timeZone: 'UTC'
-                        })
-                      : ''}
-                  </td>                  
-                  <td className="p-2 border-r border-gray-200 font-medium">{row.anio_cuota || row.concepto}</td>
-                  <td className="p-2 border-r border-gray-200 font-mono">$ {row.importe}</td>
-                  <td className="p-2 border-r border-gray-200 font-mono">{row.medio_pago}</td>
-                  <td className="p-2 border-r border-gray-200 font-mono">{row.nombre_tarjeta}</td>
-                  <td className="p-2 border-r border-gray-200 font-mono">{row.estado_cuota}</td>
-                  <td className="p-2 border-r border-gray-200 font-mono">
-                    {row.motivo_rechazo && !/NUL/i.test(row.motivo_rechazo) ? row.motivo_rechazo : ''}
-                  </td>
-                  
-                  {/* Columna de Acciones y Validación Visual */}
-                  <td className="p-1 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      
-                      {esCuotaGenerada ? (
-                        estaPagada ? (
-                          <span title="Cuota Saldada" className="text-green-600 flex items-center justify-center p-1">
-                            <Check className="w-5 h-5 font-bold" />
-                          </span>
+                return (
+                  <tr 
+                    key={row.id_transaccion_cc || index} 
+                    className={`border-b border-gray-200 hover:bg-blue-50/50 ${
+                      index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                    }`}
+                  >
+                    <td className="p-2 border-r border-gray-200 font-mono">
+                      {row.fecha_transaccion 
+                        ? new Date(row.fecha_transaccion).toLocaleDateString('es-AR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                            timeZone: 'UTC'
+                          })
+                        : ''}
+                    </td>                  
+                    <td className="p-2 border-r border-gray-200 font-medium">{row.anio_cuota || row.concepto}</td>
+                    <td className="p-2 border-r border-gray-200 font-mono">$ {row.importe}</td>
+                    <td className="p-2 border-r border-gray-200 font-mono">{row.medio_pago}</td>
+                    <td className="p-2 border-r border-gray-200 font-mono">{row.nombre_tarjeta}</td>
+                    <td className="p-2 border-r border-gray-200 font-mono">{row.estado_cuota}</td>
+                    <td className="p-2 border-r border-gray-200 font-mono">
+                      {row.motivo_rechazo && !/NUL/i.test(row.motivo_rechazo) ? row.motivo_rechazo : ''}
+                    </td>
+                    
+                    {/* Columna de Acciones */}
+                    <td className="p-1 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {esCuotaGenerada ? (
+                          estaPagada ? (
+                            <span title="Cuota Saldada" className="text-green-600 flex items-center justify-center p-1">
+                              <Check className="w-5 h-5 font-bold" />
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => handlePagarOEditar(row)}
+                              title="Falta pagar - Clic para abonar"
+                              className="p-1 hover:bg-blue-100 rounded text-blue-600 transition-colors"
+                            >
+                              <Search className="w-4 h-4" />
+                            </button>
+                          )
                         ) : (
-                          <button
-                            onClick={() => handlePagarOEditar(row)}
-                            title="Falta pagar - Clic para abonar"
-                            className="p-1 hover:bg-blue-100 rounded text-blue-600 transition-colors"
-                          >
-                            <Search className="w-4 h-4" />
-                          </button>
-                        )
-                      ) : (
-                        tieneComprobante ? (
-                          <button
-                            onClick={() => handleDescargarPDF(row)}
-                            title="Descargar Comprobante PDF"
-                            className="p-1 hover:bg-red-100 rounded text-red-600 transition-colors"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </button>
-                        ) : (
-                          <span 
-                            title="Sin factura / comprobante generado" 
-                            className="p-1 text-red-500 flex items-center justify-center cursor-not-allowed opacity-75"
-                          >
-                            <FileX className="w-4 h-4" />
-                          </span>
-                        )
-                      )}
-
-                    </div>
-                  </td>
-                </tr>
-              );
-            })
-          
-          ) : (
-    <tr>
-      <td colSpan={8} className="p-4 text-center text-gray-500 font-medium italic bg-white">
-        El alumno no tiene cargos generados
-      </td>
-    </tr>
-  )}
+                          tieneComprobante ? (
+                            <button
+                              onClick={() => handleDescargarPDF(row)}
+                              title="Descargar Comprobante PDF"
+                              className="p-1 hover:bg-red-100 rounded text-red-600 transition-colors"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                          ) : (
+                            <span 
+                              title="Sin factura / comprobante generado" 
+                              className="p-1 text-red-500 flex items-center justify-center cursor-not-allowed opacity-75"
+                            >
+                              <FileX className="w-4 h-4" />
+                            </span>
+                          )
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            ) : (
+              <tr>
+                <td colSpan={8} className="p-4 text-center text-gray-500 font-medium italic bg-white">
+                  El alumno no tiene cargos generados
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
-{movimientos.length > 0 && (
-  <>
-      {/* Fila del Total */}
-      <div className="flex justify-end items-center p-2 bg-gray-200 font-bold border-t border-gray-300">
-        <span className="mr-4">Saldo Total:</span>
-        <span className="font-mono text-sm">
-          $ {parseFloat(movimientos[0]?.saldototal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}          
-        </span>
-      </div>
 
-      {/* Formulario inferior: Datos del Pago */}
-      <div className="border-t border-gray-400 bg-indigo-900 text-white p-2">
-        <h3 className="font-bold text-xs uppercase mb-2">Datos del pago</h3>
-        <div className="flex items-center gap-2 bg-white text-black p-2 rounded">
-          <label htmlFor="concepto" className="font-medium text-xs">Concepto:</label>
-          <input
-            id="concepto"
-            type="text"
-            className="border border-gray-300 rounded px-2 py-1 text-xs flex-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            placeholder="Ingrese el concepto del pago..."
-          />
-        </div>
-      </div>
-      </>
+      {movimientos.length > 0 && (
+        <>
+          {/* Fila del Total */}
+          <div className="flex justify-end items-center p-2 bg-gray-200 font-bold border-t border-gray-300">
+            <span className="mr-4">Saldo Total:</span>
+            <span className="font-mono text-sm">
+              $ {parseFloat(movimientos[0]?.saldototal || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}          
+            </span>
+          </div>
+
+          {/* Formulario inferior */}
+          <div className="border-t border-gray-400 bg-indigo-900 text-white p-2">
+            <h3 className="font-bold text-xs uppercase mb-2">Datos del pago</h3>
+            <div className="flex items-center gap-2 bg-white text-black p-2 rounded">
+              <label htmlFor="concepto" className="font-medium text-xs">Concepto:</label>
+              <input
+                id="concepto"
+                type="text"
+                className="border border-gray-300 rounded px-2 py-1 text-xs flex-1 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                placeholder="Ingrese el concepto del pago..."
+              />
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
