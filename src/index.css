@@ -88,3 +88,24 @@ body, #root {
     @apply w-full max-w-7xl mx-auto px-2 sm:px-6 lg:px-8;
   }
 }
+
+/* Se aplica únicamente en móviles; el escritorio no cambia */
+@media (max-width: 768px) {
+  .menu-tabs, .submenu-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; /* Oculta barra en Firefox */
+  }
+
+  .menu-tabs::-webkit-scrollbar, 
+  .submenu-tabs::-webkit-scrollbar {
+    display: none; /* Oculta barra en Chrome/Safari */
+  }
+
+  .menu-tabs a, .submenu-tabs a,
+  .menu-tabs button, .submenu-tabs button {
+    flex: 0 0 auto !important; /* Evita que los botones se reduzcan */
+  }
+}
