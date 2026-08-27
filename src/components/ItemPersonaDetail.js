@@ -784,7 +784,7 @@ const ItemDetailPersona = () => {
     <div style={{ padding: '20px' }}>
       
       {/* Botones de Navegación de Pestañas locales */}
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+<div className="flex flex-wrap gap-2 p-3 bg-gray-100/60 border-b border-gray-200">
         <button onClick={() => setSubSolapaActiva('alta')} style={subSolapaActiva === 'alta' ? styles.activeSubTab : styles.subTab}>
           {isEditMode ? 'Editar Persona' : 'Alta de Persona'}
         </button>
@@ -1035,9 +1035,37 @@ const ItemDetailPersona = () => {
   );
 };
 
-const styles = {
+/*const styles = {
   subTab: { flex: 1, backgroundColor: '#e0e0e0', color: '#555555', padding: '12px 0', border: 'none', borderRight: '1px solid #cccccc', cursor: 'pointer', fontSize: '14px', textAlign: 'center' },
   activeSubTab: { flex: 1, backgroundColor: '#ffffff', color: '#000000', fontWeight: 'bold', padding: '12px 0', border: 'none', borderRight: '1px solid #cccccc', cursor: 'pointer', fontSize: '14px', textAlign: 'center' }
+};*/
+const styles = {
+  subTab: { 
+    flex: '1 1 0%',
+    minWidth: 'max-content',
+    padding: '10px 14px', 
+    borderRadius: '6px',
+    backgroundColor: '#e5e7eb', 
+    color: '#374151', 
+    fontSize: '13px', 
+    fontWeight: '500',
+    border: 'none',
+    cursor: 'pointer',
+    textAlign: 'center'
+  },
+  activeSubTab: { 
+    flex: '1 1 0%',
+    minWidth: 'max-content',
+    padding: '10px 14px', 
+    borderRadius: '6px',
+    backgroundColor: '#2563eb', 
+    color: '#ffffff', 
+    fontSize: '13px', 
+    fontWeight: '600',
+    border: 'none',
+    cursor: 'pointer',
+    textAlign: 'center'
+  }
 };
 
 export default ItemDetailPersona;

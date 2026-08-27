@@ -365,8 +365,10 @@ useEffect(() => {
         </button>
       </div>
 
-      <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-        <table className="table-responsive w-full text-sm text-left text-gray-500 bg-white">
+{/* 🔹 1. Envoltorio con scroll horizontal habilitado */}
+<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">  
+  {/* 🔹 2. La tabla exige al menos 750px para mostrar todas las columnas sin recortar */}
+  <table className="w-full min-w-[750px] text-left text-sm text-gray-700">
           <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
             <tr>
               <th scope="col" className="px-4 py-3">Persona (Buscador)</th>
@@ -379,8 +381,8 @@ useEffect(() => {
             </tr>
           </thead>
 
-          <tbody>
-            {listaAllegados.length > 0 ? (
+<tbody className="divide-y divide-gray-200 text-sm">
+              {listaAllegados.length > 0 ? (
               listaAllegados.map((p, index) => {
                 const itemUniqueId = p.id_persona || p.id_persona_allegado || p.id || `allegado-${index}`;
                 const isEditing = editingId === itemUniqueId;

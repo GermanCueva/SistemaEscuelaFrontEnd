@@ -4,9 +4,8 @@ import ItemPersonaPagos from './ItemPersonaPagos'
 const ItemListAlumnosPagos = ({ prods, setProds }) => {
 
     return (
-        <div className="overflow-x-auto">
-{/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
-        <table className="table-responsive w-full text-sm text-left text-gray-500 bg-white">
+<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+    <table className="w-full min-w-[750px] text-left text-sm text-gray-700">
                     {/* El encabezado siempre debe ir en <thead> */}
 <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                         <tr>
@@ -32,8 +31,8 @@ const ItemListAlumnosPagos = ({ prods, setProds }) => {
                     </tr>
                 </thead>
                 {/* Los datos siempre deben ir en <tbody> */}
-                <tbody>
-                    {prods.length ? (
+<tbody className="divide-y divide-gray-200 text-sm">
+                        {prods.length ? (
                         prods.map(p => (
                             <ItemPersonaPagos 
                                 key={p.id_persona} // Corregido: Key única para React

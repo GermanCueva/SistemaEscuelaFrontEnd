@@ -18,8 +18,8 @@ const Home = () => {
     location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
 
   return (
-<div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 my-4">
-        {/* 🔹 Tabs principales */}
+    <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 my-4">
+      {/* 🔹 Tabs principales */}
       <div className="flex overflow-x-auto whitespace-nowrap rounded-t-lg border border-gray-300 bg-gray-100 divide-x divide-gray-300">
         {Object.keys(tabs).map((path) => {
           const active = isTabActive(path);
@@ -27,7 +27,7 @@ const Home = () => {
             <button
               key={path}
               onClick={() => navigate(path)}
-              className={`flex-1 min-w-max px-4 py-3 text-xs sm:text-sm font-semibold transition-colors text-center ${
+              className={`shrink-0 md:flex-1 px-1.5 sm:px-3 md:px-4 py-2.5 sm:py-3 text-[11px] sm:text-xs md:text-sm font-semibold transition-colors text-center ${
                 active
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-700 hover:bg-gray-200"
@@ -46,19 +46,22 @@ const Home = () => {
             { path: "/personas/abm", label: "ABM Personas" },
             { path: "/personas/alumnos", label: "Alumnos" },
             { path: "/personas/tutores", label: "Tutores" },
-          ].map((sub) => (
-            <button
-              key={sub.path}
-              onClick={() => navigate(sub.path)}
-              className={`flex-1 min-w-max px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
-                location.pathname === sub.path
-                  ? "bg-emerald-600 text-white"
-                  : "text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              {sub.label}
-            </button>
-          ))}
+          ].map((sub) => {
+            const active = location.pathname === sub.path;
+            return (
+              <button
+                key={sub.path}
+                onClick={() => navigate(sub.path)}
+                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
+                  active
+                    ? "bg-emerald-600 text-white"
+                    : "text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {sub.label}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -71,19 +74,22 @@ const Home = () => {
             { path: "/gestion/pagosmasiva", label: "Alta masiva de Pagos" },
             { path: "/gestion/actualizarimporte", label: "Actualizar importe cuotas" },
             { path: "/gestion/generacionarchivosdebito", label: "Generación Archivos de Débito" },
-          ].map((sub) => (
-            <button
-              key={sub.path}
-              onClick={() => navigate(sub.path)}
-              className={`flex-1 min-w-max px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
-                location.pathname === sub.path
-                  ? "bg-emerald-600 text-white"
-                  : "text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              {sub.label}
-            </button>
-          ))}
+          ].map((sub) => {
+            const active = location.pathname === sub.path;
+            return (
+              <button
+                key={sub.path}
+                onClick={() => navigate(sub.path)}
+                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
+                  active
+                    ? "bg-emerald-600 text-white"
+                    : "text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {sub.label}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -94,19 +100,22 @@ const Home = () => {
             { path: "/admin/instituciones", label: "ABM de Instituciones" },
             { path: "/admin/usuarios", label: "Gestión de Usuarios" },
             { path: "/admin/parametros", label: "Parámetros" },
-          ].map((sub) => (
-            <button
-              key={sub.path}
-              onClick={() => navigate(sub.path)}
-              className={`flex-1 min-w-max px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
-                location.pathname === sub.path
-                  ? "bg-emerald-600 text-white"
-                  : "text-gray-700 hover:bg-gray-300"
-              }`}
-            >
-              {sub.label}
-            </button>
-          ))}
+          ].map((sub) => {
+            const active = location.pathname === sub.path;
+            return (
+              <button
+                key={sub.path}
+                onClick={() => navigate(sub.path)}
+                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
+                  active
+                    ? "bg-emerald-600 text-white"
+                    : "text-gray-700 hover:bg-gray-300"
+                }`}
+              >
+                {sub.label}
+              </button>
+            );
+          })}
         </div>
       )}
 

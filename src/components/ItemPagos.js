@@ -275,8 +275,8 @@ const ItemPagos = () => {
       </div>
 
       {/* Tabla principal */}
-      <div className="overflow-x-auto">
-        <table className="table-responsive w-full text-left border-collapse">
+<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+  <table className="w-full min-w-[750px] text-left text-sm text-gray-700">
           <thead>
             <tr className="bg-gray-100 border-b border-gray-300">
               <th className="p-2 border-r border-gray-300 w-24">Fecha</th>
@@ -289,8 +289,8 @@ const ItemPagos = () => {
               <th className="p-2 w-24 text-center">Acciones / Estado</th>
             </tr>
           </thead>
-          <tbody>
-            {movimientos.length > 0 ? (
+<tbody className="divide-y divide-gray-200 text-sm">
+              {movimientos.length > 0 ? (
               movimientos.map((row, index) => {
                 const esCuotaGenerada = Number(row.importe) > 0;
                 const claveCuota = row.anio_cuota || row.concepto || row.cuota;

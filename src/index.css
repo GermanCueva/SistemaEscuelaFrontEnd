@@ -3,7 +3,6 @@
 @tailwind utilities;
 
 /* --- 1. MENÚS Y SOLAPAS RESPONSIVAS --- */
-/* Detecta automáticamente cualquier barra con múltiples botones (menú superior, secundario y pestañas) */
 nav,
 div:has(> button + button):not(td div) {
   display: flex !important;
@@ -11,15 +10,14 @@ div:has(> button + button):not(td div) {
   overflow-x: auto !important;
   white-space: nowrap !important;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: none;
 }
 
 nav::-webkit-scrollbar,
 div:has(> button + button):not(td div)::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
 }
 
-/* Evita que los botones del menú se achiquen o rompan texto en móviles */
 nav button,
 nav a,
 div:has(> button + button):not(td div) > button,
@@ -28,53 +26,16 @@ div:has(> button + button):not(td div) > a {
   white-space: nowrap !important;
 }
 
-/* --- 2. TABLAS RESPONSIVAS --- */
-/* Permite scroll horizontal en móviles únicamente si la pantalla es chica */
-div:has(> table) {
-  width: 100% !important;
-  max-width: 100% !important;
-  overflow-x: auto !important;
-  -webkit-overflow-scrolling: touch;
-}
-
-table {
-  width: 100% !important;
-  border-collapse: collapse;
-}
-
-@media (max-width: 768px) {
-  table {
-    min-width: 680px !important; /* Mantiene la tabla firme en celulares */
-  }
-}
-
-/* --- 3. ALINEACIÓN DE COLUMNA ACCIONES --- */
-table th:last-child,
-table td:last-child {
-  text-align: center !important;
-}
-
-table th:last-child > div,
-table td:last-child > div {
-  display: flex !important;
-  justify-content: center !important;
-  align-items: center !important;
-  gap: 0.5rem !important;
-}
-
-/* --- 4. CONTROL DE FORMULARIOS Y LOGIN --- */
-/* Formularios generales (Datos Alumno, Edición) */
+/* --- 2. CONTROL DE FORMULARIOS Y LOGIN --- */
 form {
   max-width: 680px;
   margin: 1.5rem auto;
 }
 
-/* Login exclusivo (se detecta automáticamente al tener campo de contraseña) */
 form:has(input[type="password"]) {
   max-width: 320px !important;
   margin: 3rem auto !important;
 }
-
 
 body, #root {
   width: 100%;
@@ -82,38 +43,121 @@ body, #root {
   overflow-x: auto;
 }
 
+/* --- 3. COMPONENTES Y TABLAS ADAPTABLES --- */
 @layer components {
-  /* Clase reutilizable para todos tus contenedores */
+  /* Layout general */
   .layout-container {
     @apply w-full max-w-7xl mx-auto px-2 sm:px-6 lg:px-8;
   }
+
+  /* Contenedor global para tablas con scroll si se supera el ancho */
+  .tabla-contenedor {
+    @apply w-full overflow-x-auto shadow-sm rounded-lg border border-gray-200 bg-white;
+  }
+
+  /* Estilos fluidos de la tabla (se achica en celulares) */
+  .tabla-adaptable {
+    @apply w-full text-left text-gray-700 border-collapse;
+  }
+
+  /* Encabezados (th): Texto y relleno reducidos en pantallas pequeñas */
+  .tabla-adaptable th {
+    @apply bg-gray-100 border-b border-gray-200 text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-wider text-gray-600 px-1.5 sm:px-4 md:px-6 py-2;
+  }
+
+  /* Celdas (td): Escala fluida de tipografía */
+  .tabla-adaptable td {
+    @apply border-b border-gray-200 text-[11px] sm:text-xs md:text-sm px-1.5 sm:px-4 md:px-6 py-2 whitespace-nowrap;
+  }
+
+  /* Filas */
+  .tabla-adaptable tbody tr {
+    @apply hover:bg-gray-50 transition-colors;
+  }
+
+  /* Alineación de columna Acciones (última columna) */
+  .tabla-adaptable th:last-child,
+  .tabla-adaptable td:last-child {
+    @apply text-center;
+  }
+
+  .tabla-adaptable th:last-child > div,
+  .tabla-adaptable td:last-child > div {
+    @apply flex justify-center items-center gap-2;
+  }
 }
 
-@media (max-width: 768px) {
-  /* Contenedores del menú principal y submenú */
-  .nav-tabs, .subnav-tabs { 
-    display: flex !important;
-    flex-wrap: nowrap !important; /* Impide que los botones bajen de línea */
-    overflow-x: auto !important;  /* Habilita el scroll horizontal */
-    width: 100% !important;
-    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS/iPhone */
-  }
-
-  /* Cada botón o pestaña dentro de los menús */
-  .nav-tabs > *, .subnav-tabs > * {
-    flex: 0 0 auto !important; /* Evita que los botones se deformen o encojan */
-    white-space: nowrap !important;
-  }
+/* Permite scroll horizontal automático en el contenedor de cualquier tabla */
+div:has(> table),
+.tabla-contenedor {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
 }
 
-@media (max-width: 768px) {
-  .tabla-responsive {
-    width: 100% !important;
-    overflow-x: auto !important; /* Habilita el scroll horizontal en móviles */
-    -webkit-overflow-scrolling: touch;
-  }
+/* Evita que los textos largos rompan la tabla y asegura visibilidad completa */
+table {
+  width: 100%;
+  min-width: 600px; /* Asegura que las columnas de la derecha no se compriman */
+}
 
-  .tabla-responsive table {
-    min-width: 650px !important; /* Mantiene el ancho adecuado para no amontonar datos */
-  }
+/* 🚨 REGLAS GLOBALES PARA FORZAR SCROLL HORIZONTAL DE TABLAS */
+
+/* 1. Permite que los contenedores flexibles se encojan en lugar de deformar la pantalla */
+body, #root, main, div {
+  min-width: 0;
+}
+
+/* 2. Obliga a cualquier div que contenga una tabla a mostrar barra de scroll si no cabe */
+.tabla-contenedor,
+div:has(> table) {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  display: block !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 3. Mantiene el tamaño mínimo de la tabla para proteger todas las columnas */
+table {
+  width: 100% !important;
+  min-width: 750px !important;
+}
+
+/* Previene que las tarjetas de las páginas se salgan por la derecha */
+#root, main, .p-4, .p-6 {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Fuerza el scroll horizontal únicamente dentro del marco de la tabla */
+div:has(> table) {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  display: block !important;
+}
+
+table {
+  min-width: 700px !important; /* Mantiene vivas las columnas de la derecha */
+}
+
+
+/* Fix definitivo para que Flexbox no bloquee el scroll horizontal */
+div, main, section {
+  min-width: 0;
+}
+
+div:has(> table) {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  display: block !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100% !important;
+  min-width: 750px !important;
 }

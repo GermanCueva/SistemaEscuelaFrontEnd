@@ -135,10 +135,9 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         <div className="w-full max-w-4xl mx-auto p-4">
             
             {/* TABLA DE DOCUMENTOS TEMPORALES */}
-            <div className="overflow-x-auto bg-white rounded-xl shadow-md border border-gray-100 mb-10 p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4 px-2 text-left">Documentos Asignados (Pendientes de guardar)</h3>
-                <table className="table-responsive w-full table-auto text-sm text-left text-gray-500">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-100">
+<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">                    <h3 className="text-xl font-bold text-gray-800 mb-4 px-2 text-left">Documentos Asignados (Pendientes de guardar)</h3>
+<table className="w-full min-w-[750px] text-left text-sm text-gray-700">
+                        <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
                             <th scope="col" className="px-6 py-3">Tipo de Documento</th>
                           <div className="flex justify-center w-full">
@@ -149,8 +148,8 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                         </tr>
                     </thead>
 
-                    <tbody>
-                        {docs && docs.length > 0 ? (
+<tbody className="divide-y divide-gray-200 text-sm">
+                            {docs && docs.length > 0 ? (
                             docs.map(d => {
                                 const currentId = d.id || d.id_persona_tipo_documento || d.id_tipo_documento;
                                 const tipoEncontrado = documentos.find(doc => 

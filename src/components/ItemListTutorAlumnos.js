@@ -29,9 +29,8 @@ const ItemListTutorAlumnos = () => {
         }, [obtenerDatos]);
     
     return (
-        <div className="overflow-x-auto">
-            {/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
-                    <table className="table-responsive w-full text-sm text-left text-gray-500 bg-white">
+<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">
+    <table className="w-full min-w-[750px] text-left text-sm text-gray-700">
                                 {/* El encabezado siempre debe ir en <thead> */}
             <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                         <tr>
@@ -77,8 +76,8 @@ const ItemListTutorAlumnos = () => {
                 </thead>
 
                 {/* Los datos siempre deben ir en <tbody> */}
-                <tbody>
-                    {pers && pers.length > 0 ? (
+<tbody className="divide-y divide-gray-200 text-sm">
+                        {pers && pers.length > 0 ? (
                     pers.map((p, index) => (
                         <tr key={p.id_persona || index} className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
                         
