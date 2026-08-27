@@ -77,10 +77,16 @@ const obtenerDatosAfipYQr = async (row) => {
   const base64Json = btoa(unescape(encodeURIComponent(jsonString)));
   const urlQr = `https://www.afip.gob.ar/fe/qr/?p=${base64Json}`;
 
+  const fechaRaw = datosArca.fchVto || datosArca.vencimientoCae;
+
+  const fechaVencimientoCae = fechaRaw 
+  ? `${fechaRaw.slice(6, 8)}/${fechaRaw.slice(4, 6)}/${fechaRaw.slice(0, 4)}`
+  : '';
+
   return {
     urlQr,
     cae: caeFinal,
-    fechaVencimientoCae: datosArca.fchVto || datosArca.vencimientoCae,
+    fechaVencimientoCae: fechaVencimientoCae,
     datosArca
   };
 };
@@ -270,7 +276,7 @@ const ItemPagos = () => {
 
       {/* Tabla principal */}
       <div className="overflow-x-auto">
-        <table className="w-full text-left border-collapse">
+        <table className="table-responsive w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-100 border-b border-gray-300">
               <th className="p-2 border-r border-gray-300 w-24">Fecha</th>

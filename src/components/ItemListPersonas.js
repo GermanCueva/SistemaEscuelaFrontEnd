@@ -1,16 +1,15 @@
 import ItemPersona from './ItemPersona'
-import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react';
+
 
 const ItemListPersona = ({ prods, setProds }) => {
     return (
         <div className="overflow-x-auto">
 {/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
-        <table className="w-full text-sm text-left text-gray-500 bg-white">
+        <table className="table-responsive w-full text-sm text-left text-gray-500 bg-white">
                     {/* El encabezado siempre debe ir en <thead> */}
 <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                         <tr>
-                        <th scope="col" className="px-12 py-3">
+                        <th justify-center scope="col" className="px-12 py-3">
                             Apellido
                         </th>
                         <th scope="col" className="px-12 py-3">
@@ -22,20 +21,17 @@ const ItemListPersona = ({ prods, setProds }) => {
                         <th scope="col" className="px-4 py-3">
                             Número de Documento
                         </th>
-                        <th scope="col" className="px-12 py-3">
+                        <th justify-center scope="col" className="px-12 py-3">
                             Alumno/Tutor
                         </th>
                         {/* Agrega una columna extra si el ItemPersona tiene el botón de lupa */}
-                        <th scope="col" className="px-12 py-30 text-center">
-                            Acciones
+                        {/* Reemplaza la celda <th> de ACCIONES y elimina cualquier <th> adicional donde estaba el botón '+' */}
+                        <th className="py-3 pr-10 text-right">
+                            <div className="inline-flex items-center gap-2 justify-end">
+                            <span className="font-semibold text-gray-700">ACCIONES</span>                            
+
+                            </div>
                         </th>
-            <td className="px-6 py-2 text-right">
-                <Link to={'/personas/alta'}>
-                    <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
-                        <Plus size={20} className="mr-2" />
-                    </button>
-                </Link>
-            </td>
                     </tr>
                 </thead>
 

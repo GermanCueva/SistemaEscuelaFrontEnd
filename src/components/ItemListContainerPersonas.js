@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from "react"
 import ItemListPersonas from './ItemListPersonas'
 import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa'; // Importamos los íconos
-
+import { Link } from 'react-router-dom'
+import { Plus } from 'lucide-react';
 
 const ItemListContainerPersona = () => {
   // 1. Guardamos la lista completa original cargada de la API
@@ -260,6 +261,16 @@ const handleExportPDF = async () => {
       <div style={{ display: 'flex', gap: '8px', 
                     marginTop: '15px',    /* Mueve los botones hacia abajo */
                     marginLeft: 'auto'    /* Empuja los botones completamente hacia la derecha */ }}>
+
+<Link to={'/personas/alta'}>
+  <button 
+    className="bg-blue-600 hover:bg-blue-700 text-white p-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm text-sm font-medium"
+    title="Agregar Nuevo"
+  >
+    <Plus size={18} />
+    <span>Nuevo</span>
+  </button>
+</Link>
         
         {/* Botón Excel con Ícono */}
         <button
