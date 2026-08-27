@@ -5,7 +5,6 @@ const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 🔹 Tabs principales (ruta + label)
   const tabs = {
     "/": "Inicio",
     "/personas": "Personas",
@@ -15,217 +14,108 @@ const Home = () => {
     "/admin": "Administración",
   };
 
+  const isTabActive = (path) =>
+    location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
+
   return (
-    <div style={styles.container}>
-      {/* 🔹 Tabs principales (SIEMPRE visibles) */}
-      <div style={styles.tabHeader}>
-        {Object.keys(tabs).map((path) => (
-          <button
-            key={path}
-            style={
-              location.pathname === path ||
-              (path !== "/" && location.pathname.startsWith(path))
-                ? styles.activeTab
-                : styles.tab
-            }
-            onClick={() => navigate(path)}
-          >
-            {tabs[path]}
-          </button>
-        ))}
+<div className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 my-4">
+        {/* 🔹 Tabs principales */}
+      <div className="flex overflow-x-auto whitespace-nowrap rounded-t-lg border border-gray-300 bg-gray-100 divide-x divide-gray-300">
+        {Object.keys(tabs).map((path) => {
+          const active = isTabActive(path);
+          return (
+            <button
+              key={path}
+              onClick={() => navigate(path)}
+              className={`flex-1 min-w-max px-4 py-3 text-xs sm:text-sm font-semibold transition-colors text-center ${
+                active
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {tabs[path]}
+            </button>
+          );
+        })}
       </div>
 
-      {/* 🔹 Subtabs SOLO para Personas */}
+      {/* 🔹 Subtabs Personas */}
       {location.pathname.startsWith("/personas") && (
-        <div style={styles.subTabHeader}>
-          <button
-            style={
-              location.pathname === "/personas/abm"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/personas/abm")}
-          >
-            ABM Personas
-          </button>
-
-          <button
-            style={
-              location.pathname === "/personas/alumnos"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/personas/alumnos")}
-          >
-            Alumnos
-          </button>
-
-          <button
-            style={
-              location.pathname === "/personas/tutores"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/personas/tutores")}
-          >
-            Tutores
-          </button>
+        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
+          {[
+            { path: "/personas/abm", label: "ABM Personas" },
+            { path: "/personas/alumnos", label: "Alumnos" },
+            { path: "/personas/tutores", label: "Tutores" },
+          ].map((sub) => (
+            <button
+              key={sub.path}
+              onClick={() => navigate(sub.path)}
+              className={`flex-1 min-w-max px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                location.pathname === sub.path
+                  ? "bg-emerald-600 text-white"
+                  : "text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {sub.label}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* 🔹 Subtabs SOLO para Gestión de Archivos y Cobros */}
+      {/* 🔹 Subtabs Gestión */}
       {location.pathname.startsWith("/gestion") && (
-        <div style={styles.subTabHeader}>
-          <button
-            style={
-              location.pathname === "/gestion/cargos"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/gestion/cargos")}
-          >
-            Generar Cargos a Alumnos
-          </button>
-          <button
-            style={
-              location.pathname === "/gestion/pagosmanual"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/gestion/pagosmanual")}
-          >
-            Alta manual de Pagos
-          </button>
-          <button
-            style={
-              location.pathname === "/gestion/pagosmasiva"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/gestion/pagosmasiva")}
-          >
-            Alta masiva de Pagos
-          </button>
-          <button
-            style={
-              location.pathname === "/gestion/actualizarimporte"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/gestion/actualizarimporte")}
-          >
-            Actualizar importe cuotas
-          </button>
-          
-          <button
-            style={
-              location.pathname === "/gestion/generacionarchivosdebito"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/gestion/generacionarchivosdebito")}
-          >
-            Generación Archivos de Débito
-          </button>
-          
+        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
+          {[
+            { path: "/gestion/cargos", label: "Generar Cargos a Alumnos" },
+            { path: "/gestion/pagosmanual", label: "Alta manual de Pagos" },
+            { path: "/gestion/pagosmasiva", label: "Alta masiva de Pagos" },
+            { path: "/gestion/actualizarimporte", label: "Actualizar importe cuotas" },
+            { path: "/gestion/generacionarchivosdebito", label: "Generación Archivos de Débito" },
+          ].map((sub) => (
+            <button
+              key={sub.path}
+              onClick={() => navigate(sub.path)}
+              className={`flex-1 min-w-max px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                location.pathname === sub.path
+                  ? "bg-emerald-600 text-white"
+                  : "text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {sub.label}
+            </button>
+          ))}
         </div>
       )}
 
-      {/* 🔹 Subtabs SOLO para Administración */}
+      {/* 🔹 Subtabs Administración */}
       {location.pathname.startsWith("/admin") && (
-        <div style={styles.subTabHeader}>
-          <button
-            style={
-              location.pathname === "/admin/instituciones"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/admin/instituciones")}
-          >
-            ABM de Instituciones
-          </button>
-
-          <button
-            style={
-              location.pathname === "/admin/usuarios"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/admin/usuarios")}
-          >
-            Gestión de Usuarios
-          </button>
-
-          <button
-            style={
-              location.pathname === "/admin/parametros"
-                ? styles.activeSubTab
-                : styles.subTab
-            }
-            onClick={() => navigate("/admin/parametros")}
-          >
-            Parámetros
-          </button>
+        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
+          {[
+            { path: "/admin/instituciones", label: "ABM de Instituciones" },
+            { path: "/admin/usuarios", label: "Gestión de Usuarios" },
+            { path: "/admin/parametros", label: "Parámetros" },
+          ].map((sub) => (
+            <button
+              key={sub.path}
+              onClick={() => navigate(sub.path)}
+              className={`flex-1 min-w-max px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                location.pathname === sub.path
+                  ? "bg-emerald-600 text-white"
+                  : "text-gray-700 hover:bg-gray-300"
+              }`}
+            >
+              {sub.label}
+            </button>
+          ))}
         </div>
       )}
 
       {/* 🔥 Contenido dinámico */}
-      <div style={styles.content}>
+      <div className="p-4 sm:p-6 border-x border-b border-gray-300 rounded-b-lg bg-white shadow-sm">
         <Outlet />
       </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    width: "1300px",
-    margin: "10px auto",
-  },
-  tabHeader: {
-    display: "flex",
-  },
-  tab: {
-    flex: 1,
-    padding: "15px",
-    cursor: "pointer",
-    backgroundColor: "#eee",
-    border: "1px solid #ccc",
-  },
-  activeTab: {
-    flex: 1,
-    padding: "15px",
-    cursor: "pointer",
-    backgroundColor: "#007bff",
-    color: "#fff",
-    border: "1px solid #ccc",
-  },
-
-  subTabHeader: {
-    display: "flex",
-    marginTop: "10px",
-  },
-  subTab: {
-    flex: 1,
-    padding: "10px",
-    cursor: "pointer",
-    backgroundColor: "#ddd",
-    border: "1px solid #bbb",
-  },
-  activeSubTab: {
-    flex: 1,
-    padding: "10px",
-    cursor: "pointer",
-    backgroundColor: "#28a745",
-    color: "#fff",
-    border: "1px solid #bbb",
-  },
-
-  content: {
-    padding: "20px",
-    border: "1px solid #ccc",
-    marginTop: "10px",
-  },
 };
 
 export default Home;

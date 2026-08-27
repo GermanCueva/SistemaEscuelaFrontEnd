@@ -5,7 +5,7 @@ const ItemListAlumnos = ({ prods, setProds }) => {
     return (
         <div className="overflow-x-auto">
 {/* REEMPLAZÁ LA ETIQUETA <table> COMPLETA POR ESTA: */}
-        <table className="w-full text-sm text-left text-gray-500 bg-white">
+        <table className="table-responsive w-full text-sm text-left text-gray-500 bg-white">
                     {/* El encabezado siempre debe ir en <thead> */}
 <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                         <tr>

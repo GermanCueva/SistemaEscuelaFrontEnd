@@ -137,7 +137,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
             {/* TABLA DE DOCUMENTOS TEMPORALES */}
             <div className="overflow-x-auto bg-white rounded-xl shadow-md border border-gray-100 mb-10 p-6">
                 <h3 className="text-xl font-bold text-gray-800 mb-4 px-2 text-left">Documentos Asignados (Pendientes de guardar)</h3>
-                <table className="w-full table-auto text-sm text-left text-gray-500">
+                <table className="table-responsive w-full table-auto text-sm text-left text-gray-500">
                     <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
                             <th scope="col" className="px-6 py-3">Tipo de Documento</th>

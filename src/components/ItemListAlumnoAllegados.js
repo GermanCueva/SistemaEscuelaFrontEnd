@@ -366,7 +366,7 @@ useEffect(() => {
       </div>
 
       <div className="overflow-x-auto border border-gray-200 rounded-lg shadow-sm">
-        <table className="w-full text-sm text-left text-gray-500 bg-white">
+        <table className="table-responsive w-full text-sm text-left text-gray-500 bg-white">
           <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
             <tr>
               <th scope="col" className="px-4 py-3">Persona (Buscador)</th>

@@ -106,8 +106,8 @@ return (
             </td>
 
             {/* Botones de Acciones */}
-            <td className="px-6 py-2 text-sm text-center bg-white">
-                <div className="flex items-center justify-center gap-2">
+                <td className="py-3 pr-10 text-right">
+                    <div className="flex items-center justify-center gap-2">
                     <Link to={'/personas/' + id_persona}>
                         <button className="inline-flex items-center justify-center p-1 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">
                             <Search size={20} className="mr-2" />

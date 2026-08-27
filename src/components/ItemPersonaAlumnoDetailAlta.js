@@ -31,7 +31,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.legajo || ''} 
                         onChange={handleChange}
                         className="input input-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     />
                 </label>
 
@@ -42,7 +42,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.extranjero || ''}
                         onChange={handleChange}
                         className="select select-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     >
                         <option value="">Seleccione...</option>
                         <option value="S">Si</option>
@@ -57,7 +57,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.regular || ''}
                         onChange={handleChange}
                         className="select select-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     >
                         <option value="">Seleccione...</option>
                         <option value="S">Si</option>
@@ -77,7 +77,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                             onChange={handleChange}
                             required={formData?.regular === 'N'}
                             className="select select-bordered w-full"
-                            style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                            style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                         >
                             <option value="">Seleccione un motivo...</option>
                             {desercion.map((des) => (
@@ -96,7 +96,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.es_celiaco || ''}
                         onChange={handleChange}
                         className="select select-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     >
                         <option value="">Seleccione...</option>
                         <option value="S">Si</option>
@@ -112,7 +112,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.direccion_calle || ''} 
                         onChange={handleChange}
                         className="input input-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     />
                 </label>
 
@@ -124,7 +124,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.direccion_numero || ''} 
                         onChange={handleChange}
                         className="input input-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     />
                 </label>
 
@@ -136,7 +136,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.direccion_piso || ''} 
                         onChange={handleChange}
                         className="input input-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     />
                 </label>
 
@@ -148,7 +148,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         value={formData?.direccion_depto || ''} 
                         onChange={handleChange}
                         className="input input-bordered w-full"
-                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '100%' }}
+                        style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     />
                 </label>
 
