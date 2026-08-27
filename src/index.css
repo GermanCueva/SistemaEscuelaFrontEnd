@@ -89,23 +89,31 @@ body, #root {
   }
 }
 
-/* Se aplica únicamente en móviles; el escritorio no cambia */
 @media (max-width: 768px) {
-  .menu-tabs, .submenu-tabs {
+  /* Contenedores del menú principal y submenú */
+  .nav-tabs, .subnav-tabs { 
     display: flex !important;
-    overflow-x: auto !important;
+    flex-wrap: nowrap !important; /* Impide que los botones bajen de línea */
+    overflow-x: auto !important;  /* Habilita el scroll horizontal */
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS/iPhone */
+  }
+
+  /* Cada botón o pestaña dentro de los menús */
+  .nav-tabs > *, .subnav-tabs > * {
+    flex: 0 0 auto !important; /* Evita que los botones se deformen o encojan */
     white-space: nowrap !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .tabla-responsive {
+    width: 100% !important;
+    overflow-x: auto !important; /* Habilita el scroll horizontal en móviles */
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none; /* Oculta barra en Firefox */
   }
 
-  .menu-tabs::-webkit-scrollbar, 
-  .submenu-tabs::-webkit-scrollbar {
-    display: none; /* Oculta barra en Chrome/Safari */
-  }
-
-  .menu-tabs a, .submenu-tabs a,
-  .menu-tabs button, .submenu-tabs button {
-    flex: 0 0 auto !important; /* Evita que los botones se reduzcan */
+  .tabla-responsive table {
+    min-width: 650px !important; /* Mantiene el ancho adecuado para no amontonar datos */
   }
 }
