@@ -369,7 +369,8 @@ const payloadCompleto = {
   id_motivo_rechazo1: null,
   id_motivo_rechazo2: null,
   codigo_error_debito: null,
-  descripcion_error_debito: null
+  descripcion_error_debito: null,
+  fecha_respuesta_prisma: null
 };
 
 
