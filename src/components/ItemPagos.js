@@ -365,7 +365,11 @@ const payloadCompleto = {
   comprobante_numero: null,
   cae: null,
   docTipo: docTipoAfip, // Código AFIP (86, 96, 80, etc.)
-  nroDoc: nroDocLimpio   // Número entero sin caracteres
+  nroDoc: nroDocLimpio,   // Número entero sin caracteres
+  id_motivo_rechazo1: null,
+  id_motivo_rechazo2: null,
+  codigo_error_debito: null,
+  descripcion_error_debito: null
 };
 
 
