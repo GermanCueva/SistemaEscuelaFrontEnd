@@ -4,9 +4,17 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
     const [desercion, setDesercion] = useState([]);
 
     const cargarDeserciones = useCallback(() => {
-        fetch(`${process.env.REACT_APP_API_URL}/api/desercion`)
+             
+      const token = localStorage.getItem('token');
+      const headers = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      };
+
+        fetch(`${process.env.REACT_APP_API_URL}/api/desercion`, { headers })
             .then(res => res.json())
             .then(data => {
+                
                 console.log("Respuesta raw del backend:", data); // Mira la estructura exacta
                 const listaDesercion = Array.isArray(data) ? data : data.desercion || data.data || [];
                 setDesercion(listaDesercion);

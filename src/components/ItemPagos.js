@@ -476,7 +476,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
       items: [
         {
           cantidad: 1,
-          descripcion: (row.anio_cuota || '') + ' - Alumno: ' + (row.nombrealumno || ''),
+          descripcion: (row.anio_cuota || '') + ' - Alumno: ' + (row.nombrealumno || '' ),
           precioUnitario: Math.abs(Number(row.importe)) || 0,
           importe: Math.abs(Number(row.importe)) || 0
         }
@@ -527,6 +527,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
     }
   };
 
+  
   if (loading) return <div className="p-4 text-center">Cargando estado de cuenta...</div>;
 
   return (
@@ -535,7 +536,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
       {/* Título con el nombre del alumno */}
       <div className="p-3 bg-gray-50 border-b border-gray-300">
         <h2 className="text-sm font-bold text-gray-800">
-          Alumno: {movimientos[0]?.nombrealumno || ''}
+          Alumno: {movimientos[0] && `${movimientos[0].nombrealumno} - Legajo: ${movimientos[0].legajo}`}
         </h2>
       </div>
 
@@ -591,7 +592,15 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
                           })
                         : ''}
                     </td>                  
-                    <td className="p-2 border-r border-gray-200 font-medium whitespace-nowrap">{row.anio_cuota || row.concepto}</td>
+                    <td className="p-2 border-r border-gray-200 font-medium whitespace-nowrap">
+                      {row.importe < 0
+                        ? /inscr/i.test(row.anio_cuota)
+                          ? `Pago de Inscripción Anual ${row.anio_cuota?.match(/\d{4}/)?.[0] || ''}`
+                          : /materiales/i.test(row.anio_cuota)
+                          ? `Pago de Materiales ${row.anio_cuota?.match(/\d{4}/)?.[0] || ''}`
+                          : `Pago de cuota ${row.cuota && row.anio ? `${row.cuota}/${row.anio}` : (row.anio_cuota || row.concepto)}`
+                        : (row.anio_cuota || row.concepto)}
+                    </td>
                     <td className="p-2 border-r border-gray-200 font-mono">$ {row.importe}</td>
                     <td className="p-2 border-r border-gray-200 font-mono">{row.medio_pago}</td>
                     <td className="p-2 border-r border-gray-200 font-mono">{row.nombre_tarjeta}</td>

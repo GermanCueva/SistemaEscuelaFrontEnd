@@ -110,7 +110,7 @@ const ItemListContainerPersona = () => {
 
 
   // 1. Mapeamos los 711 registros en el instante exacto del click
-  const datosParaEnviar = todasLasPersonas.map(p => ({
+  const datosParaEnviar = personasFiltradas.map(p => ({
     apellidos: p.apellidos,
     nombres: p.nombres,
     nombre_corto: p.nombre_corto,

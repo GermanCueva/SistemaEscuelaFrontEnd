@@ -113,7 +113,7 @@ const ItemListContainerAlumnos = () => {
 
 
   // 1. Mapeamos los 711 registros en el instante exacto del click
-  const datosParaEnviar = todasLasPersonas.filter(p => p.es_alumno === 'S') // 👈 Tu condición de filtrado aquí
+  const datosParaEnviar = personasFiltradas.filter(p => p.es_alumno === 'S') // 👈 Tu condición de filtrado aquí
    .map(p => ({
     apellidos: p.apellidos,
     nombres: p.nombres,
