@@ -37,6 +37,7 @@ const Login = () => {
           { setSubmitting, setErrors }
         ) => {
           try {
+ 
             const response = await axios.post(
               `${process.env.REACT_APP_API_URL}/api/login`,
               {
@@ -45,6 +46,7 @@ const Login = () => {
               }
             );
 
+     
             const data = response.data;
 
             // Guarda el token
