@@ -15,6 +15,7 @@ import ItemListContainerAlumnosPagos from "./components/ItemListContainerAlumnos
 import ItemPagos from "./components/ItemPagos";
 import ItemGeneracionDebito from "./components/ItemGeneracionDebito";
 import ItemGestionPagoMasivo from "./components/ItemGestionPagoMasivo";
+import ItemGenerarCargosAlumnos from "./components/ItemGenerarCargosAlumnos";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -234,7 +235,7 @@ function App() {
               </Route>
 
               <Route path="gestion">
-                <Route path="cargos" element={<GestionPagos />} />
+                <Route path="cargos" element={<ItemGenerarCargosAlumnos />} />
                 <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
                 <Route path="pagosmasiva" element={<ItemGestionPagoMasivo />} />
                 <Route path="actualizarimporte" element={<GestionPagos />} />
