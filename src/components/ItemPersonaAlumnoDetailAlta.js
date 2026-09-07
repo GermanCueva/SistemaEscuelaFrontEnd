@@ -15,7 +15,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
             .then(res => res.json())
             .then(data => {
                 
-                console.log("Respuesta raw del backend:", data); // Mira la estructura exacta
+                //console.log("Respuesta raw del backend:", data); // Mira la estructura exacta
                 const listaDesercion = Array.isArray(data) ? data : data.desercion || data.data || [];
                 setDesercion(listaDesercion);
             })

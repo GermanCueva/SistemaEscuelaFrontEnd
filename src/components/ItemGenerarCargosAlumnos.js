@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { avisar } from '../utils/notificaciones';
 
+
 // Helper para verificar si un parámetro viene habilitado ('S' o 'SI')
 const esSi = (val) => String(val).toUpperCase() === 'S' || String(val).toUpperCase() === 'SI';
 
@@ -60,6 +61,7 @@ const GenerarCargosAlumnos = () => {
   const [anios, setAnios] = useState([]);
   const [loading, setLoading] = useState(true);
 
+
   // Estados para parámetros
   const [CantidadCuotasMateriales, setValorCantidadCuotasMateriales] = useState(null);
   const [cant_cuotas_cobro_inscripcion, setValor_cant_cuotas_cobro_inscripcion] = useState(null);
@@ -74,7 +76,7 @@ const GenerarCargosAlumnos = () => {
   const [cobra_inscripcion_en_cuotas_inicial, setValor_cobra_inscripcion_en_cuotas_inicial] = useState(null);
   const [cobra_inscripcion_en_cuotas_primario, setValor_cobra_inscripcion_en_cuotas_primario] = useState(null);
   const [ingresa_importe_en_generacion_cargos, setValor_ingresa_importe_en_generacion_cargos] = useState(null);
-  const [valida_cuotas_impagas_pago_inscripcion, setValor_valida_cuotas_impagas_pago_inscripcion] = useState(null);
+  //const [valida_cuotas_impagas_pago_inscripcion, setValor_valida_cuotas_impagas_pago_inscripcion] = useState(null);
   const [importe_mensual_cuota_x_grado, setValor_importe_mensual_cuota_x_grado] = useState(null);
   //const [envia_notif_al_generar_cargo, setValor_envia_notif_al_generar_cargo] = useState(null); EN BACKEND NOTIFICACIONES CORREO
   //const [importe_inscripcion_anual, setValor_importe_inscripcion_anual] = useState(null); EN DESUSO
@@ -142,7 +144,7 @@ const GenerarCargosAlumnos = () => {
         setValor_cobra_inscripcion_en_cuotas_inicial(getParam('cobra_inscripcion_en_cuotas_inicial'));
         setValor_cobra_inscripcion_en_cuotas_primario(getParam('cobra_inscripcion_en_cuotas_primario'));
         setValor_ingresa_importe_en_generacion_cargos(getParam('ingresa_importe_en_generacion_cargos'));
-        setValor_valida_cuotas_impagas_pago_inscripcion(getParam('valida_cuotas_impagas_pago_inscripcion'));
+        //setValor_valida_cuotas_impagas_pago_inscripcion(getParam('valida_cuotas_impagas_pago_inscripcion'));
         setValor_importe_mensual_cuota_x_grado(getParam('importe_mensual_cuota_x_grado'));
       } catch (error) {
         console.error('Error al obtener parametros:', error);
@@ -253,7 +255,7 @@ const GenerarCargosAlumnos = () => {
             forma: formData.forma,
             mes: mesFormateado,
             cuota: `${mesFormateado}${anioValor}`,
-            descripcion: `Cuota mensual ${mesFormateado} del Año ${anioValor}`,
+            descripcion: `Cuota mensual ${parseInt(mesFormateado)} del Año ${anioValor}`,
             importe: obtenerImporteFinal(importe_mensual_cuota),
             fecha: fechaActualStr,
           });
@@ -284,6 +286,28 @@ const GenerarCargosAlumnos = () => {
             if (idNivel === 1) montoInscripcion = importe_inscripcion_inicial;
             else if (idNivel === 2) montoInscripcion = importe_inscripcion_primario;
 
+            /*
+              if (esSi(valida_cuotas_impagas_pago_inscripcion)) {
+                const token = localStorage.getItem('token');
+                const resDeuda = await fetch(
+                  `${process.env.REACT_APP_API_URL}/api/pagos/estado-deuda/${alumno.id_alumno}`,
+                  {
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                      }
+                  }
+                );
+                if (resDeuda.ok) {
+                  const dataDeuda = await resDeuda.json();
+                  if (Array.isArray(dataDeuda) && dataDeuda.length > 0) {
+                    avisar.error(`El alumno ${alumno.apellidos} ${alumno.nombres} tiene cuotas impagas.`);
+                    continue;
+                  }
+                }
+              }*/
+
+
             payload.push({
               id_alumno: alumno.id_alumno,
               ...datosAcademicos,
@@ -304,19 +328,25 @@ const GenerarCargosAlumnos = () => {
               (idNivel === 2 && esSi(cobra_inscripcion_en_cuotas_primario));
 
             if (permiteEnCuotas) {
-              if (esSi(valida_cuotas_impagas_pago_inscripcion)) {
+             /* if (esSi(valida_cuotas_impagas_pago_inscripcion)) {
+                const token = localStorage.getItem('token');
                 const resDeuda = await fetch(
-                  `${process.env.REACT_APP_API_URL}/api/alumnos/${alumno.id_alumno}/estado-deuda`,
-                  { headers }
+                  `${process.env.REACT_APP_API_URL}/api/pagos/estado-deuda/${alumno.id_alumno}`,
+                  {
+                      headers: {
+                          'Content-Type': 'application/json',
+                          'Authorization': `Bearer ${token}`
+                      }
+                  }
                 );
                 if (resDeuda.ok) {
                   const dataDeuda = await resDeuda.json();
-                  if (dataDeuda.tieneDeuda) {
+                  if (Array.isArray(dataDeuda) && dataDeuda.length > 0) {
                     avisar.error(`El alumno ${alumno.apellidos} ${alumno.nombres} tiene cuotas impagas.`);
                     continue;
                   }
                 }
-              }
+              }*/
 
               let impCuota1 = idNivel === 1 ? importe_cuota_uno_nivel_inicial : importe_cuota_uno_nivel_primario;
               let impCuota2 = idNivel === 1 ? importe_cuota_dos_nivel_inicial : importe_cuota_dos_nivel_primario;
@@ -329,7 +359,7 @@ const GenerarCargosAlumnos = () => {
                 id_anio: formData.id_anio,
                 anio: anioValor,
                 forma: formData.forma,
-                cuota: `${anioValor}-1`,
+                cuota: `${anioValor}`,
                 descripcion: `Inscripción anual del Año ${anioValor} Cuota 1/2`,
                 importe: obtenerImporteFinal(impCuota1),
                 fecha: fechaActualStr,
@@ -343,7 +373,7 @@ const GenerarCargosAlumnos = () => {
                 id_anio: formData.id_anio,
                 anio: anioValor,
                 forma: formData.forma,
-                cuota: `${anioValor}-2`,
+                cuota: `${anioValor}`,
                 descripcion: `Inscripción anual del Año ${anioValor} Cuota 2/2`,
                 importe: obtenerImporteFinal(impCuota2),
                 fecha: fechaCuota2Str,
@@ -369,7 +399,37 @@ const GenerarCargosAlumnos = () => {
         throw new Error(errorData.message || 'Error al procesar la solicitud');
       }
 
-      avisar.exito('¡Cargos generados correctamente!');
+      // 1. Obtener los datos reales de la respuesta
+      const data = await response.json(); 
+
+
+      // 2. Armar el mensaje para la alerta usando el resumen recibido
+      const { generados, noGenerados } = data.resumen;
+      const mensaje = `Proceso completado. Generados: ${generados} | No generados: ${noGenerados}`;
+
+      // 3. Mostrar la notificación con el mensaje en texto
+      avisar.exito(mensaje);
+
+      // 1. Formatear la lista de alumnos omitidos
+      let listaOmitidosTexto = '';
+
+      if (data.detallesNoGenerados && data.detallesNoGenerados.length > 0) {
+          listaOmitidosTexto = '\n\nAlumnos omitidos:\n' +
+              data.detallesNoGenerados
+                  .map(a => `• ${a.apellidos}, ${a.nombres} (${a.tipo_documento}: ${a.numero_documento}) - Motivo: ${a.motivo}`)
+                  .join('\n');
+      }
+
+      // 2. Armar el mensaje completo
+      const mensajeAlert = `RESUMEN DE GENERACIÓN DE:\n${payload[0].descripcion.toUpperCase()}\n` +
+        `-----------------------------------------\n` +
+        `• Cargos generados: ${generados}\n` +
+        `• Cargos no generados: ${noGenerados}` +
+        listaOmitidosTexto;
+
+      // 3. Mostrar la alerta
+      alert(mensajeAlert);
+
       handleCancel();
     } catch (error) {
       console.error('Error al enviar los cargos:', error);
@@ -447,7 +507,7 @@ const GenerarCargosAlumnos = () => {
                 .filter((alumno) => alumno.es_alumno === 'S' && alumno.activo === 'S' && alumno.regular === 'S')
                 .map((alumno) => (
                   <option key={alumno.id_alumno} value={alumno.id_alumno}>
-                    {alumno.apellidos}, {alumno.nombres} - {alumno.grado} ({alumno.nivel})
+                    {alumno.apellidos}, {alumno.nombres} - {alumno.nombre_corto} {alumno.numero} - {alumno.grado} ({alumno.nivel})
                   </option>
                 ))}
             </select>

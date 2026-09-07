@@ -91,6 +91,9 @@ const ItemPagos = () => {
   // Visibilidad del formulario de pago
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
 
+  const [permitePagosParciales, setPermitePagosParciales] = useState(true);
+
+  const [nombreLegajo, setNombreLegajo] = useState(true);
 
   const [valorPuntoVenta, setValorPuntoVenta] = useState(null);
 
@@ -115,7 +118,14 @@ useEffect(() => {
       const data = await response.json();
       const listaParametros = Array.isArray(data) ? data : (data.data || []);
       const puntoVentaObj = listaParametros.find((item) => item.parametro === 'punto_venta');
-      
+      const permiteParcialesObj = listaParametros.find((item) => item.parametro === 'permite_pagos_parciales');
+      const nombreLegajoObj = listaParametros.find((item) => item.parametro === 'muestra_nombre_con_legajo');
+
+      setPermitePagosParciales(permiteParcialesObj?.valor === 'SI');
+
+      setNombreLegajo(nombreLegajoObj?.valor === 'SI');
+
+
       setValorPuntoVenta(puntoVentaObj?.valor);
     } catch (error) {
       console.error('Error al obtener parametros:', error);
@@ -536,7 +546,11 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
       {/* Título con el nombre del alumno */}
       <div className="p-3 bg-gray-50 border-b border-gray-300">
         <h2 className="text-sm font-bold text-gray-800">
-          Alumno: {movimientos[0] && `${movimientos[0].nombrealumno} - Legajo: ${movimientos[0].legajo}`}
+          Alumno: {movimientos[0] && 
+          nombreLegajo 
+            ? `${movimientos[0].nombrealumno} - Legajo: ${movimientos[0].legajo}`
+            : movimientos[0].nombrealumno
+          }
         </h2>
       </div>
 
@@ -828,6 +842,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
                   step="0.01"
                   value={pagoForm.importe}
                   onChange={(e) => setPagoForm({ ...pagoForm, importe: e.target.value })}
+                  readOnly={!permitePagosParciales} // 👈 Si no permite parciales, no se puede editar
                   onBlur={(e) => {
                     const val = parseFloat(e.target.value);
                     if (!isNaN(val)) {
