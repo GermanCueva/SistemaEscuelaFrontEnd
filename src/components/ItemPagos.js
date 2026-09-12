@@ -612,7 +612,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
                           ? `Pago de Inscripción Anual ${row.anio_cuota?.match(/\d{4}/)?.[0] || ''}`
                           : /materiales/i.test(row.anio_cuota)
                           ? `Pago de Materiales ${row.anio_cuota?.match(/\d{4}/)?.[0] || ''}`
-                          : `Pago de cuota ${row.cuota && row.anio ? `${row.cuota}/${row.anio}` : (row.anio_cuota || row.concepto)}`
+                          : `Pago de cuota ${String(row.cuota).slice(0, 2).padStart(2, '0')}/${row.anio}`
                         : (row.anio_cuota || row.concepto)}
                     </td>
                     <td className="p-2 border-r border-gray-200 font-mono">$ {row.importe}</td>
