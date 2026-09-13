@@ -1,5 +1,11 @@
+
 import { useState } from "react";
-import { Upload, CheckCircle, AlertCircle } from "lucide-react";
+import {
+  Upload,
+  CheckCircle,
+  AlertCircle,
+  FileText,
+} from "lucide-react";
 import axios from "axios";
 
 const ItemAfectacionDebito = () => {
@@ -8,74 +14,47 @@ const ItemAfectacionDebito = () => {
   const [resultado, setResultado] = useState(null);
 
   // ==========================================
-  // Seleccionar archivo
+  // SELECCIONAR ARCHIVO
   // ==========================================
   const seleccionarArchivo = (event) => {
-  const archivoSeleccionado = event.target.files[0];
+    const archivoSeleccionado = event.target.files[0];
 
-  if (!archivoSeleccionado) {
-    return;
-  }
+    if (!archivoSeleccionado) {
+      return;
+    }
 
-  const nombre = archivoSeleccionado.name.toUpperCase();
+    const nombre = archivoSeleccionado.name.toUpperCase();
 
-  // Obtener solamente la parte anterior al "_"
-  const nombreBase = nombre.split("_")[0];
+    const nombreBase = nombre.split("_")[0];
 
-  // Archivos permitidos
-  const archivosPermitidos = [
-    "LDEBLIQD",
-    "RDEBLIQD",
-    "DEBLIQC",
-    "DEBLIMC",
-  ];
+    // Archivos permitidos
+    const archivosPermitidos = [
+      "LDEBLIQD",
+      "RDEBLIQC",
+      "RDEBLIMC",
+    ];
 
-  if (!archivosPermitidos.includes(nombreBase)) {
-    alert(
-      "Archivo no válido.\n\n" +
-        "El nombre del archivo debe comenzar con uno de estos códigos:\n" +
+    if (!archivosPermitidos.includes(nombreBase)) {
+      alert(
+        "Archivo no válido.\n\n" +
+        "El nombre del archivo debe comenzar con:\n\n" +
         "LDEBLIQD\n" +
-        "RDEBLIQD\n" +
-        "DEBLIQC\n" +
-        "DEBLIMC"
-    );
+        "RDEBLIQC\n" +
+        "RDEBLIMC"
+      );
 
-    event.target.value = "";
-    return;
-  }
+      event.target.value = "";
+      setArchivo(null);
 
-  setArchivo(archivoSeleccionado);
-  setResultado(null);
-};
+      return;
+    }
 
-  // ==========================================
-  // Determinar endpoint según archivo
-  // ==========================================
- const obtenerEndpoint = (nombreArchivo) => {
-  const nombre = nombreArchivo.toUpperCase();
-
-  // Obtener solamente la parte anterior al "_"
-  const nombreBase = nombre.split("_")[0];
-
-  switch (nombreBase) {
-    case "LDEBLIQD":
-    case "RDEBLIQD":
-      return "http://localhost:8080/api/pagos/afectar/visaDebito";
-
-    case "DEBLIQC":
-      return "http://localhost:8080/api/pagos/afectar/visaCredito";
-
-    case "DEBLIMC":
-      return "http://localhost:8080/api/pagos/afectar/mastercardCredito";
-      
-
-    default:
-      return null;
-  }
-};
+    setArchivo(archivoSeleccionado);
+    setResultado(null);
+  };
 
   // ==========================================
-  // Afectar pagos
+  // AFECTAR PAGOS
   // ==========================================
   const afectarPagos = async () => {
     if (!archivo) {
@@ -90,98 +69,127 @@ const ItemAfectacionDebito = () => {
       const token = localStorage.getItem("token");
 
       if (!token) {
-        alert("La sesión no es válida. Volvé a iniciar sesión.");
+        alert(
+          "La sesión no es válida. Volvé a iniciar sesión."
+        );
+
         return;
       }
 
-      const endpoint = obtenerEndpoint(archivo.name);
+      // ==========================================
+      // ENDPOINT
+      // ==========================================
+      const endpoint =
+        "http://localhost:8080/api/archivos-debito/procesar";
 
-      if (!endpoint) {
-        alert("El archivo no es válido.");
-        return;
-      }
-
-      console.log("=================================");
-      console.log("AFECTANDO PAGOS");
-      console.log("Archivo:", archivo.name);
-      console.log("Endpoint:", endpoint);
-      console.log("=================================");
-
+      // ==========================================
+      // FORM DATA
+      // ==========================================
       const formData = new FormData();
 
       formData.append("archivo", archivo);
 
+      // ==========================================
+      // ENVIAR ARCHIVO
+      // ==========================================
       const response = await axios.post(
         endpoint,
         formData,
         {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
           },
         }
       );
 
-      console.log("Respuesta del backend:");
-      console.log(response.data);
-
+      // ==========================================
+      // RESPUESTA DEL BACKEND
+      // ==========================================
       const mensaje =
         response.data?.mensaje ||
-        "Los pagos fueron afectados correctamente.";
+        "Procesamiento finalizado.";
 
+      const resumen =
+        response.data?.resumen || null;
+
+      // ==========================================
+      // GUARDAR RESULTADO
+      // ==========================================
       setResultado({
-        ok: true,
+        ok: response.data?.ok !== false,
         mensaje,
+        resumen,
+        archivo: archivo.name,
       });
 
-      alert(mensaje);
-
-      // Limpiar archivo para poder cargar otro
+      // ==========================================
+      // LIMPIAR ARCHIVO SELECCIONADO
+      // ==========================================
       setArchivo(null);
 
-      const input = document.getElementById("archivoBanco");
+      const input =
+        document.getElementById("archivoBanco");
 
       if (input) {
         input.value = "";
       }
-    } catch (error) {
-      console.error("=================================");
-      console.error("ERROR AL AFECTAR PAGOS");
-      console.error("=================================");
-      console.error(error);
 
-      let mensaje = "Ocurrió un error al afectar los pagos.";
+    } catch (error) {
+
+      let mensaje =
+        "Ocurrió un error al afectar los pagos.";
 
       if (error.response) {
-        console.error("Código HTTP:", error.response.status);
-        console.error("Respuesta:", error.response.data);
 
         mensaje =
           error.response.data?.mensaje ||
           error.response.data?.message ||
           mensaje;
+
+      } else if (error.request) {
+
+        mensaje =
+          "No se pudo conectar con el servidor.";
+
+      } else {
+
+        mensaje =
+          error.message || mensaje;
+
       }
 
+      // ==========================================
+      // MOSTRAR ERROR EN PANTALLA
+      // ==========================================
       setResultado({
         ok: false,
         mensaje,
+        resumen: null,
+        archivo: archivo?.name,
       });
 
-      alert(mensaje);
     } finally {
       setProcesando(false);
     }
   };
 
+  // ==========================================
+  // RENDER
+  // ==========================================
   return (
     <div className="border rounded-lg p-5 bg-white shadow-sm">
+
+      {/* ==========================================
+          TÍTULO
+      ========================================== */}
 
       <h3 className="font-semibold text-gray-800 text-lg mb-1">
         Afectación de pagos
       </h3>
 
       <p className="text-sm text-gray-500 mb-4">
-        Seleccioná el archivo del banco que deseas procesar.
+        Seleccioná el archivo del banco que deseas
+        procesar.
       </p>
 
       {/* ==========================================
@@ -190,7 +198,22 @@ const ItemAfectacionDebito = () => {
 
       <div className="flex items-center gap-3">
 
-        <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded cursor-pointer">
+        {/* SELECCIONAR */}
+
+        <label
+          className="
+            flex
+            items-center
+            gap-2
+            px-4
+            py-2
+            bg-gray-100
+            hover:bg-gray-200
+            rounded
+            cursor-pointer
+          "
+        >
+
           <Upload size={18} />
 
           Seleccionar archivo
@@ -202,14 +225,30 @@ const ItemAfectacionDebito = () => {
             accept=".txt"
             onChange={seleccionarArchivo}
           />
+
         </label>
+
+        {/* AFECTAR */}
 
         <button
           onClick={afectarPagos}
           disabled={!archivo || procesando}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          className="
+            px-4
+            py-2
+            bg-blue-600
+            text-white
+            rounded
+            hover:bg-blue-700
+            disabled:bg-gray-400
+            disabled:cursor-not-allowed
+          "
         >
-          {procesando ? "Procesando..." : "Afectar pagos"}
+
+          {procesando
+            ? "Procesando..."
+            : "Afectar pagos"}
+
         </button>
 
       </div>
@@ -219,16 +258,39 @@ const ItemAfectacionDebito = () => {
       ========================================== */}
 
       {archivo && (
-        <div className="mt-4 p-3 bg-gray-50 rounded">
+
+        <div
+          className="
+            mt-4
+            p-3
+            bg-gray-50
+            border
+            rounded
+            flex
+            items-center
+            gap-2
+          "
+        >
+
+          <FileText
+            size={20}
+            className="text-gray-500"
+          />
 
           <div className="text-sm">
-            <span className="font-medium">
-              Archivo seleccionado:
-            </span>{" "}
-            {archivo.name}
+
+            <div className="font-medium text-gray-800">
+              Archivo seleccionado
+            </div>
+
+            <div className="text-gray-500">
+              {archivo.name}
+            </div>
+
           </div>
 
         </div>
+
       )}
 
       {/* ==========================================
@@ -236,21 +298,312 @@ const ItemAfectacionDebito = () => {
       ========================================== */}
 
       {resultado && (
+
         <div
-          className={`mt-4 p-3 rounded text-sm flex items-center gap-2 ${
-            resultado.ok
-              ? "bg-green-50 text-green-700"
-              : "bg-red-50 text-red-700"
-          }`}
+          className={`
+            mt-5
+            border
+            rounded-lg
+            overflow-hidden
+            ${
+              resultado.ok
+                ? "border-green-200"
+                : "border-red-200"
+            }
+          `}
         >
-          {resultado.ok ? (
-            <CheckCircle size={20} />
-          ) : (
-            <AlertCircle size={20} />
+
+          {/* ==========================================
+              CABECERA
+          ========================================== */}
+
+          <div
+            className={`
+              p-4
+              flex
+              items-center
+              gap-2
+              ${
+                resultado.ok
+                  ? "bg-green-50"
+                  : "bg-red-50"
+              }
+            `}
+          >
+
+            {resultado.ok ? (
+              <CheckCircle
+                size={22}
+                className="text-green-600"
+              />
+            ) : (
+              <AlertCircle
+                size={22}
+                className="text-red-600"
+              />
+            )}
+
+            <div>
+
+              <div
+                className={`
+                  font-semibold
+                  ${
+                    resultado.ok
+                      ? "text-green-700"
+                      : "text-red-700"
+                  }
+                `}
+              >
+                {resultado.ok
+                  ? "Afectación finalizada"
+                  : "Error en la afectación"}
+              </div>
+
+              <div className="text-sm text-gray-600">
+                {resultado.mensaje}
+              </div>
+
+            </div>
+
+          </div>
+
+          {/* ==========================================
+              CONTENIDO DEL RESULTADO
+          ========================================== */}
+
+          {resultado.resumen && (
+
+            <div className="p-4">
+
+              {/* ARCHIVO */}
+
+              {resultado.archivo && (
+
+                <div className="mb-4">
+
+                  <div className="text-xs text-gray-500">
+                    Archivo procesado
+                  </div>
+
+                  <div className="font-medium text-gray-800">
+                    {resultado.archivo}
+                  </div>
+
+                </div>
+
+              )}
+
+              {/* ==========================================
+                  ESTADÍSTICAS
+              ========================================== */}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+                {/* TOTAL */}
+
+                <div
+                  className="
+                    border
+                    rounded-lg
+                    p-4
+                    bg-gray-50
+                  "
+                >
+
+                  <div className="text-sm text-gray-500">
+                    Total de registros
+                  </div>
+
+                  <div className="text-3xl font-bold text-gray-800">
+                    {resultado.resumen.totalRegistros ?? 0}
+                  </div>
+
+                </div>
+
+                {/* EXITOSOS */}
+
+                <div
+                  className="
+                    border
+                    border-green-200
+                    rounded-lg
+                    p-4
+                    bg-green-50
+                  "
+                >
+
+                  <div className="text-sm text-green-700">
+                    Afectados correctamente
+                  </div>
+
+                  <div className="text-3xl font-bold text-green-600">
+                    {
+                      resultado.resumen
+                        .afectadosExitosamente ?? 0
+                    }
+                  </div>
+
+                </div>
+
+                {/* RECHAZADOS */}
+
+                <div
+                  className="
+                    border
+                    border-red-200
+                    rounded-lg
+                    p-4
+                    bg-red-50
+                  "
+                >
+
+                  <div className="text-sm text-red-700">
+                    No pudieron afectarse
+                  </div>
+
+                  <div className="text-3xl font-bold text-red-600">
+                    {
+                      resultado.resumen
+                        .noAfectados ?? 0
+                    }
+                  </div>
+
+                </div>
+
+              </div>
+
+              {/* ==========================================
+                  MOTIVOS DE RECHAZO
+              ========================================== */}
+
+              {resultado.resumen.rechazos &&
+               resultado.resumen.rechazos.length > 0 && (
+
+                <div className="mt-6">
+
+                  <h4
+                    className="
+                      font-semibold
+                      text-gray-800
+                      mb-3
+                    "
+                  >
+                    Motivos de rechazo
+                  </h4>
+
+                  <div
+                    className="
+                      border
+                      rounded-lg
+                      overflow-hidden
+                    "
+                  >
+
+                    <table className="w-full text-sm">
+
+                      <thead className="bg-gray-100">
+
+                        <tr>
+
+                          <th
+                            className="
+                              text-left
+                              px-4
+                              py-3
+                            "
+                          >
+                            Código
+                          </th>
+
+                          <th
+                            className="
+                              text-left
+                              px-4
+                              py-3
+                            "
+                          >
+                            Descripción
+                          </th>
+
+                          <th
+                            className="
+                              text-center
+                              px-4
+                              py-3
+                            "
+                          >
+                            Cantidad
+                          </th>
+
+                        </tr>
+
+                      </thead>
+
+                      <tbody>
+
+                        {resultado.resumen.rechazos.map(
+                          (rechazo, index) => (
+
+                            <tr
+                              key={
+                                `${rechazo.codigo}-${index}`
+                              }
+                              className="border-t"
+                            >
+
+                              <td
+                                className="
+                                  px-4
+                                  py-3
+                                  font-medium
+                                "
+                              >
+                                {rechazo.codigo}
+                              </td>
+
+                              <td
+                                className="
+                                  px-4
+                                  py-3
+                                "
+                              >
+                                {rechazo.descripcion}
+                              </td>
+
+                              <td
+                                className="
+                                  px-4
+                                  py-3
+                                  text-center
+                                  font-semibold
+                                  text-red-600
+                                "
+                              >
+                                {rechazo.cantidad}
+                              </td>
+
+                            </tr>
+
+                          )
+                        )}
+
+                      </tbody>
+
+                    </table>
+
+                  </div>
+
+                </div>
+
+              )}
+
+            </div>
+
           )}
 
-          {resultado.mensaje}
         </div>
+
       )}
 
     </div>
@@ -258,3 +611,4 @@ const ItemAfectacionDebito = () => {
 };
 
 export default ItemAfectacionDebito;
+ 
