@@ -194,6 +194,8 @@ useEffect(() => {
   useEffect(() => {
     const fetchCatalogos = async () => {
       const token = localStorage.getItem("token");
+      let idEntidad = null;
+
       const headers = { 'Authorization': `Bearer ${token}` };
 
       try {
@@ -202,9 +204,31 @@ useEffect(() => {
           fetch(`${process.env.REACT_APP_API_URL}/api/pagos/marcas`, { headers })
         ]);
 
+        if (token) {
+          try {
+            const payloadBase64 = token.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payloadBase64));
+            idEntidad = decodedPayload.user?.identidadeducativa;
+          } catch (error) {
+            console.error("Error al decodificar el token", error);
+          }
+        }
+
         if (resMedios.ok) {
           const dataMedios = await resMedios.json();
-          setMediosPago(Array.isArray(dataMedios) ? dataMedios : []);
+
+        // Si la entidad educativa es 1, omitir los medios con id_medio_pago 1, 3 y 4
+        console.log(idEntidad)
+          if (Number(idEntidad) === 1) {
+            const omitidos = [1, 3, 4];
+            const mediosFiltrados = Array.isArray(dataMedios)
+              ? dataMedios.filter(m => !omitidos.includes(Number(m.id_medio_pago)))
+              : [];
+            setMediosPago(mediosFiltrados);
+          } else {
+            // Si es otra entidad educativa, cargar todos los medios
+            setMediosPago(Array.isArray(dataMedios) ? dataMedios : []);
+          }
         }
 
         if (resTarjetas.ok) {
