@@ -218,7 +218,7 @@ useEffect(() => {
           const dataMedios = await resMedios.json();
 
         // Si la entidad educativa es 1, omitir los medios con id_medio_pago 1, 3 y 4
-        console.log(idEntidad)
+       // console.log(idEntidad)
           if (Number(idEntidad) === 1) {
             const omitidos = [1, 3, 4];
             const mediosFiltrados = Array.isArray(dataMedios)
