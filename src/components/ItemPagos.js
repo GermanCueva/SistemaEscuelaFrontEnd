@@ -171,6 +171,7 @@ useEffect(() => {
 
       const data = await response.json();
       setMovimientos(Array.isArray(data) ? data : []);
+
     } catch (error) {
       console.error('Error cargando movimientos:', error);
       setMovimientos([]);
