@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState, useMemo, useCallback } from "react"
 import ItemListAlumnosPagos from './ItemListAlumnosPagos'
 import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
@@ -8,6 +8,9 @@ const ItemListContainerAlumnosPagos = () => {
   const [cargando, setCargando] = useState(true)
   const [descargando, setDescargando] = useState(false)
   const [tipoDescarga, setTipoDescarga] = useState('')
+
+  // 🟢 Estado para acumular los saldos de cada alumno { [id_alumno]: saldoTotal }
+  const [saldos, setSaldos] = useState({})
 
   const [niveles, setNiveles] = useState([])
   const [grados, setGrados] = useState([])
@@ -42,7 +45,7 @@ const ItemListContainerAlumnosPagos = () => {
     }
 
     Promise.all([
-      fetch(`${process.env.REACT_APP_API_URL}/api/persons`, { headers }).then(res => res.json()),
+      fetch(`${process.env.REACT_APP_API_URL}/api/persons?incluirSaldo=true`, { headers }).then(res => res.json()),
       fetch(`${process.env.REACT_APP_API_URL}/api/academica/nivel`, { headers }).then(res => res.json()),
       fetch(`${process.env.REACT_APP_API_URL}/api/academica/grado`, { headers }).then(res => res.json())
     ])
@@ -61,7 +64,14 @@ const ItemListContainerAlumnosPagos = () => {
       })
   }, [token])
 
-  // Exclusión de Nivel 3 (Secundario) si idEntidad === 1
+  // 🟢 Callback para recibir el saldo de cada ItemPersonaPagos
+  const handleSaldoCargado = useCallback((id_alumno, saldo) => {
+    setSaldos(prev => {
+      if (prev[id_alumno] === saldo) return prev;
+      return { ...prev, [id_alumno]: saldo };
+    });
+  }, []);
+
   const nivelesFiltrados = useMemo(() => {
     return niveles.filter(n => {
       const idNivel = n.id_nivel ?? n.idNivel ?? n.id;
@@ -72,7 +82,6 @@ const ItemListContainerAlumnosPagos = () => {
     });
   }, [niveles, idEntidad]);
 
-  // Filtrado de Grados según Nivel y Exclusión por idEntidad
   const gradosFiltrados = useMemo(() => {
     return grados.filter(g => {
       const idNivelDelGrado = g.id_nivel ?? g.idNivel ?? g.nivel_id ?? g.nivel?.id_nivel ?? g.nivel?.id;
@@ -89,42 +98,24 @@ const ItemListContainerAlumnosPagos = () => {
     });
   }, [grados, filtros.idNivel, idEntidad]);
 
-  // FILTRADO DINÁMICO EN MEMORIA
   const personasFiltradas = useMemo(() => {
     return todasLasPersonas.filter(persona => {
+      if (persona.es_alumno !== 'S') return false;
 
-      // 🟢 RESTAURADO: Solo permite alumnos
-      if (persona.es_alumno !== 'S') {
-        return false;
-      }
-
-      // Buscador por Texto Libre
       if (textoBusqueda.trim() !== '') {
         const query = textoBusqueda.toLowerCase().trim()
         const coincideApellido = persona.apellidos?.toLowerCase().includes(query)
         const coincideNombre = persona.nombres?.toLowerCase().includes(query)
         const coincideDni = persona.numero?.toString().toLowerCase().includes(query)
 
-        if (!coincideApellido && !coincideNombre && !coincideDni) {
-          return false
-        }
+        if (!coincideApellido && !coincideNombre && !coincideDni) return false
       }
 
-      // Alumno Activo / Pasivo
-      if (filtros.esActivo && persona.regular !== 'S') {
-        return false
-      }
-      if (!filtros.esActivo && persona.regular !== 'N') {
-        return false
-      }
+      if (filtros.esActivo && persona.regular !== 'S') return false
+      if (!filtros.esActivo && persona.regular !== 'N') return false
 
-      // Filtro por Nivel y Grado
-      if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) {
-        return false
-      }
-      if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) {
-        return false
-      }
+      if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) return false
+      if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) return false
 
       return true
     })
@@ -138,13 +129,17 @@ const ItemListContainerAlumnosPagos = () => {
     setFiltros(prev => ({ ...prev, [name]: checked }))
   }
 
+  // 🟢 Incluimos saldo_total en el objeto a exportar
   const datosParaEnviar = personasFiltradas.map(p => ({
     apellidos: p.apellidos,
     nombres: p.nombres,
     nombre_corto: p.nombre_corto,
     numero: p.numero,
     es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor',
-    nivel: p.nombre_nivel && p.nombre_grado ? `${p.nombre_nivel} - ${p.nombre_grado}` : (p.nombre_nivel || '')
+    nivel: p.nombre_nivel && p.nombre_grado ? `${p.nombre_nivel} - ${p.nombre_grado}` : (p.nombre_nivel || ''),
+    saldo_total: p.saldo_total,
+    tieneSaldoTotal: true,
+    titulo: 'Reporte de Alumnos - Estado de Cuenta'
   }));
 
   const handleExportExcel = async () => {
@@ -217,10 +212,7 @@ const ItemListContainerAlumnosPagos = () => {
     <div className="container mx-auto p-4">
       <h2 className="text-xl font-bold mb-4 text-center">Listado de Alumnos - Pagos</h2>
 
-      {/* Barra de Filtros */}
       <div className="flex flex-wrap items-center justify-center gap-6 mb-6 bg-gray-100 p-4 rounded-xl shadow-sm">
-        
-        {/* Buscador */}
         <div className="flex items-end gap-2">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-gray-700">Buscar:</label>
@@ -246,7 +238,6 @@ const ItemListContainerAlumnosPagos = () => {
 
         <div className="h-8 border-r border-gray-300 hidden sm:block"></div>
 
-        {/* Toggle Alumno Activo / Pasivo */}
         <CustomToggle 
           label={filtros.esActivo ? "Alumno Activo" : "Alumno Pasivo"}
           name="esActivo"
@@ -256,7 +247,6 @@ const ItemListContainerAlumnosPagos = () => {
 
         <div className="h-8 border-r border-gray-300 hidden sm:block"></div>
 
-        {/* Combo Nivel */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-bold text-gray-700">Nivel:</label>
           <select 
@@ -273,7 +263,6 @@ const ItemListContainerAlumnosPagos = () => {
           </select>
         </div>
 
-        {/* Combo Grado */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-bold text-gray-700">Grado/Curso:</label>
           <select 
@@ -290,7 +279,6 @@ const ItemListContainerAlumnosPagos = () => {
           </select>
         </div>
 
-        {/* Botones de Exportación */}
         <div style={{ display: 'flex', gap: '8px', marginTop: '15px', marginLeft: 'auto' }}>
           <button
             onClick={handleExportExcel}
@@ -332,13 +320,17 @@ const ItemListContainerAlumnosPagos = () => {
             <FaFilePdf size={18}/>
           </button>
         </div>
-
       </div>
 
       {cargando ? (
         <p className="text-center font-semibold my-4">Cargando datos iniciales...</p>
       ) : (
-        <ItemListAlumnosPagos prods={personasFiltradas} setProds={setTodasLasPersonas} />
+        /* 🟢 Pasamos onSaldoCargado */
+        <ItemListAlumnosPagos 
+          prods={personasFiltradas} 
+          setProds={setTodasLasPersonas} 
+          onSaldoCargado={handleSaldoCargado}
+        />
       )}
 
       {descargando && (
@@ -347,7 +339,6 @@ const ItemListContainerAlumnosPagos = () => {
           <span className="text-sm font-medium">Generando {tipoDescarga}...</span>
         </div>
       )}
-
     </div>
   )
 }

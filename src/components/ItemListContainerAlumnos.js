@@ -100,7 +100,9 @@ const ItemListContainerAlumnos = () => {
     nombre_corto: p.nombre_corto,
     numero: p.numero,
     es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor',
-    nivel: p.nombre_nivel && p.nombre_grado ? `${p.nombre_nivel} - ${p.nombre_grado}` : ''
+    nivel: p.nombre_nivel && p.nombre_grado ? `${p.nombre_nivel} - ${p.nombre_grado}` : '',
+    tieneSaldoTotal: false, // 🔴 Oculta la columna Saldo Total
+    titulo: 'Reporte de Alumnos'
   }));
 
   const handleExportExcel = async () => {
