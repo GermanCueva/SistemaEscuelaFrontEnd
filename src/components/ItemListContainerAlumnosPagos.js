@@ -10,6 +10,7 @@ const ItemListContainerAlumnosPagos = () => {
   const [tipoDescarga, setTipoDescarga] = useState('')
 
   // 🟢 Estado para acumular los saldos de cada alumno { [id_alumno]: saldoTotal }
+  // eslint-disable-next-line no-unused-vars
   const [saldos, setSaldos] = useState({})
 
   const [niveles, setNiveles] = useState([])
