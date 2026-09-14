@@ -120,7 +120,9 @@ const ItemListContainerTutores = () => {
     nombres: p.nombres,
     nombre_corto: p.nombre_corto,
     numero: p.numero,
-    es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor'
+    es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor',
+    tieneSaldoTotal: false, // 🔴 Oculta la columna Saldo Total
+    titulo: 'Reporte de Tutores'
   }));
 
 
