@@ -11,13 +11,15 @@ const ItemListContainerAlumnos = () => {
 
   const [niveles, setNiveles] = useState([])
   const [grados, setGrados] = useState([])
+  const [divisiones, setDivisiones] = useState([])
 
   const [textoBusqueda, setTextoBusqueda] = useState('')
 
   const [filtros, setFiltros] = useState({
     esActivo: true,
     idNivel: '',
-    idGrado: ''
+    idGrado: '',
+    idDivision: ''
   })
 
   const token = localStorage.getItem('token')
@@ -29,18 +31,17 @@ const ItemListContainerAlumnos = () => {
       'Authorization': `Bearer ${token}`
     }
 
-
     Promise.all([
       fetch(`${process.env.REACT_APP_API_URL}/api/persons`, { headers }).then(res => res.json()),
       fetch(`${process.env.REACT_APP_API_URL}/api/academica/nivel`, { headers }).then(res => res.json()),
-      fetch(`${process.env.REACT_APP_API_URL}/api/academica/grado`, { headers }).then(res => res.json())
+      fetch(`${process.env.REACT_APP_API_URL}/api/academica/grado`, { headers }).then(res => res.json()),
+      fetch(`${process.env.REACT_APP_API_URL}/api/academica/division`, { headers }).then(res => res.json()).catch(() => [])
     ])
-      .then(([dataPersonas, dataNiveles, dataGrados]) => {
-        
-        //console.log("Respuesta Grados API:", dataGrados); // 👈 Revisa esto en la consola del navegador (F12)
+      .then(([dataPersonas, dataNiveles, dataGrados, dataDivisiones]) => {
         setTodasLasPersonas(Array.isArray(dataPersonas) ? dataPersonas : [])
         setNiveles(Array.isArray(dataNiveles) ? dataNiveles : [])
         setGrados(Array.isArray(dataGrados) ? dataGrados : [])
+        setDivisiones(Array.isArray(dataDivisiones) ? dataDivisiones : [])
         setCargando(false)
       })
       .catch(error => {
@@ -48,43 +49,61 @@ const ItemListContainerAlumnos = () => {
         setTodasLasPersonas([])
         setNiveles([])
         setGrados([])
+        setDivisiones([])
         setCargando(false)
       })
   }, [token])
 
-  // 🟢 Filtrado estricto de Grados según el Nivel seleccionado
   const gradosFiltrados = useMemo(() => {
     if (!filtros.idNivel) return grados;
-
     return grados.filter(g => {
-      // Soporta múltiples formatos de nombre de propiedad que pueda devolver la API
       const idNivelDelGrado = g.id_nivel ?? g.idNivel ?? g.nivel_id ?? g.nivel?.id_nivel ?? g.nivel?.id;
       return String(idNivelDelGrado) === String(filtros.idNivel);
     });
   }, [grados, filtros.idNivel]);
 
-  const personasFiltradas = useMemo(() => {
-    return todasLasPersonas.filter(persona => {
-      if (persona.es_alumno !== 'S') return false;
+const personasFiltradas = useMemo(() => {
+  const divObjetoSeleccionado = divisiones.find(
+    d => String(d.id_division || d.id) === String(filtros.idDivision)
+  );
 
-      if (textoBusqueda.trim() !== '') {
-        const query = textoBusqueda.toLowerCase().trim()
-        const coincideApellido = persona.apellidos?.toLowerCase().includes(query)
-        const coincideNombre = persona.nombres?.toLowerCase().includes(query)
-        const coincideDni = persona.numero?.toString().toLowerCase().includes(query)
+  return todasLasPersonas.filter(persona => {
+    if (persona.es_alumno !== 'S') return false;
 
-        if (!coincideApellido && !coincideNombre && !coincideDni) return false
-      }
+    if (textoBusqueda.trim() !== '') {
+      const query = textoBusqueda.toLowerCase().trim()
+      const coincideApellido = persona.apellidos?.toLowerCase().includes(query)
+      const coincideNombre = persona.nombres?.toLowerCase().includes(query)
+      const coincideDni = persona.numero?.toString().toLowerCase().includes(query)
 
-      if (filtros.esActivo && persona.regular !== 'S') return false;
-      if (!filtros.esActivo && persona.regular !== 'N') return false;
+      if (!coincideApellido && !coincideNombre && !coincideDni) return false
+    }
 
-      if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) return false;
-      if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) return false;
+    if (filtros.esActivo && persona.regular !== 'S') return false
+    if (!filtros.esActivo && persona.regular !== 'N') return false
 
-      return true
-    })
-  }, [todasLasPersonas, textoBusqueda, filtros])
+    if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) return false
+    if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) return false
+
+    if (filtros.idDivision) {
+      const idBuscado = String(filtros.idDivision);
+      const nombreBuscado = divObjetoSeleccionado 
+        ? String(divObjetoSeleccionado.division || divObjetoSeleccionado.nombre).toLowerCase().trim() 
+        : '';
+
+      const idAlumno = persona.id_division ? String(persona.id_division) : '';
+      const nombreAlumno = persona.division ? String(persona.division).toLowerCase().trim() : '';
+
+      const coincidePorId = idAlumno === idBuscado;
+      const coincidePorNombre = nombreBuscado !== '' && nombreAlumno === nombreBuscado;
+
+      if (!coincidePorId && !coincidePorNombre) return false;
+    }
+
+    return true
+  })
+}, [todasLasPersonas, textoBusqueda, filtros, divisiones])
+
 
   const handleTextChange = (e) => setTextoBusqueda(e.target.value)
   const handleClearSearch = () => setTextoBusqueda('')
@@ -100,8 +119,8 @@ const ItemListContainerAlumnos = () => {
     nombre_corto: p.nombre_corto,
     numero: p.numero,
     es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor',
-    nivel: p.nombre_nivel && p.nombre_grado ? `${p.nombre_nivel} - ${p.nombre_grado}` : '',
-    tieneSaldoTotal: false, // 🔴 Oculta la columna Saldo Total
+    nivel: p.nombre_nivel && p.nombre_grado && p.division ? `${p.nombre_nivel} - ${p.nombre_grado} - ${p.division}` : '',
+    tieneSaldoTotal: false,
     titulo: 'Reporte de Alumnos'
   }));
 
@@ -124,7 +143,6 @@ const ItemListContainerAlumnos = () => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.style.display = 'none';
       a.href = url;
       a.download = 'Reporte_Alumnos.xlsx';
       document.body.appendChild(a);
@@ -157,7 +175,6 @@ const ItemListContainerAlumnos = () => {
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.style.display = 'none';
       a.href = url;
       a.download = 'Reporte_Alumnos.pdf';
       document.body.appendChild(a);
@@ -175,9 +192,8 @@ const ItemListContainerAlumnos = () => {
     <div className="container mx-auto p-4">
       <h2 className="text-xl font-bold mb-4 text-center">Listado de Alumnos</h2>
 
-      <div className="flex flex-wrap items-center justify-center gap-6 mb-6 bg-gray-100 p-4 rounded-xl shadow-sm">
+      <div className="flex flex-wrap items-center justify-center gap-4 mb-6 bg-gray-100 p-4 rounded-xl shadow-sm">
         
-        {/* Buscador */}
         <div className="flex items-end gap-2">
           <div className="flex flex-col gap-1">
             <label className="text-xs font-bold text-gray-700">Buscar:</label>
@@ -186,7 +202,7 @@ const ItemListContainerAlumnos = () => {
               value={textoBusqueda} 
               onChange={handleTextChange}
               placeholder="Buscar por Apellido, Nombre o DNI..." 
-              className="input input-bordered input-sm w-64 bg-white"
+              className="input input-bordered input-sm w-60 bg-white"
             />
           </div>
           
@@ -196,7 +212,7 @@ const ItemListContainerAlumnos = () => {
               onClick={handleClearSearch} 
               className="btn btn-ghost btn-sm text-xs"
             >
-              ✕ Limpiar
+              ✕
             </button>
           )}
         </div>
@@ -212,15 +228,14 @@ const ItemListContainerAlumnos = () => {
 
         <div className="h-8 border-r border-gray-300 hidden sm:block"></div>
 
-        {/* Select de Nivel */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-bold text-gray-700">Nivel:</label>
           <select 
             value={filtros.idNivel}
-            onChange={(e) => setFiltros(prev => ({ ...prev, idNivel: e.target.value, idGrado: '' }))}
+            onChange={(e) => setFiltros(prev => ({ ...prev, idNivel: e.target.value, idGrado: '', idDivision: '' }))}
             className="select select-bordered select-sm bg-white"
           >
-            <option value="">Todos los Niveles</option>
+            <option value="">Todos</option>
             {niveles.map(n => (
               <option key={n.id_nivel} value={n.id_nivel}>
                 {n.nombre || n.nombre_nivel}
@@ -229,15 +244,14 @@ const ItemListContainerAlumnos = () => {
           </select>
         </div>
 
-        {/* Select de Grado (Filtrado según Nivel seleccionado) */}
         <div className="flex flex-col gap-1">
           <label className="text-xs font-bold text-gray-700">Grado/Curso:</label>
           <select 
             value={filtros.idGrado}
-            onChange={(e) => setFiltros(prev => ({ ...prev, idGrado: e.target.value }))}
+            onChange={(e) => setFiltros(prev => ({ ...prev, idGrado: e.target.value, idDivision: '' }))}
             className="select select-bordered select-sm bg-white"
           >
-            <option value="">Todos los Grados</option>
+            <option value="">Todos</option>
             {gradosFiltrados.map(g => (
               <option key={g.id_grado} value={g.id_grado}>
                 {g.nombre || g.nombre_grado}
@@ -246,44 +260,33 @@ const ItemListContainerAlumnos = () => {
           </select>
         </div>
 
-        {/* Botones de Exportación */}
-        <div style={{ display: 'flex', gap: '8px', marginTop: '15px', marginLeft: 'auto' }}>
-          <button
-            onClick={handleExportExcel}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#16a34a',
-              color: '#ffffff',
-              padding: '10px 16px',
-              border: 'none',
-              borderRadius: '6px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'background-color 0.2s',
-            }}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-bold text-gray-700">División:</label>
+          <select 
+            value={filtros.idDivision}
+            onChange={(e) => setFiltros(prev => ({ ...prev, idDivision: e.target.value }))}
+            className="select select-bordered select-sm bg-white"
+          >
+            <option value="">Todas</option>
+            {divisiones.map(d => (
+              <option key={d.id_division || d.id} value={d.id_division || d.id}>
+                {d.nombre || d.division}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto mt-2 sm:mt-0">
+          <button 
+            onClick={handleExportExcel} 
+            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white p-2 px-3 rounded-lg font-semibold text-sm transition-colors shadow-sm"
           >
             <FaFileExcel size={18} />
           </button>
 
           <button 
             onClick={handleExportPDF} 
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              backgroundColor: '#dc2626',
-              color: '#ffffff',
-              padding: '10px 16px',
-              border: 'none',
-              borderRadius: '6px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              fontSize: '14px',
-              transition: 'background-color 0.2s',
-            }}
+            className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white p-2 px-3 rounded-lg font-semibold text-sm transition-colors shadow-sm"
           >
             <FaFilePdf size={18}/>
           </button>
