@@ -15,11 +15,12 @@ const ItemPersonaPagos = ({
     regular, 
     id_nivel, 
     nombre_nivel, 
-    nombre_grado
+    nombre_grado,
+    division
 }) => {
     const esInicial = String(id_nivel) === '1' || nombre_nivel?.toLowerCase().includes('inicial');
     const esPrimario = String(id_nivel) === '2' || nombre_nivel?.toLowerCase().includes('primario');
-    const textoNivelGrado = [nombre_nivel, nombre_grado].filter(Boolean).join(' - ');
+    const textoNivelGrado = [nombre_nivel, nombre_grado, division].filter(Boolean).join(' - ');
 
     const saldoNumerico = Number(saldo_total || 0);
     const esMayorACero = saldoNumerico > 0;
@@ -27,11 +28,11 @@ const ItemPersonaPagos = ({
 
     return (
         <tr className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
-            <td className="px-4 py-2 text-sm text-gray-900 bg-white whitespace-nowrap">{apellido}</td>
-            <td className="px-4 py-2 text-sm text-gray-700 bg-white whitespace-nowrap">{nombre}</td>
-            <td className="px-4 py-2 text-sm text-gray-700 bg-white whitespace-nowrap text-center">{tipo_documento}</td>
-            <td className="px-4 py-2 text-sm text-gray-700 bg-white whitespace-nowrap text-center">{numero}</td>
-            <td className="px-4 py-2 text-sm bg-white whitespace-nowrap text-center">  
+            <td className="px-2 py-2 text-sm text-gray-900 bg-white whitespace-nowrap">{apellido}</td>
+            <td className="px-2 py-2 text-sm text-gray-700 bg-white whitespace-nowrap">{nombre}</td>
+            <td className="px-2 py-2 text-sm text-gray-700 bg-white whitespace-nowrap text-center">{tipo_documento}</td>
+            <td className="px-2 py-2 text-sm text-gray-700 bg-white whitespace-nowrap text-center">{numero}</td>
+            <td className="px-2 py-2 text-sm bg-white whitespace-nowrap text-center">  
                 <div className="flex justify-center w-full">
                     {tipo_usuario === "S" && activo === "S" && regular === "S" ? (
                         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Alumno</span>
@@ -42,7 +43,7 @@ const ItemPersonaPagos = ({
                     )}
                 </div>
             </td>
-            <td className="px-4 py-2 text-sm bg-white whitespace-nowrap text-center">
+            <td className="px-2 py-2 text-sm bg-white whitespace-nowrap text-center">
                 <div className="flex justify-center w-full">
                     {esInicial ? (
                         <span className="px-3 py-1 rounded-full text-xs font-semibold bg-pink-100 text-pink-800 whitespace-nowrap">
@@ -61,7 +62,7 @@ const ItemPersonaPagos = ({
                     )}
                 </div>
             </td>
-            <td className="px-4 py-2 text-sm bg-white whitespace-nowrap text-center">
+            <td className="px-2 py-2 text-sm bg-white whitespace-nowrap text-center">
                 <div className="flex justify-center w-full">
                     <span className={`px-3 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
                         esMayorACero ? 'bg-red-100 text-red-800' : 'bg-sky-100 text-sky-800'
@@ -70,7 +71,7 @@ const ItemPersonaPagos = ({
                     </span>
                 </div>
             </td>
-            <td className="px-4 py-2 text-sm text-center bg-white whitespace-nowrap">
+            <td className="px-2 py-2 text-sm text-center bg-white whitespace-nowrap">
                 <div className="flex items-center justify-center gap-2">
                     <Link to={'/gestion/SaldoAlumno/' + id_alumno}>
                         <button className="inline-flex items-center justify-center p-1.5 bg-transparent hover:bg-blue-500 text-blue-700 hover:text-white border border-blue-500 hover:border-transparent rounded transition-all">

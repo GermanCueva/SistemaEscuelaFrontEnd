@@ -6,27 +6,13 @@ const ItemListAlumnos = ({ prods, setProds }) => {
             <table className="w-full text-left text-sm text-gray-700 border-collapse">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-100 border-b border-gray-200">
                     <tr>
-                        <th scope="col" className="px-4 py-3 whitespace-nowrap">
-                            Apellido
-                        </th>
-                        <th scope="col" className="px-4 py-3 whitespace-nowrap">
-                            Nombre
-                        </th>
-                        <th scope="col" className="px-3 py-3 text-center whitespace-nowrap">
-                            Tipo de Doc.
-                        </th>
-                        <th scope="col" className="px-3 py-3 text-center whitespace-nowrap">
-                            Nº Documento
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-center whitespace-nowrap">
-                            Alumno/Tutor
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-center whitespace-nowrap">
-                            Nivel
-                        </th>
-                        <th scope="col" className="px-4 py-3 text-center whitespace-nowrap">
-                            Acciones
-                        </th>
+                        <th scope="col" className="px-2 py-2.5 whitespace-nowrap">Apellido</th>
+                        <th scope="col" className="px-2 py-2.5 whitespace-nowrap">Nombre</th>
+                        <th scope="col" className="px-2 py-2.5 text-center whitespace-nowrap">Tipo Doc.</th>
+                        <th scope="col" className="px-2 py-2.5 text-center whitespace-nowrap">Nº Doc.</th>
+                        <th scope="col" className="px-2 py-2.5 text-center whitespace-nowrap">Alumno/Tutor</th>
+                        <th scope="col" className="px-2 py-2.5 text-center whitespace-nowrap">Nivel - Grado/Curso - División</th>
+                        <th scope="col" className="px-2 py-2.5 text-center whitespace-nowrap min-w-[80px]">Acciones</th>
                     </tr>
                 </thead>
 
@@ -46,6 +32,7 @@ const ItemListAlumnos = ({ prods, setProds }) => {
                                 regular={p.regular}
                                 nombre_nivel={p.nombre_nivel}
                                 nombre_grado={p.nombre_grado}
+                                division={p.division}
                                 esAlumno={true}
                                 setProds={setProds}
                             />
