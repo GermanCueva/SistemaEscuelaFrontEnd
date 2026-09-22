@@ -23,3 +23,9 @@ body {
 a {
   text-decoration: none;
 }
+
+/* Desactivar el ojo nativo de contraseñas de Edge y Chrome */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

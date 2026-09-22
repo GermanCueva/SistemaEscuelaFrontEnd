@@ -33,12 +33,15 @@ const ItemDetailPersona = () => {
   // Flag para saber si el registro de alumno ya existe en el backend (Modo Edición)
   const [hasAlumnoRecord, setHasAlumnoRecord] = useState(false);
 
+  //Sexos
+  const [sexos, setSexos] = useState([]);
+
   // ESTADO UNIFICADO
   const [pers, setPers] = useState({
     apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
     correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
     id_localidad_nacimiento: '', id_localidad_residencia: '',
-    id_nacionalidad: '', activo: '', es_alumno: '', usuario: '',
+    id_nacionalidad: '', activo: '', es_alumno: '', usuario: 'S/U',
     // Campos de Alumno
     legajo: '',
     extranjero: '',
@@ -55,6 +58,28 @@ const ItemDetailPersona = () => {
     formasPago: [] 
   });
 
+
+  // 2. Cargar los sexos al montar el componente
+useEffect(() => {
+  const fetchSexos = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/sexo`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) throw new Error("Error al obtener los tipos de sexo");
+      const data = await res.json();
+      setSexos(data);
+    } catch (error) {
+      console.error("Error cargando sexos:", error);
+    }
+  };
+
+  fetchSexos();
+}, []);
 
   // Helper seguro para mostrar notificaciones garantizadas
   const notificar = (mensaje, tipo = 'advertencia') => {
@@ -443,11 +468,11 @@ const ItemDetailPersona = () => {
 
       const esAlumno = String(pers.es_alumno).toUpperCase() === 'S' || pers.es_alumno === true || pers.es_alumno === 1 || Boolean(pers.legajo);
 
-      if (!esAlumno && (String(pers.usuario || '').trim() === '')) {
+    /*  if (!esAlumno && (String(pers.usuario || '').trim() === '')) {
           notificar("⚠️ Error: Debe ingresar un valor de Usuario antes de continuar.", 'advertencia');
           setSubSolapaActiva('alta');
           return;
-      }
+      }*/
 
       if (emailError || phoneError) { 
         notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
@@ -927,12 +952,22 @@ const ItemDetailPersona = () => {
                 </label>
 
                 <label className="form-control w-full">
-                  <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Sexo:</span>
-                  <select name="id_sexo" value={pers.id_sexo || ''} onChange={handleChange} className="select select-bordered w-full" style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px' }}>
-                    <option value="" disabled>Seleccione una opción</option>
-                    <option value="1">Masculino</option>
-                    <option value="2">Femenino</option>
-                  </select>
+                  <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>
+                    Sexo:
+                  </span>
+                    <select 
+                      name="id_sexo" 
+                      value={pers.id_sexo || ''} 
+                      onChange={handleChange} 
+                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-700"
+                    >
+                      <option value="" disabled>Seleccione una opción</option>
+                      {Array.isArray(sexos) && sexos.map((s) => (
+                        <option key={s.id_sexo} value={s.id_sexo}>
+                          {s.nombre}
+                        </option>
+                      ))}
+                    </select>
                 </label>
 
                 <label className="form-control w-full">
@@ -1003,7 +1038,7 @@ const ItemDetailPersona = () => {
                   </select>
                 </label>
 
-                <label className="form-control w-full">
+  {/*              <label className="form-control w-full">
                   <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Usuario:</span>
                   <input 
                     type="text" name="usuario" value={pers.usuario || ''} onChange={handleChange} className="input input-bordered w-full" 
@@ -1014,7 +1049,7 @@ const ItemDetailPersona = () => {
                       cursor: pers.es_alumno === 'S' ? 'not-allowed' : 'text'
                     }} 
                   />
-                </label>
+                </label>*/} 
 
               </div>
             </div>
