@@ -97,9 +97,9 @@ const Home = () => {
       {location.pathname.startsWith("/admin") && (
         <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300 scrollbar-thin">
           {[
-            { path: "/admin/instituciones", label: "ABM de Instituciones" },
-            { path: "/admin/usuarios", label: "Gestión de Usuarios" },
-            { path: "/admin/parametros", label: "Parámetros" },
+            { path: "/administracion/instituciones", label: "ABM de Instituciones" },
+            { path: "/administracion/usuarios", label: "Gestión de Usuarios" },
+            { path: "/administracion/parametros", label: "Parámetros" },
           ].map((sub) => {
             const active = location.pathname === sub.path;
             return (

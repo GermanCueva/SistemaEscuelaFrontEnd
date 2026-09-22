@@ -220,6 +220,7 @@ const ItemListContainerPersona = () => {
               onChange={handleTextChange}
               placeholder="Buscar por Apellido, Nombre o DNI..." 
               className="input input-bordered input-sm w-60 bg-white"
+              style={{ width: '280px' }} /* Forzado directo */
             />
           </div>
           

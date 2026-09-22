@@ -161,3 +161,14 @@ table {
   width: 100% !important;
   min-width: 750px !important;
 }
+
+/* Forzar que SweetAlert aparezca siempre por encima de cualquier Modal */
+.swal2-container {
+  z-index: 99999 !important;
+}
+
+/* Desactivar el ojo nativo de contraseñas de Edge y Chrome */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}

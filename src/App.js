@@ -17,6 +17,7 @@ import ItemGeneracionDebito from "./components/ItemGeneracionDebito";
 import ItemGestionPagoMasivo from "./components/ItemGestionPagoMasivo";
 import ItemGenerarCargosAlumnos from "./components/ItemGenerarCargosAlumnos";
 import ItemActualizarImporteCuotas from "./components/ItemActualizarImporteCuotas";
+import ABMUsuarios from  "./components/ItemABMUsuarios";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -246,7 +247,7 @@ function App() {
 
               <Route path="administracion">
                 <Route path="instituciones" element={<Administracion />} />
-                <Route path="usuarios" element={<Administracion />} />
+                <Route path="usuarios" element={<ABMUsuarios />} />
                 <Route path="parametros" element={<Administracion />} />
                 <Route path="cargos" element={<GestionPagos />} />
                 <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
