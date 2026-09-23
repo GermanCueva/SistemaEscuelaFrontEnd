@@ -73,13 +73,13 @@ const getImageUrl = (path) => {
 
   // Caso 1: Si la BD guarda solo el nombre de la foto (ej: "1790080...jpg")
   if (!path.includes('/')) {
-    return `${baseUrl}/public/img/usuarios/${path}`;
+    return `${baseUrl}/img/usuarios/${path}`;
   }
 
   // Caso 2: Si la BD guarda "img/usuarios/...jpg" sin la palabra 'public'
   if (path.startsWith('img/') || path.startsWith('/img/')) {
     const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${baseUrl}/public${cleanPath}`;
+    return `${baseUrl}/${cleanPath}`;
   }
 
   // Caso 3: Si la BD ya guarda "public/img/usuarios/...jpg"
