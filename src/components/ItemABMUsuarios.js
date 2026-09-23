@@ -66,24 +66,17 @@ const ABMUsuarios = () => {
 
   // Helper para construir la URL de la imagen guardada
 const getImageUrl = (path) => {
-  if (!path) return null;
+  if (!path) return '';
+
+  // Si ya es una URL completa (http/https), la devuelve tal cual
   if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  
+
   const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
-  // Caso 1: Si la BD guarda solo el nombre de la foto (ej: "1790080...jpg")
-  if (!path.includes('/')) {
-    return `${baseUrl}/img/usuarios/${path}`;
-  }
-
-  // Caso 2: Si la BD guarda "img/usuarios/...jpg" sin la palabra 'public'
-  if (path.startsWith('img/') || path.startsWith('/img/')) {
-    const cleanPath = path.startsWith('/') ? path : `/${path}`;
-    return `${baseUrl}/${cleanPath}`;
-  }
-
-  // Caso 3: Si la BD ya guarda "public/img/usuarios/...jpg"
+  // Asegura que empiece con '/'
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
+
+  // Resultado: http://localhost:8080/img/usuarios/1790102536420-comunicados.png
   return `${baseUrl}${cleanPath}`;
 };
 
