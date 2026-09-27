@@ -42,6 +42,8 @@ const ABMUsuarios = () => {
 
   // Estado del formulario
   const estadoInicialForm = {
+    id_persona: '',
+    id_usuario: '',
     apellido: '',
     nombre: '',
     nombreAMostrar: '',
@@ -368,7 +370,9 @@ const getImageUrl = (path) => {
       confirmPassword: '',
       idLocalidadNacimiento: usuario.id_localidad_nacimiento || usuario.idLocalidadNacimiento || '',
       idLocalidadResidencia: usuario.id_localidad_residencia || usuario.idLocalidadResidencia || '',
-      idNacionalidad: usuario.id_nacionalidad || usuario.idNacionalidad || ''
+      idNacionalidad: usuario.id_nacionalidad || usuario.idNacionalidad || '',
+      id_persona: usuario.id_persona,
+      id_usuario: usuario.id_usuario
     });
 
     setPreviewLocalUrl(null);
@@ -419,6 +423,8 @@ const handleGuardarUsuario = async (e) => {
 
       // 2. Construcción del Payload
       const payload = {
+        id_persona: formData.id_persona,
+        id_usuario: formData.id_usuario,
         apellido: formData.apellido,
         nombre: formData.nombre,
         nombreAMostrar: formData.nombreAMostrar,
@@ -437,7 +443,7 @@ const handleGuardarUsuario = async (e) => {
         id_localidad_residencia: formData.idLocalidadResidencia ? Number(formData.idLocalidadResidencia) : null,
         id_nacionalidad: formData.idNacionalidad ? Number(formData.idNacionalidad) : null
       };
-
+console.log(payload)
       if (formData.password.trim()) {
         payload.password = formData.password;
       }
