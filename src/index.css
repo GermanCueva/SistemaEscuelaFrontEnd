@@ -27,14 +27,9 @@ div:has(> button + button):not(td div) > a {
 }
 
 /* --- 2. CONTROL DE FORMULARIOS Y LOGIN --- */
-form {
-  max-width: 680px;
-  margin: 1.5rem auto;
-}
-
-form:has(input[type="password"]) {
-  max-width: 320px !important;
-  margin: 3rem auto !important;
+.login-container form {
+  max-width: 320px;
+  margin: 3rem auto;
 }
 
 body, #root {
