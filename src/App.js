@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { jwtDecode } from "jwt-decode";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -18,6 +18,7 @@ import ItemGestionPagoMasivo from "./components/ItemGestionPagoMasivo";
 import ItemGenerarCargosAlumnos from "./components/ItemGenerarCargosAlumnos";
 import ItemActualizarImporteCuotas from "./components/ItemActualizarImporteCuotas";
 import ABMUsuarios from  "./components/ItemABMUsuarios";
+import ItemTutorMisAlumnos from "./components/ItemTutorMisAlumnos";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -39,10 +40,9 @@ function App() {
   const navigate = useNavigate();
   const { user, isAuth, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
 
   useEffect(() => {
-    setMenuOpen(false);
-
     let meta = document.querySelector("meta[name='viewport']");
     if (!meta) {
       meta = document.createElement('meta');
@@ -52,11 +52,17 @@ function App() {
     meta.content = 'width=device-width, initial-scale=1.0';
   }, []);
 
+  // Cerrar menú al hacer clic fuera del componente
   useEffect(() => {
-    const cerrarMenu = () => setMenuOpen(false);
-    window.addEventListener("click", cerrarMenu);
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      window.removeEventListener("click", cerrarMenu);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -168,44 +174,66 @@ function App() {
               Bienvenidos al Sistema de Gestión de {escuelaInfo.nombre}
             </p>
 
-            {/* Botón y Dropdown de Usuario */}
+            {/* Controles de Usuario y Logout */}
             {isAuth && (
-              <div className="relative">
+              <div className="flex items-center gap-2">
+                {/* Botón y Dropdown de Usuario */}
+                <div className="relative" ref={menuRef}>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer"
+                    onClick={() => setMenuOpen((prev) => !prev)}
+                  >
+                    <span>{user?.usuario || "Usuario"}</span>
+                    <span className="text-xs">▼</span>
+                  </button>
+
+                  {menuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl border border-gray-200 z-50 py-1">
+                      <div className="px-4 py-2 border-b border-gray-100 text-xs text-gray-500">
+                        Usuario: <span className="font-semibold text-gray-700">{user?.usuario}</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 flex items-center gap-2 transition-colors cursor-pointer"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          navigate("/perfil");
+                        }}
+                      >
+                        Editar perfil
+                      </button>
+
+                      <button
+                        type="button"
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          logout();
+                          navigate("/login");
+                        }}
+                      >
+                        <LogOut size={16} />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Botón directo de Logout visible */}
                 <button
-                  className="flex items-center gap-2 bg-white/10 hover:bg-white/20 active:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setMenuOpen((prev) => !prev);
+                  type="button"
+                  title="Cerrar sesión"
+                  className="flex items-center gap-1.5 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-all shadow-sm cursor-pointer"
+                  onClick={() => {
+                    logout();
+                    navigate("/login");
                   }}
                 >
-                  <span>{user?.usuario || "Usuario"}</span>
-                  <span className="text-xs">▼</span>
+                  <LogOut size={16} />
+                  <span className="hidden sm:inline">Logout</span>
                 </button>
-
-                {menuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded-lg shadow-xl border border-gray-200 z-50 py-1">
-                    <button
-                      className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 flex items-center gap-2 transition-colors"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        navigate("/perfil");
-                      }}
-                    >
-                      Editar perfil
-                    </button>
-
-                    <button
-                      className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-100"
-                      onClick={() => {
-                        logout();
-                        navigate("/login");
-                      }}
-                    >
-                      <LogOut size={16} />
-                      Cerrar sesión
-                    </button>
-                  </div>
-                )}
               </div>
             )}
           </div>
@@ -257,7 +285,7 @@ function App() {
               </Route>
 
               <Route path="perfil" element={<div>Editar perfil</div>} />
-              <Route path="tutor" element={<div>Contenido Tutor</div>} />
+              <Route path="tutor" element={<ItemTutorMisAlumnos />} />
               <Route path="reportes" element={<div>Contenido Reportes</div>} />
               <Route path="admin" element={<div>Contenido Admin</div>} />
             </Route>
