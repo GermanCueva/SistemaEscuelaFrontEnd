@@ -50,6 +50,17 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("loginTime");
   };
 
+  // ==========================================
+  // ACTUALIZAR USUARIO
+  // ==========================================
+  const updateUser = (nuevosDatos) => {
+    setUser((prev) => {
+      const actualizado = { ...prev, ...nuevosDatos };
+      localStorage.setItem("usuario", JSON.stringify(actualizado));
+      return actualizado;
+    });
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -57,6 +68,7 @@ export function AuthProvider({ children }) {
         isAuth: user !== null,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}
