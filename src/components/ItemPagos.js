@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { Search, FileText, Check, FileX } from 'lucide-react';
+import { Search, FileText, Check, FileX, X } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { NumerosALetras } from 'numero-a-letras';
 import { saveAs } from 'file-saver';
@@ -77,7 +77,35 @@ const obtenerDatosAfipYQr = async (row) => {
 };
 
 
+const obtenerTipoUsuario = () => {
+  // 1. Leer primero del objeto "usuario" en localStorage
+  const usuarioStorage = localStorage.getItem("usuario");
+  if (usuarioStorage) {
+    try {
+      const usuarioObj = JSON.parse(usuarioStorage);
+      if (usuarioObj.idtipoUsuario !== undefined) {
+        return Number(usuarioObj.idtipoUsuario);
+      }
+    } catch (error) {
+      console.error("Error al leer usuario de localStorage:", error);
+    }
+  }
 
+  // 2. Respaldo: Decodificar desde el token JWT si no está en localStorage
+  const token = localStorage.getItem("token");
+  if (token) {
+    try {
+      const payloadBase64 = token.split(".")[1];
+      const payload = JSON.parse(atob(payloadBase64));
+      const tipo = payload.idtipoUsuario ?? payload.id_tipo_usuario ?? payload.idtipousuario;
+      return tipo !== undefined ? Number(tipo) : null;
+    } catch (error) {
+      console.error("Error al decodificar token:", error);
+    }
+  }
+
+  return null;
+};
 
 
 const ItemPagos = () => {
@@ -96,6 +124,9 @@ const ItemPagos = () => {
   const [nombreLegajo, setNombreLegajo] = useState(true);
 
   const [valorPuntoVenta, setValorPuntoVenta] = useState(null);
+
+  const tipoUsuario = obtenerTipoUsuario();
+
 
 useEffect(() => {
   const obtenerParametros = async () => {
@@ -655,6 +686,11 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
                           estaPagada ? (
                             <span title="Cuota Saldada" className="text-green-600 flex items-center justify-center p-1">
                               <Check className="w-5 h-5 font-bold" />
+                            </span>
+                          ): tipoUsuario === 3 ? (
+                            /* 🔹 Para Tipo 3 (Tutor): Muestra solo la cruz roja */
+                            <span title="Falta pagar" className="text-red-600 flex items-center justify-center p-1">
+                              <X className="w-5 h-5 font-bold" />
                             </span>
                           ) : (
                             <button

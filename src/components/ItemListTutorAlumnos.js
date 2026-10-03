@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react"
 import { useParams, Link } from "react-router-dom";
 import { Search } from 'lucide-react';
-
+//import { useRol } from "./useRole.js";
 
 
 const ItemListTutorAlumnos = () => {
   
+      //const { esSoloLectura } = useRol();
+
       const { id } = useParams();
     
       const [pers, setpers] = useState([])
@@ -71,8 +73,7 @@ const ItemListTutorAlumnos = () => {
                         <th scope="col" className="px-3 py-30 text-center">
                             Acciones
                         </th>
-
-                    </tr>
+                       </tr>
                 </thead>
 
                 {/* Los datos siempre deben ir en <tbody> */}

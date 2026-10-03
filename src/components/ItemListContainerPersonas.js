@@ -5,6 +5,7 @@ import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react';
 
+
 const ItemListContainerPersona = () => {
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -25,6 +26,7 @@ const ItemListContainerPersona = () => {
     idGrado: '',
     idDivision: ''
   })
+
 
   const token = localStorage.getItem('token')
 
@@ -322,6 +324,7 @@ const ItemListContainerPersona = () => {
       )}
     </div>
   )
+  
 }
 
 export default ItemListContainerPersona

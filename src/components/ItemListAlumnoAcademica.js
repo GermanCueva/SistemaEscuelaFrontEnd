@@ -1,13 +1,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
 import { avisar } from "../utils/notificaciones";
+import { useRol } from "./useRole.js";
+
 
 const ItemListAlumnoAcademica = ({ idAlumno, idPersona, onCambioDatos, onEliminarBackend }) => {
   const [listado, setListado] = useState([]);
   const [cargando, setCargando] = useState(false);
   const token = localStorage.getItem("token");
   const idFinal = idAlumno;
-
+  const { esSoloLectura } = useRol();
   // Estados para catálogos
   const [listaGrados, setGrados] = useState([]);
   const [listaAniosCursado, setAniosCursado] = useState([]);
@@ -228,10 +230,12 @@ const guardarNuevo = () => {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
+        {!esSoloLectura && (
         <button onClick={() => setIsAdding(!isAdding)} className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
           {isAdding ? <X size={16} /> : <Plus size={16} />}
           {isAdding ? "Cancelar" : "Nuevo Registro"}
         </button>
+        )}
       </div>
 
 {/* 🔹 1. Envoltorio con scroll horizontal habilitado */}
@@ -245,7 +249,9 @@ const guardarNuevo = () => {
               <th className="px-4 py-3"><div className="flex justify-center w-full">Año Cursada</div></th>
               <th className="px-2 py-3"><div className="flex justify-center w-full">¿Generó Cargo?</div></th>
               <th className="px-2 py-3"><div className="flex justify-center w-full">¿Pagó Cargo?</div></th>
+              {!esSoloLectura && (
               <th className="px-4 py-3 text-center">Acciones</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -360,10 +366,12 @@ const guardarNuevo = () => {
                       <td className="px-2 py-1"><div className="flex justify-center w-full">
                         <span className={`px-2 py-1 rounded font-semibold ${item.pago_cargo === 'S' ? 'text-green-700 bg-green-50' : 'text-gray-500'}`}>{formatBoolean(item.pago_inscripcion || 'N')}</span>
                      </div></td>
+                         {!esSoloLectura && (
                       <td className="px-2 py-3 text-center flex justify-center gap-3">
                         <button onClick={() => iniciarEdicion(item, index)} className="text-blue-600"><Pencil size={18} /></button>
                         <button onClick={() => eliminarRegistro(idRegistro)} className="text-red-600"><Trash2 size={18} /></button>
                       </td>
+                       ) }
                     </>
                   )}
                 </tr>

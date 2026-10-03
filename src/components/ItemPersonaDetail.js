@@ -8,10 +8,11 @@ import { avisar } from "../utils/notificaciones.js";
 import ItemListAlumnoAllegados from "./ItemListAlumnoAllegados.js";
 import ItemListAlumnoAcademica from "./ItemListAlumnoAcademica.js";
 import ItemListAlumnoFormaPago from "./ItemListAlumnoFormaPago.js";
+import { useRol } from "./useRole.js";
 
 
 const ItemDetailPersona = () => {
-
+  const { esSoloLectura } = useRol();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -810,6 +811,7 @@ useEffect(() => {
       
       {/* Botones de Navegación de Pestañas locales */}
 <div className="flex flex-wrap gap-2 p-3 bg-gray-100/60 border-b border-gray-200">
+
         <button onClick={() => setSubSolapaActiva('alta')} style={subSolapaActiva === 'alta' ? styles.activeSubTab : styles.subTab}>
           {isEditMode ? 'Editar Persona' : 'Alta de Persona'}
         </button>
@@ -933,9 +935,14 @@ useEffect(() => {
   
       {subSolapaActiva === 'alta' && (
         <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
+          <fieldset disabled={esSoloLectura}>
             <div className="mb-8 border-b pb-4">
               <h2 className="text-2xl font-bold text-gray-800">
-                {isEditMode ? 'Editar Perfil de Persona' : 'Alta de Persona'}
+                {esSoloLectura
+                  ? 'Ver Perfil de Persona'
+                  : isEditMode
+                  ? 'Editar Perfil de Persona'
+                  : 'Alta de Persona'}
               </h2>
             </div>
             
@@ -1053,17 +1060,28 @@ useEffect(() => {
 
               </div>
             </div>
+            </fieldset>
         </div>
       )}
 
       {/* BOTONES GLOBALES CENTRALES */}
       <div className="max-w-4xl mx-auto flex justify-end mt-4 gap-4 px-8">
+        {!esSoloLectura && (
         <Link to={'/personas/abm'}>
           <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
         </Link>
+        )}
+        {esSoloLectura && (
+        <Link to={'/tutor'}>
+          <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cerrar</button>
+        </Link>
+        )}
+        {!esSoloLectura && (
         <button onClick={grabar} type="button" className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
           {isEditMode ? 'Guardar Cambios Totales' : 'Registrar Persona Completa'}
         </button>
+        )}
+        
       </div>
 
     </div>  
