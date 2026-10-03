@@ -4,9 +4,11 @@ import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
 import { Link } from 'react-router-dom'
 import { Plus } from 'lucide-react';
+import { useAuth } from "../context/AuthContext";
 
 
 const ItemListContainerPersona = () => {
+  const { user } = useAuth();
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [descargando, setDescargando] = useState(false)
@@ -27,11 +29,9 @@ const ItemListContainerPersona = () => {
     idDivision: ''
   })
 
-
-  const token = localStorage.getItem('token')
-
   useEffect(() => {
     setCargando(true)
+    const token = localStorage.getItem('token')
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -58,7 +58,7 @@ const ItemListContainerPersona = () => {
         setDivisiones([])
         setCargando(false)
       })
-  }, [token])
+  }, [user?.identidadeducativa])
 
   const gradosFiltrados = useMemo(() => {
     if (!filtros.idNivel) return grados;

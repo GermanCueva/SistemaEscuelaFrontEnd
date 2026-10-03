@@ -8,6 +8,7 @@ import {
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { ReporteTabs } from './ReporteTabs'; // O la ruta donde lo ubiques
+import { useAuth } from '../context/AuthContext';
 
 
 const MySwal = withReactContent(Swal);
@@ -65,6 +66,7 @@ const MAPA_MESES = {
 };
 
 const GenerarCargosAlumnos = () => {
+  const { user } = useAuth();
   const [formData, setFormData] = useState(initialFormData);
 
   const [alumnos, setAlumnos] = useState([]);
@@ -122,7 +124,7 @@ const GenerarCargosAlumnos = () => {
     };
 
     fetchData();
-  }, []);
+  }, [user?.identidadeducativa]);
 
   useEffect(() => {
     const obtenerParametros = async () => {
@@ -163,7 +165,7 @@ const GenerarCargosAlumnos = () => {
     };
 
     obtenerParametros();
-  }, []);
+  }, [user?.identidadeducativa]);
 
   // Extrae lista única de grados desde la respuesta de alumnos
   const gradosDisponibles = useMemo(() => {

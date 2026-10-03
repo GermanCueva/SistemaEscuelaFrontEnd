@@ -2,8 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from "react"
 import ItemListAlumnosPagos from './ItemListAlumnosPagos'
 import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
+import { useAuth } from "../context/AuthContext";
 
 const ItemListContainerAlumnosPagos = () => {
+  const { user } = useAuth();
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [descargando, setDescargando] = useState(false)
@@ -15,7 +17,7 @@ const ItemListContainerAlumnosPagos = () => {
   const [niveles, setNiveles] = useState([])
   const [grados, setGrados] = useState([])
   const [divisiones, setDivisiones] = useState([])
-  const [idEntidad, setIdEntidad] = useState(null)
+  const idEntidad = user?.identidadeducativa;
 
   const [textoBusqueda, setTextoBusqueda] = useState('')
 
@@ -26,20 +28,9 @@ const ItemListContainerAlumnosPagos = () => {
     idDivision: ''
   })
 
-  const token = localStorage.getItem('token')
-
   useEffect(() => {
     setCargando(true)
-
-    if (token) {
-      try {
-        const payloadBase64 = token.split('.')[1];
-        const decodedPayload = JSON.parse(atob(payloadBase64));
-        setIdEntidad(decodedPayload.user?.identidadeducativa);
-      } catch (error) {
-        console.error("Error al decodificar el token", error);
-      }
-    }
+    const token = localStorage.getItem('token')
 
     const headers = {
       'Content-Type': 'application/json',
@@ -67,7 +58,7 @@ const ItemListContainerAlumnosPagos = () => {
         setDivisiones([])
         setCargando(false)
       })
-  }, [token])
+  }, [user?.identidadeducativa])
 
   const handleSaldoCargado = useCallback((id_alumno, saldo) => {
     setSaldos(prev => {
