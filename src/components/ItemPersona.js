@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Search, Trash2 } from 'lucide-react';
 
+
+
 const ItemPersona = ({ 
     apellido, 
     nombre, 
@@ -17,6 +19,8 @@ const ItemPersona = ({
     esAlumno, 
     setProds 
 }) => {
+
+
 
   const cambiar_estado = async (e) => {
     e.preventDefault();
@@ -55,7 +59,9 @@ const ItemPersona = ({
     return "bg-gray-100 text-gray-800 border-gray-200";
   };
 
+
   return (
+
     <tr className="bg-white border-b border-gray-200 hover:bg-gray-50 transition-colors">
         <td className="px-2 py-2 text-sm text-gray-900 whitespace-nowrap">{apellido}</td>
         <td className="px-2 py-2 text-sm text-gray-700 whitespace-nowrap">{nombre}</td>

@@ -1,8 +1,11 @@
 import { Search, Trash2, X } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import { avisar } from "../utils/notificaciones.js";
+import { useRol } from "./useRole.js";
+
 
 const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarBackend }) => {
+    const { esSoloLectura } = useRol();
     const [isEditing, setIsEditing] = useState(false);
     const [editingDocId, setEditingDocId] = useState(null);
 
@@ -135,7 +138,11 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
         <div className="w-full max-w-4xl mx-auto p-4">
             
             {/* TABLA DE DOCUMENTOS TEMPORALES */}
-<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">                    <h3 className="text-xl font-bold text-gray-800 mb-4 px-2 text-left">Documentos Asignados (Pendientes de guardar)</h3>
+<div className="w-full max-w-full overflow-x-auto bg-white rounded-lg border border-gray-200 shadow-sm my-4">                    
+    <h3 className="text-xl font-bold text-gray-800 mb-4 px-2 text-left">{esSoloLectura 
+    ? 'Documentos Asignados' 
+    : 'Documentos Asignados (Pendientes de guardar)'}
+    </h3>
 <table className="w-full min-w-[750px] text-left text-sm text-gray-700">
                         <thead className="text-xs text-gray-700 uppercase bg-gray-100">
                         <tr>
@@ -144,11 +151,13 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                             <th scope="col" className="px-6 py-3">Número de Documento</th>
                           </div>       
                             <th scope="col" className="px-6 py-3">Activo</th>
+                             {!esSoloLectura && (
                             <th scope="col" className="px-6 py-3 text-center">Acciones</th>
+                             )}
                         </tr>
                     </thead>
 
-<tbody className="divide-y divide-gray-200 text-sm">
+                    <tbody className="divide-y divide-gray-200 text-sm">
                             {docs && docs.length > 0 ? (
                             docs.map(d => {
                                 const currentId = d.id || d.id_persona_tipo_documento || d.id_tipo_documento;
@@ -157,6 +166,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                                 );
 
                                 return (
+                     
                                     <tr key={currentId} className="odd:bg-white even:bg-gray-50 border-b hover:bg-gray-100 transition-colors">
                                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
                                           <div className="flex justify-left w-full">
@@ -173,6 +183,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                                             {d.activo === 'S' || d.activo === 'A' ? 'Activo' : 'Inactivo'}
                                            </div>
                                         </td>
+                                          {!esSoloLectura && (
                                         <td className="px-6 py-4 text-center flex justify-center gap-2">
                                             <button 
                                                 type="button"
@@ -190,6 +201,7 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                                                 <Trash2 size={16} />
                                             </button>
                                         </td>
+                                        )}
                                     </tr>
                                 );
                             })
@@ -200,11 +212,13 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                                 </td>
                             </tr>
                         )}
+                      
                     </tbody>
                 </table>
             </div>
     
             {/* FORMULARIO DE ACCIÓN EN MEMORIA */}
+            {!esSoloLectura && (
             <div className="max-w-md mx-auto p-8 bg-white rounded-xl shadow-md border border-gray-100">
                 <div className="mb-6 border-b pb-4 flex justify-between items-center">
                     <h2 className="text-2xl font-bold text-gray-800 text-left">
@@ -220,8 +234,10 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                         </button>
                     )}
                 </div>
+               
                 
                 <div className="flex flex-col gap-6">
+                       <fieldset disabled={esSoloLectura}>
                     <div className="flex flex-col gap-2 w-full">
                         <label className="font-bold text-gray-700 text-left">Tipo de Documento:</label>
                         <select 
@@ -275,8 +291,11 @@ const ItemDetailPersonaDocumentoAlta = ({ docs, setDocs, isEditMode, onEliminarB
                             {isEditing ? 'Confirmar Cambios en Grilla' : 'Cargar en Grilla Temporal'}
                         </button>
                     </div>
+                    </fieldset>
                 </div>
+               
             </div> 
+             )}
         </div>  
     );
 };

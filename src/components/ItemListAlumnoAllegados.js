@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { Search, Pencil, Trash2, Check, X, Plus } from "lucide-react";
 import { avisar } from "../utils/notificaciones";
+import { useRol } from "./useRole.js";
 
 
 // Helper global totalmente seguro para convertir a minúsculas
@@ -23,7 +24,7 @@ const ItemListAlumnoAllegados = ({
   const [listaTiposAllegados, setTiposAllegados] = useState([]);
   const [listaPersonas, setListaPersonas] = useState([]);
   const [personaSeleccionada, setPersonaSeleccionada] = useState(null);
-
+  const { esSoloLectura } = useRol();
   const token = localStorage.getItem("token");
 
 // Prevenir errores si allegados no es un array válido (Memorizado para evitar advertencias de React)
@@ -355,6 +356,7 @@ useEffect(() => {
       </datalist>
 
       <div className="flex justify-end px-2">
+        {!esSoloLectura && (
         <button
           type="button"
           onClick={handleAddRow}
@@ -363,6 +365,7 @@ useEffect(() => {
         >
           <Plus size={16} /> Agregar Allegado
         </button>
+        ) }
       </div>
 
 {/* 🔹 1. Envoltorio con scroll horizontal habilitado */}
@@ -599,6 +602,8 @@ useEffect(() => {
                                 <Search size={18} />
                               </button>
                             </Link>
+                       {!esSoloLectura && (
+                       <>   
                             <button
                               type="button"
                               onClick={() => handleEditClick(p)}
@@ -615,6 +620,8 @@ useEffect(() => {
                             >
                               <Trash2 size={18} />
                             </button>
+                            </>
+                          )}
                           </>
                         )}
                       </div>
@@ -634,6 +641,7 @@ useEffect(() => {
       </div>
 
       <div className="flex justify-end gap-3 mt-4 px-2">
+        {!esSoloLectura && (
         <button
           type="button"
           onClick={onRecargar}
@@ -641,6 +649,7 @@ useEffect(() => {
         >
           Recargar Lista
         </button>
+        )}
       </div>
     </div>
   );

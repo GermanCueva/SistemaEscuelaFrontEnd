@@ -5,7 +5,8 @@ import {
 } from '../utils/alerts';
 import Swal from 'sweetalert2';
 import { avisar } from '../utils/notificaciones';
-import { Eye, EyeOff, User, MapPin, Key, Camera, X, Info, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, User, MapPin, Key, Camera, X, Info, AlertCircle, Search, Trash2 } from 'lucide-react';
+
 
 const ABMUsuarios = () => {
   // Estados para datos
@@ -487,6 +488,44 @@ const ABMUsuarios = () => {
     }
   };
 
+
+  // Con fetch (JavaScript estándar)
+const handleDelete = async (id_usuario) => {
+
+  const confirmado = await showConfirm('¿Estás seguro de que deseas eliminar este usuario?');
+
+  if (!confirmado?.isConfirmed) return;
+
+  
+  try {
+        const token = localStorage.getItem("token");
+
+    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/usuarios/${id_usuario}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+        // Si tu API requiere autenticación:
+         'Authorization': `Bearer ${token}`
+      },
+    });
+
+    if (response.ok) {
+      // Remover el usuario de la lista en memoria (ej. React State)
+      setUsuarios((prevUsuarios) =>
+        prevUsuarios.filter((usuario) => usuario.id_usuario !== id_usuario)
+      );
+      showSuccess("El usuario fué eliminado con éxito")
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      showError(errorData.mensaje || 'Error al eliminar el usuario.');
+    }
+  } catch (error) {
+    console.error('Error al realizar el DELETE:', error);
+    showError('Ocurrió un error al conectar con el servidor.');
+  }
+};
+
+
   const handleSelectTutor = (idPersona) => {
     if (!idPersona) return;
     if (selectedTutores.includes(idPersona)) {
@@ -557,6 +596,60 @@ const ABMUsuarios = () => {
       setLoading(false);
     }
   };
+
+
+
+  const buscarPersonaExistente = async () => {
+  const { idTipoDocumento, numeroDocumento } = formData;
+
+  // Solo buscar si ambos campos están completos
+  if (!idTipoDocumento || !numeroDocumento) return;
+
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/persons/buscar-por-documento?id_tipo_documento=${idTipoDocumento}&numero_documento=${numeroDocumento}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.existe) {
+      const p = data.persona;
+
+      // Autocompletar el estado del formulario con los datos encontrados
+      setFormData((prev) => ({
+        ...prev,
+        id_persona: p.id_persona, // Guardar ID para asociarlo si ya existe
+        nombre: p.nombres || '',
+        apellido: p.apellidos || '',
+        nombreAMostrar: p.nombre || `${p.apellidos}, ${p.nombres}`,
+        fechaNacimiento: p.fecha_nacimiento ? p.fecha_nacimiento.split('T')[0] : '',
+        sexo: p.id_sexo || '',
+        telefono: p.telefono || '',
+        email: p.email || prev.email,
+        password: '',
+        idLocalidadNacimiento: p.id_localidad_nacimiento,
+        idLocalidadResidencia: p.id_localidad_residencia,
+        idNacionalidad: p.id_nacionalidad,
+        activo: p.activo,
+        usuario: p.usuario,
+        idTipoUsuario: p.idtipousuario,
+        imagenUrl: p.imagen
+      }));
+
+      showSuccess('Persona encontrada. Se autocompletaron los datos.');
+    }
+  } catch (error) {
+    showError('Error al autocompletar persona:', error);
+  }
+};
+
+
 
   const inputClass = "w-full box-border h-10 px-3 bg-white border border-gray-300 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all disabled:bg-gray-100/80 disabled:text-gray-500 disabled:border-gray-200 disabled:cursor-not-allowed";
   const labelClass = "block text-xs font-semibold text-gray-600 mb-1 tracking-wide";
@@ -734,7 +827,15 @@ const ABMUsuarios = () => {
                           onClick={() => handleAbrirEdicion(u)}
                           className="text-indigo-600 hover:text-indigo-900 font-semibold transition"
                         >
-                          Editar
+                          <Search size={20} />
+                        </button>
+                        {/* Nuevo Botón Eliminar */}
+                        <button
+                          onClick={() => handleDelete(u.id_usuario)}
+                          className="btn-danger"
+                          style={{ marginLeft: '8px' }}
+                        >
+                          <Trash2 size={20} />
                         </button>
                       </td>
                     </tr>
@@ -834,7 +935,15 @@ const ABMUsuarios = () => {
                   {modoEdicion ? 'Editar Usuario' : 'Nuevo Usuario'}
                 </h2>
                 <p className="text-xs text-gray-500">
-                  {modoEdicion ? 'Modifique los datos del usuario.' : 'Complete los datos requeridos para dar de alta un usuario.'}
+{modoEdicion ? (
+  'Modifique los datos del usuario.'
+) : (             <>
+                    Complete los datos requeridos para dar de alta un usuario.
+                    <span className="block mt-1 text-red-600 font-medium">
+                      <strong className="font-bold">NOTA: </strong>si la persona ya existe, ingrese Tipo y Número de Documento y los datos se autocompletarán.
+                    </span>
+                  </>
+                )}
                 </p>
               </div>
               <button
@@ -954,14 +1063,19 @@ const ABMUsuarios = () => {
                       <select
                         name="idTipoDocumento"
                         value={formData.idTipoDocumento}
-                        onChange={handleSelectTipoDocumento}
+                        //onChange={handleSelectTipoDocumento}
+                        onChange={(e) => {
+                            handleSelectTipoDocumento(e);
+                            // Si ya había ingresado número de documento, dispara la búsqueda
+                            if (formData.numeroDocumento) buscarPersonaExistente();
+                          }}
                         disabled={esTutorEnEdicion}
                         className={inputClass}
                       >
                         <option value="">Seleccionar...</option>
                         {tiposDocumento.map((doc) => (
                           <option key={doc.id_tipo_documento} value={doc.id_tipo_documento}>
-                            {doc.nombre_corto || doc.nombre}
+                            {doc.nombre || doc.nombre_corto}
                           </option>
                         ))}
                       </select>
@@ -973,6 +1087,7 @@ const ABMUsuarios = () => {
                         name="numeroDocumento"
                         value={formData.numeroDocumento}
                         onChange={handleInputChange}
+                        onBlur={buscarPersonaExistente}
                         disabled={esTutorEnEdicion}
                         className={inputClass}
                       />

@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { useRol } from "./useRole.js";
+
 
 const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
+    const { esSoloLectura } = useRol();
     const [desercion, setDesercion] = useState([]);
 
     const cargarDeserciones = useCallback(() => {
@@ -30,7 +33,9 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
         <div style={{ padding: '0px', backgroundColor: '#ffffff' }}>
             {/* Forzamos una sola columna vertical limpia con espaciado constante */}
             <div className="flex flex-col gap-4 max-w-xl mx-auto">
-                
+            
+            <fieldset disabled={esSoloLectura}>
+
                 <label className="form-control w-full">
                     <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left', marginBottom: '4px' }}>Legajo:</span>
                     <input 
@@ -159,7 +164,7 @@ const ItemPersonaAlumnoDetailAlta = ({ formData, handleChange }) => {
                         style={{ border: '1px solid #ccc', padding: '8px', borderRadius: '4px', width: '50%' }}
                     />
                 </label>
-
+               </fieldset>
             </div>
         </div>
     );

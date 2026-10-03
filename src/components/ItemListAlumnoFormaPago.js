@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Pencil, Trash2, Check, X, Plus } from "lucide-react";
 import { avisar } from "../utils/notificaciones";
+import { useRol } from "./useRole.js";
+
 
 const ItemListAlumnoFormaPago = ({ 
   idAlumno, 
@@ -13,7 +15,7 @@ const ItemListAlumnoFormaPago = ({
   // Inicializamos el estado directamente con las props que vienen del padre
   const [listado, setListado] = useState(Array.isArray(formasPago) ? formasPago : []);
   const token = localStorage.getItem("token");
-
+  const { esSoloLectura } = useRol();
   // Estados para catálogos
   const [listaMediosPago, setMediosPago] = useState([]);
   const [listaMarcas, setMarcas] = useState([]);
@@ -356,6 +358,7 @@ if (esTarjeta) {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex justify-end">
+        {!esSoloLectura && (
         <button 
           onClick={() => setIsAdding(!isAdding)} 
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
@@ -363,6 +366,7 @@ if (esTarjeta) {
           {isAdding ? <X size={16} /> : <Plus size={16} />}
           {isAdding ? "Cancelar" : "Nuevo Registro"}
         </button>
+        )}
       </div>
 
 {/* 🔹 1. Envoltorio con scroll horizontal habilitado */}
@@ -376,7 +380,9 @@ if (esTarjeta) {
               <th className="px-4 py-3 text-left">N° Tarjeta</th>
               <th className="px-4 py-3 text-left">Titular</th>
               <th className="px-4 py-3"><div className="flex items-center justify-center">Activa</div></th>  
+             {!esSoloLectura && (
               <th className="px-4 py-3 text-center">Acciones</th>
+             )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -657,10 +663,12 @@ if (esTarjeta) {
                         </div>
                       </td>
                       <td className="px-4 py-3 text-center">
+                          {!esSoloLectura && (
                         <div className="flex items-center justify-center gap-3">
                           <button onClick={() => iniciarEdicion(item, index)} className="text-blue-600 hover:text-blue-800"><Pencil size={18} /></button>
                           <button onClick={() => eliminarRegistro(idRegistro)} className="text-red-600 hover:text-red-800"><Trash2 size={18} /></button>
                         </div>
+                          )}
                       </td>
                     </>
                   )}
