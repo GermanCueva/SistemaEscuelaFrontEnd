@@ -20,6 +20,7 @@ import ItemActualizarImporteCuotas from "./components/ItemActualizarImporteCuota
 import ABMUsuarios from  "./components/ItemABMUsuarios";
 import ItemTutorMisAlumnos from "./components/ItemTutorMisAlumnos";
 import ItemPerfilUsuario from "./components/ItemPerfilUsuario";
+import ItemSeleccionInstitucion from "./components/ItemSeleccionInstitucion";
 
 import { useAuth } from "./context/AuthContext";
 
@@ -39,7 +40,7 @@ function App() {
   });
 
   const navigate = useNavigate();
-  const { user, isAuth, logout } = useAuth();
+  const { user, isAuth, logout, requiereSeleccionInstitucion } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
 
@@ -124,9 +125,9 @@ function App() {
     };
   }, [logout, navigate]);
 
-  // Petición a la BD cuando la App se monta
+  // Petición a la BD cuando la App se monta o cambia la institución activa
   useEffect(() => {
-    if (isAuth) {
+    if (isAuth && !requiereSeleccionInstitucion) {
       const token = localStorage.getItem("token");
 
       fetch(`${process.env.REACT_APP_API_URL}/api/escuela`, {
@@ -150,7 +151,7 @@ function App() {
           });
         });
     }
-  }, [isAuth]);
+  }, [isAuth, requiereSeleccionInstitucion, user?.identidadeducativa]);
 
   const getImageUrl = (path) => {
     if (!path) return "";
@@ -235,6 +236,19 @@ function App() {
                         Editar perfil
                       </button>
 
+                      {(user?.entidades?.length || 0) > 1 && (
+                        <button
+                          type="button"
+                          className="w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 flex items-center gap-2 transition-colors cursor-pointer"
+                          onClick={() => {
+                            setMenuOpen(false);
+                            navigate("/seleccionar-institucion");
+                          }}
+                        >
+                          Cambiar institución
+                        </button>
+                      )}
+
                       <button
                         type="button"
                         className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors border-t border-gray-100 cursor-pointer"
@@ -279,10 +293,32 @@ function App() {
               element={isAuth ? <Navigate to="/" replace /> : <Login />}
             />
 
+            {/* SELECCIÓN DE INSTITUCIÓN (solo si pertenece a más de una) */}
+            <Route
+              path="/seleccionar-institucion"
+              element={
+                !isAuth ? (
+                  <Navigate to="/login" replace />
+                ) : (user?.entidades?.length || 0) > 1 ? (
+                  <ItemSeleccionInstitucion />
+                ) : (
+                  <Navigate to="/" replace />
+                )
+              }
+            />
+
             {/* RUTAS PROTEGIDAS */}
             <Route
               path="/"
-              element={isAuth ? <Home /> : <Navigate to="/login" replace />}
+              element={
+                !isAuth ? (
+                  <Navigate to="/login" replace />
+                ) : requiereSeleccionInstitucion ? (
+                  <Navigate to="/seleccionar-institucion" replace />
+                ) : (
+                  <Home />
+                )
+              }
             >
               <Route index element={<div className="text-xl font-bold text-gray-700 text-center py-6">Sistema de Gestión de Escuelas</div>} />
 

@@ -5,6 +5,7 @@ import { showConfirm,
 import Swal from 'sweetalert2';
 import withReactContent from 'sweetalert2-react-content';
 import { ReporteTabs } from './ReporteTabs'; // O la ruta donde lo ubiques
+import { useAuth } from '../context/AuthContext';
 
 const MySwal = withReactContent(Swal);
 
@@ -25,6 +26,7 @@ const MESES_CUOTAS = [
 ];
 
 export default function ItemActualizarImporteCuotas() {
+  const { user } = useAuth();
   const [mes, setMes] = useState('');
   const [anio, setAnio] = useState('');
   const [listaAnios, setListaAnios] = useState([]);
@@ -70,7 +72,7 @@ export default function ItemActualizarImporteCuotas() {
     };
 
     obtenerParametros();
-  }, []);
+  }, [user?.identidadeducativa]);
 
   // Obtener lista de años desde el endpoint
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function ItemActualizarImporteCuotas() {
     };
 
     obtenerAnios();
-  }, []);
+  }, [user?.identidadeducativa]);
 
   // Filtrado de alumnos (Aplica para cualquier combinación de combos)
   const handleFiltrar = async (e) => {

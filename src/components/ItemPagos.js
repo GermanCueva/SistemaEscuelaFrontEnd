@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { NumerosALetras } from 'numero-a-letras';
 import { saveAs } from 'file-saver';
 import { avisar } from '../utils/notificaciones';
+import { useAuth } from '../context/AuthContext';
 
 
 // Función helper para consultar AFIP/ARCA y construir la URL oficial del QR
@@ -109,6 +110,7 @@ const obtenerTipoUsuario = () => {
 
 
 const ItemPagos = () => {
+  const { user } = useAuth();
   const [movimientos, setMovimientos] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -164,7 +166,7 @@ useEffect(() => {
   };
 
   obtenerParametros();
-}, []);
+}, [user?.identidadeducativa]);
 
 
   // Estado inicial del formulario de pago
@@ -225,7 +227,7 @@ useEffect(() => {
   useEffect(() => {
     const fetchCatalogos = async () => {
       const token = localStorage.getItem("token");
-      let idEntidad = null;
+      const idEntidad = user?.identidadeducativa;
 
       const headers = { 'Authorization': `Bearer ${token}` };
 
@@ -234,16 +236,6 @@ useEffect(() => {
           fetch(`${process.env.REACT_APP_API_URL}/api/pagos/medios`, { headers }),
           fetch(`${process.env.REACT_APP_API_URL}/api/pagos/marcas`, { headers })
         ]);
-
-        if (token) {
-          try {
-            const payloadBase64 = token.split('.')[1];
-            const decodedPayload = JSON.parse(atob(payloadBase64));
-            idEntidad = decodedPayload.user?.identidadeducativa;
-          } catch (error) {
-            console.error("Error al decodificar el token", error);
-          }
-        }
 
         if (resMedios.ok) {
           const dataMedios = await resMedios.json();
@@ -272,7 +264,7 @@ useEffect(() => {
     };
 
     fetchCatalogos();
-  }, []);
+  }, [user?.identidadeducativa]);
 
   useEffect(() => {
     fetchMovimientos();

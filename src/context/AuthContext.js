@@ -30,13 +30,60 @@ export function AuthProvider({ children }) {
   // ==========================================
   // LOGIN
   // ==========================================
+  // Si el usuario pertenece a más de una institución, queda pendiente de
+  // selección (institucionSeleccionada = false) hasta que elija una.
   const login = (usuario) => {
-    setUser(usuario);
+    const entidades = Array.isArray(usuario?.entidades) ? usuario.entidades : [];
+    const usuarioConEstado = {
+      ...usuario,
+      entidades,
+      institucionSeleccionada: entidades.length <= 1,
+    };
+
+    setUser(usuarioConEstado);
 
     localStorage.setItem(
       "usuario",
-      JSON.stringify(usuario)
+      JSON.stringify(usuarioConEstado)
     );
+  };
+
+  // ==========================================
+  // SELECCIONAR INSTITUCIÓN
+  // ==========================================
+  // Pide al backend un nuevo token para la institución elegida
+  const seleccionarInstitucion = async (entidad) => {
+    const token = localStorage.getItem("token");
+
+    const res = await fetch(
+      `${process.env.REACT_APP_API_URL}/api/usuarios/cambiar-institucion`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ identidadeducativa: entidad.identidadeducativa }),
+      }
+    );
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.mensaje || "No se pudo seleccionar la institución");
+    }
+
+    localStorage.setItem("token", data.token);
+
+    setUser((prev) => {
+      const actualizado = {
+        ...prev,
+        identidadeducativa: data.identidadeducativa,
+        entidadeducativa: data.entidadeducativa,
+        institucionSeleccionada: true,
+      };
+      localStorage.setItem("usuario", JSON.stringify(actualizado));
+      return actualizado;
+    });
   };
 
   // ==========================================
@@ -61,6 +108,9 @@ export function AuthProvider({ children }) {
     });
   };
 
+  const requiereSeleccionInstitucion =
+    user !== null && user.institucionSeleccionada === false;
+
   return (
     <AuthContext.Provider
       value={{
@@ -69,6 +119,8 @@ export function AuthProvider({ children }) {
         login,
         logout,
         updateUser,
+        seleccionarInstitucion,
+        requiereSeleccionInstitucion,
       }}
     >
       {children}

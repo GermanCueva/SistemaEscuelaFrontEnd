@@ -2,8 +2,10 @@ import { useEffect, useState, useMemo } from "react"
 import ItemListAlumnos from './ItemListAlumnos'
 import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
+import { useAuth } from "../context/AuthContext";
 
 const ItemListContainerAlumnos = () => {
+  const { user } = useAuth();
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
   const [descargando, setDescargando] = useState(false)
@@ -22,10 +24,9 @@ const ItemListContainerAlumnos = () => {
     idDivision: ''
   })
 
-  const token = localStorage.getItem('token')
-
   useEffect(() => {
     setCargando(true)
+    const token = localStorage.getItem('token')
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
@@ -52,7 +53,7 @@ const ItemListContainerAlumnos = () => {
         setDivisiones([])
         setCargando(false)
       })
-  }, [token])
+  }, [user?.identidadeducativa])
 
   const gradosFiltrados = useMemo(() => {
     if (!filtros.idNivel) return grados;

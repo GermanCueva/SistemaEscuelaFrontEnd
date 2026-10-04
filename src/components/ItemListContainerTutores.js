@@ -2,9 +2,11 @@ import { useEffect, useState, useMemo } from "react"
 import ItemListPersonas from './ItemListPersonas'
 //import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa'; // Importamos los íconos
+import { useAuth } from "../context/AuthContext";
 
 
 const ItemListContainerTutores = () => {
+  const { user } = useAuth();
   // 1. Guardamos la lista completa original cargada de la API
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -21,12 +23,10 @@ const ItemListContainerTutores = () => {
     esActivo: true
   })
 
-
-  const token = localStorage.getItem('token')
-
-  // --- CARGA INICIAL (Solo se ejecuta 1 vez al montar el componente) ---
+  // --- CARGA INICIAL ---
   useEffect(() => {
     setCargando(true)
+    const token = localStorage.getItem('token')
     const url = `${process.env.REACT_APP_API_URL}/api/persons`
 
     fetch(url, {
@@ -46,7 +46,7 @@ const ItemListContainerTutores = () => {
         setTodasLasPersonas([])
         setCargando(false)
       })
-  }, [token])
+  }, [user?.identidadeducativa])
 
 
   // --- FILTRADO DINÁMICO EN MEMORIA (useMemo) ---
