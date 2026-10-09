@@ -10,17 +10,22 @@ import ItemListAlumnoAcademica from "./ItemListAlumnoAcademica.js";
 import ItemListAlumnoFormaPago from "./ItemListAlumnoFormaPago.js";
 import { useRol } from "./useRole.js";
 
+const initialPersState = {
+  apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
+  correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
+  id_localidad_nacimiento: '', id_localidad_residencia: '',
+  id_nacionalidad: '', activo: 'S', es_alumno: 'S', usuario: 'S/U',
+  legajo: '', extranjero: '', regular: '', id_motivo_desercion: '',
+  es_celiaco: '', direccion_calle: '', direccion_numero: '',
+  direccion_piso: '', direccion_depto: '',
+  documentos: [], allegados: [], academica: [], formasPago: []
+};
 
 const ItemDetailPersona = () => {
   const { esSoloLectura } = useRol();
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Resetear la pestaña activa a 'alta' cada vez que cambie el ID de la persona en la URL
-  useEffect(() => {
-    setSubSolapaActiva('alta');
-  }, [id]);
-  
   const isEditMode = Boolean(id) && id !== "alta" && id !== "undefined";
 
   const [subSolapaActiva, setSubSolapaActiva] = useState('alta');
@@ -31,64 +36,47 @@ const ItemDetailPersona = () => {
   const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState(""); 
   
-  // Flag para saber si el registro de alumno ya existe en el backend (Modo Edición)
   const [hasAlumnoRecord, setHasAlumnoRecord] = useState(false);
 
-  //Sexos
+  // Estados para Búsqueda previa por DNI
+  const [dniBusqueda, setDniBusqueda] = useState('');
+  const [buscandoDni, setBuscandoDni] = useState(false);
+  const [esPersonaExistente, setEsPersonaExistente] = useState(false);
+  
+  // 🛑 Estado de Bloqueo si YA es alumno en ESTE establecimiento
+  const [yaEsAlumnoEnEstaEscuela, setYaEsAlumnoEnEstaEscuela] = useState(null);
+
   const [sexos, setSexos] = useState([]);
+  const [pers, setPers] = useState(initialPersState);
 
-  // ESTADO UNIFICADO
-  const [pers, setPers] = useState({
-    apellidos: '', nombres: '', id_sexo: '', fecha_nacimiento: '',
-    correo_electronico: '', recibe_notif_x_correo: '', telefono: '',
-    id_localidad_nacimiento: '', id_localidad_residencia: '',
-    id_nacionalidad: '', activo: '', es_alumno: '', usuario: 'S/U',
-    // Campos de Alumno
-    legajo: '',
-    extranjero: '',
-    regular: '',
-    id_motivo_desercion: '',
-    es_celiaco: '',
-    direccion_calle: '',
-    direccion_numero: '',
-    direccion_piso: '',
-    direccion_depto: '',
-    documentos: [],
-    allegados: [],
-    academica: [], 
-    formasPago: [] 
-  });
+  useEffect(() => {
+    setSubSolapaActiva('alta');
+  }, [id]);
 
+  useEffect(() => {
+    const fetchSexos = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/sexo`, {
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (!res.ok) throw new Error("Error al obtener los tipos de sexo");
+        const data = await res.json();
+        setSexos(data);
+      } catch (error) {
+        console.error("Error cargando sexos:", error);
+      }
+    };
+    fetchSexos();
+  }, []);
 
-  // 2. Cargar los sexos al montar el componente
-useEffect(() => {
-  const fetchSexos = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/sexo`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!res.ok) throw new Error("Error al obtener los tipos de sexo");
-      const data = await res.json();
-      setSexos(data);
-    } catch (error) {
-      console.error("Error cargando sexos:", error);
-    }
-  };
-
-  fetchSexos();
-}, []);
-
-  // Helper seguro para mostrar notificaciones garantizadas
   const notificar = (mensaje, tipo = 'advertencia') => {
     try {
       if (avisar && typeof avisar[tipo] === 'function') {
         avisar[tipo](mensaje);
-      } else if (avisar && typeof avisar.advertencia === 'function') {
-        avisar.advertencia(mensaje);
       } else {
         avisar.advertencia(mensaje);
       }
@@ -97,7 +85,6 @@ useEffect(() => {
     }
   };
 
-  // 1. Cargar Catálogos
   useEffect(() => {
     const cargarCatalogos = async () => {
       try {
@@ -118,7 +105,6 @@ useEffect(() => {
     cargarCatalogos();
   }, [isEditMode]);
 
-  // Carga de Allegados de forma aislada / reutilizable
   const obtenerAllegados = useCallback(async (idAlumno) => {
     const token = localStorage.getItem('token');
     try {
@@ -134,7 +120,6 @@ useEffect(() => {
     }
   }, []);
 
-  // Carga de Formas de Pago de forma aislada / reutilizable
   const obtenerFormasPago = useCallback(async (idAlumno) => {
     if (!idAlumno) return;
     const token = localStorage.getItem('token');
@@ -151,7 +136,6 @@ useEffect(() => {
     }
   }, []);
 
-  // 2. Cargar Datos del Registro (Modo Edición)
   useEffect(() => {
     if (isEditMode) {
       setIsLoading(true);
@@ -197,7 +181,6 @@ useEffect(() => {
             academica: prev.academica
           }));
 
-          // Si obtuvimos el id_alumno, llamamos a la función de formas de pago
           if (idAlumnoReal) {
             obtenerFormasPago(idAlumnoReal);
           }
@@ -210,6 +193,118 @@ useEffect(() => {
       });
     }
   }, [id, isEditMode, obtenerFormasPago]);
+
+  // 🔍 BÚSQUEDA Y VALIDACIÓN DE DUPLICADOS EN ESTA ESCUELA
+  const buscarPersonaPorDni = async () => {
+    if (!dniBusqueda || dniBusqueda.trim().length < 3) {
+      avisar.advertencia("Por favor, ingrese un número de documento válido para buscar.");
+      return;
+    }
+
+    setBuscandoDni(true);
+    setYaEsAlumnoEnEstaEscuela(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/apellidodocumento/${encodeURIComponent(dniBusqueda.trim())}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!res.ok) throw new Error("Error en la consulta al servidor");
+
+      const data = await res.json();
+      const listaPersonas = Array.isArray(data) ? data : (data.data || []);
+
+      const personaEncontrada = listaPersonas.find(p => {
+        const dniStr = String(p.numero_dni || p.numero || p.dni || p.nro_documento || p.documento || '').trim();
+        return dniStr === String(dniBusqueda.trim());
+      }) || listaPersonas[0];
+
+      if (personaEncontrada) {
+        const targetId = personaEncontrada.id_persona || personaEncontrada.id;
+
+        // Consultamos simultáneamente los datos personales y la existencia de alumno en este establecimiento
+        const [dataPersonaComplete, dataDocs, dataAlumno, dataAllegados] = await Promise.all([
+          fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/${targetId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).then(r => r.json()),
+          fetch(`${process.env.REACT_APP_API_URL}/api/documentos/${targetId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).then(r => r.json()).catch(() => []),
+          fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${targetId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).then(r => r.ok ? r.json() : null).catch(() => null),
+          fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${targetId}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          }).then(r => r.json()).catch(() => [])
+        ]);
+
+        // Verificamos si YA posee un legajo/registro de alumno en esta escuela logueada
+        let alumnoExistente = null;
+        if (dataAlumno) {
+          const objAlumno = Array.isArray(dataAlumno) ? dataAlumno[0] : (dataAlumno.data || dataAlumno);
+          if (objAlumno && (objAlumno.id_alumno || objAlumno.id || objAlumno.legajo)) {
+            alumnoExistente = objAlumno;
+          }
+        }
+
+        // 🛑 CASO A: LA PERSONA YA ES ALUMNO EN ESTA MISMA ESCUELA -> BLOQUEO
+        if (alumnoExistente) {
+          const basePersona = (dataPersonaComplete && dataPersonaComplete.length > 0) ? dataPersonaComplete[0] : personaEncontrada;
+          setYaEsAlumnoEnEstaEscuela({
+            id_persona: targetId,
+            nombreCompleto: `${basePersona.apellidos} ${basePersona.nombres}`,
+            legajo: alumnoExistente.legajo || 'S/D'
+          });
+
+          setEsPersonaExistente(false);
+          avisar.advertencia(`⚠️ La persona ya está registrada como alumno en este establecimiento (Legajo: ${alumnoExistente.legajo || 'S/D'}).`);
+          return;
+        }
+
+        // 🟢 CASO B: EXISTE GLOBALMENTE PERO NO ES ALUMNO EN ESTA ESCUELA -> PERMITIR VINCULAR
+        const basePersona = (dataPersonaComplete && dataPersonaComplete.length > 0) ? dataPersonaComplete[0] : personaEncontrada;
+        const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
+        const misAllegados = Array.isArray(dataAllegados) ? dataAllegados : [];
+
+        setPers({
+          ...initialPersState,
+          ...basePersona,
+          id_persona: targetId,
+          documentos: misDocs,
+          allegados: misAllegados,
+          es_alumno: 'S',
+          legajo: '', extranjero: '', regular: '', id_motivo_desercion: '',
+          es_celiaco: '', direccion_calle: '', direccion_numero: '',
+          direccion_piso: '', direccion_depto: '',
+          academica: [], formasPago: []
+        });
+
+        setEsPersonaExistente(true);
+        setHasAlumnoRecord(false);
+
+        avisar.exito("¡Persona encontrada! Se cargaron sus datos filiatorios. Complete los Datos del Alumno para matricularlo.");
+        setSubSolapaActiva('alumnos');
+      } else {
+        // ⚪ CASO C: NO EXISTE EN EL SISTEMA -> ALTA TOTAL DESDE CERO
+        avisar.advertencia("No se encontró la persona por documento. Puede continuar con la carga del nuevo registro.");
+        setEsPersonaExistente(false);
+      }
+    } catch (err) {
+      console.error("Error buscando persona por DNI:", err);
+      avisar.error("Ocurrió un error al consultar la base de datos.");
+    } finally {
+      setBuscandoDni(false);
+    }
+  };
+
+  const limpiarBusquedaExistente = () => {
+    setEsPersonaExistente(false);
+    setYaEsAlumnoEnEstaEscuela(null);
+    setDniBusqueda('');
+    setPers(initialPersState);
+    setSubSolapaActiva('alta');
+  };
 
   const calcularEdad = (fechaNacimiento) => {
     const hoy = new Date();
@@ -236,11 +331,7 @@ useEffect(() => {
     
     setPers((prev) => {
       if (name === 'es_alumno' && value === 'S') {
-        return {
-          ...prev,
-          [name]: value,
-          usuario: '' 
-        };
+        return { ...prev, [name]: value, usuario: '' };
       }
       return { ...prev, [name]: value };
     });
@@ -249,14 +340,14 @@ useEffect(() => {
   const handleChangeEmail = (e) => {
     handleChange(e); 
     const v = e.target.value; 
-    const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/; 
+    const regexEmail = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\$/; 
     setEmailError(v !== "" && !regexEmail.test(v) ? "Formato de correo inválido." : ""); 
   };
 
   const handleChangePhone = (e) => {
     handleChange(e); 
-    const v = e.target.value; 
-    const regexPhone = /^\+?[0-9\s-]{7,15}$/; 
+    const v = e.target.value.trim(); 
+    const regexPhone = /^\+?[0-9\s()-]{7,15}\$/; 
     setPhoneError(v !== "" && !regexPhone.test(v) ? "Formato de teléfono inválido." : ""); 
   };
 
@@ -312,7 +403,7 @@ useEffect(() => {
 
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || errData.mensaje || 'No se pudo eliminar el documento del servidor.');
+        throw new Error(errData.error || errData.mensaje || 'No se pudo eliminar el documento.');
       }
 
       avisar.advertencia('¡Documento eliminado correctamente de la base de datos!', 'exito');
@@ -343,16 +434,12 @@ useEffect(() => {
         throw new Error(errData.error || errData.mensaje || "Error al eliminar de la base de datos.");
       }
 
-      setPers(prev => {
-        const listaActual = Array.isArray(prev.allegados) ? prev.allegados : [];
-        return {
-          ...prev,
-          allegados: listaActual.filter(item => 
-            item.id_persona_allegado !== idPersonaAllegado && 
-            item.id_persona !== idPersonaAllegado
-          )
-        };
-      });
+      setPers(prev => ({
+        ...prev,
+        allegados: (prev.allegados || []).filter(item => 
+          item.id_persona_allegado !== idPersonaAllegado && item.id_persona !== idPersonaAllegado
+        )
+      }));
 
       avisar.advertencia('¡Allegado eliminado correctamente!', 'exito');
     } catch (error) {
@@ -404,7 +491,6 @@ useEffect(() => {
     }
   };
 
-  // DELETE PARA FORMAS DE PAGO
   const eliminarFormaPagoBackend = async (idFormaPago) => {
     if (!idFormaPago || String(idFormaPago).startsWith('temp-')) {
       setPers(prev => ({
@@ -452,6 +538,12 @@ useEffect(() => {
       e.stopPropagation();
     }
 
+    // Prevención de seguridad adicional
+    if (yaEsAlumnoEnEstaEscuela) {
+      avisar.advertencia("No se puede guardar: Este alumno ya pertenece a este establecimiento.");
+      return;
+    }
+
     try {
       const token = localStorage.getItem('token'); 
 
@@ -468,12 +560,6 @@ useEffect(() => {
       }
 
       const esAlumno = String(pers.es_alumno).toUpperCase() === 'S' || pers.es_alumno === true || pers.es_alumno === 1 || Boolean(pers.legajo);
-
-    /*  if (!esAlumno && (String(pers.usuario || '').trim() === '')) {
-          notificar("⚠️ Error: Debe ingresar un valor de Usuario antes de continuar.", 'advertencia');
-          setSubSolapaActiva('alta');
-          return;
-      }*/
 
       if (emailError || phoneError) { 
         notificar("⚠️ Error: Corrige los errores de formato (Email o Teléfono) antes de guardar.", 'error');
@@ -509,21 +595,6 @@ useEffect(() => {
         return;
       }
 
-      const allegadosIncompletos = allegadosParaValidar.filter(all => {
-        const tienePersona = Boolean(all.id_persona || all.id_persona_real || all.nombre || all.apellido || all.id);
-        const tieneTipo = Boolean(all.id_tipo_allegado || all.id_parentesco || all.tipo_allegado || all.parentesco);
-        return !tienePersona || !tieneTipo;
-      });
-
-      if (allegadosIncompletos.length > 0 && subSolapaActiva === 'alumnoAllegados') {
-        avisar.advertencia('Por favor, complete los campos obligatorios (Parentesco y Persona) de todos los allegados.');
-        setSubSolapaActiva('alumnoAllegados'); 
-        return;
-      }
-
-      // ==========================================
-      // CONTROLES DE GESTIÓN ACADÉMICA Y PAGO
-      // ==========================================
       const academicaParaValidar = pers?.academica || [];
       const formasPagoParaValidar = pers?.formasPago || [];
 
@@ -533,23 +604,11 @@ useEffect(() => {
         return;
       }
 
-      // Si está en modo edición, permitimos avanzar si ya existe en backend incluso si la lista local está vacía por falta de sincronización
       if (esAlumno && formasPagoParaValidar.length === 0) {
         avisar.advertencia("⚠️ Error: Debe ingresar obligatoriamente al menos un registro en la Forma de Pago.");
         setSubSolapaActiva('alumnoFormaPago');
         return;
       }
-
-      const academicaIncompleta = academicaParaValidar.some(item => {
-        return !item.id_grado || !item.id_division || (!item.anio_cursada && !item.id_anio);
-      });
-
-      if (academicaIncompleta) {
-        avisar.advertencia("⚠️ Error: Hay registros académicos incompletos. Por favor, revísalos.");
-        setSubSolapaActiva('alumnoAcademica');
-        return;
-      }
-      // ==========================================
 
       setIsLoading(true);
       const { documentos, allegados, academica, formasPago, ...todo } = pers;
@@ -564,16 +623,18 @@ useEffect(() => {
       const datosPersona = { ...todo };
       Object.keys(datosAlumno).forEach(key => delete datosPersona[key]);
 
-      if (!isEditMode) {
+      const esEdicionOGlobalExistente = isEditMode || esPersonaExistente;
+
+      if (!esEdicionOGlobalExistente) {
         delete datosPersona.id_persona; 
         delete datosPersona.id; 
       }
 
-      const urlPersona = isEditMode 
-        ? `${process.env.REACT_APP_API_URL}/api/persons/${id}` 
+      const urlPersona = esEdicionOGlobalExistente 
+        ? `${process.env.REACT_APP_API_URL}/api/persons/${pers.id_persona || id}` 
         : `${process.env.REACT_APP_API_URL}/api/persons`;      
 
-      const methodPersona = isEditMode ? 'PUT' : 'POST'; 
+      const methodPersona = esEdicionOGlobalExistente ? 'PUT' : 'POST'; 
 
       const responsePersona = await fetch(urlPersona, {
         method: methodPersona,
@@ -584,11 +645,10 @@ useEffect(() => {
       const resultadoPersona = await responsePersona.json();
       if (!responsePersona.ok) throw new Error(resultadoPersona.error || resultadoPersona.message || 'No se pudo procesar la persona.');
 
-      let idPersonaFinal = isEditMode ? id : null;
-      if (!isEditMode && resultadoPersona) {
+      let idPersonaFinal = isEditMode ? id : (esPersonaExistente ? pers.id_persona : null);
+      if (!idPersonaFinal && resultadoPersona) {
         idPersonaFinal = resultadoPersona.id_persona || resultadoPersona.id || (resultadoPersona.rows && resultadoPersona.rows[0]?.id_persona);
       }
-      if (!idPersonaFinal) idPersonaFinal = id;
 
       const promesasDocumentos = documentos.map(async (doc) => {
         const idRelacionDoc = doc.id_persona_tipo_documento || doc.id_documento || doc.id;
@@ -661,20 +721,9 @@ useEffect(() => {
             return isNaN(n) || n === 0 ? null : n;
           };
 
-          const allegadosNuevos = allegados.filter(all => {
-            const tieneRelacionPrevia = Boolean(all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores);
-            return all.esNuevo || String(all.id_persona || '').startsWith('temp-') || !tieneRelacionPrevia;
-          });
-
-          const allegadosExistentes = allegados.filter(all => {
-            const tieneRelacionPrevia = Boolean(all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores);
-            const esTemporal = String(all.id_persona || '').startsWith('temp-');
-            return !all.esNuevo && !esTemporal && tieneRelacionPrevia;
-          });
-
-          for (const all of allegadosNuevos) {
+          for (const all of allegados) {
             const idP = parseIdPersona(all);
-            if (!idP) throw new Error(`Uno de los allegados nuevos no tiene un ID válido.`);
+            if (!idP) continue;
 
             const payloadPost = {
               id_persona: idP, id_alumno: Number(idAlumnoFinal),
@@ -690,23 +739,6 @@ useEffect(() => {
               body: JSON.stringify(payloadPost)
             });
           }
-
-          for (const all of allegadosExistentes) {
-            const idRelacion = all.id_alumno_tutor || all.id_persona_allegado || all.id_alumno_tutores || all.id;
-            const payloadPut = {
-              id_alumno_tutor: idRelacion ? Number(idRelacion) : undefined,
-              id_persona: Number(all.id_persona), id_alumno: Number(idAlumnoFinal),
-              id_tipo_allegado: all.id_tipo_allegado || all.id_parentesco || null,
-              id_estudio_alcanzado: all.id_estudio_alcanzado || all.id_nivel_estudio || all.id_estudio || null,
-              id_ocupacion: all.id_ocupacion || null, tutor: all.tutor || all.Tutor || 'S', activo: all.activo || 'S'
-            };
-
-            await fetch(idRelacion ? `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores/${idRelacion}` : `${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutores`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-              body: JSON.stringify(payloadPut)
-            });
-          }
         }
 
         const nuevosCrudos = (academica || []).filter(item => item.esNuevo === true);
@@ -714,20 +746,13 @@ useEffect(() => {
 
         const registrosNuevos = nuevosCrudos.map(item => {
             const { id_academica, esNuevo, ...resto } = item; 
-            return {
-                ...resto,
-                id_alumno: idAlumnoFinal
-            };
+            return { ...resto, id_alumno: idAlumnoFinal };
         });
 
         if (registrosNuevos.length > 0) {
-            const urlAcademicaBulk = `${process.env.REACT_APP_API_URL}/api/academica/`;
-            const resAcademica = await fetch(urlAcademicaBulk, {
+            const resAcademica = await fetch(`${process.env.REACT_APP_API_URL}/api/academica/`, {
                 method: 'POST',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${token}` 
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ historialAcademico: registrosNuevos })
             });
 
@@ -736,65 +761,38 @@ useEffect(() => {
 
         if (registrosModificados.length > 0) {
             const modificadosSincronizados = registrosModificados.map(item => ({
-                ...item,
-                id_anio_cursada: item.anio_cursada 
+                ...item, id_anio_cursada: item.anio_cursada 
             }));
 
-            const urlAcademicaPut = `${process.env.REACT_APP_API_URL}/api/academica/`;
-            const resAcademicaPut = await fetch(urlAcademicaPut, {
+            const resAcademicaPut = await fetch(`${process.env.REACT_APP_API_URL}/api/academica/`, {
                 method: 'PUT',
-                headers: { 
-                    'Content-Type': 'application/json', 
-                    'Authorization': `Bearer ${token}` 
-                },
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
                 body: JSON.stringify({ historialAcademico: modificadosSincronizados })
             });
 
             if (!resAcademicaPut.ok) throw new Error("Error actualizando los cambios académicos existentes.");
         }
 
+        for (const pago of (formasPago || [])) {
+          const payloadPost = { ...pago, id_alumno: Number(idAlumnoFinal) };
+          delete payloadPost.esNuevo;
+          delete payloadPost.id;
+          delete payloadPost.id_pago;
+          delete payloadPost.id_alumno_tarjeta;
+          delete payloadPost.id_forma_pago;
 
-// ==========================================
-    // PROCESAMIENTO DE FORMAS DE PAGO (POST / PUT)
-    // ==========================================
-    for (const pago of (formasPago || [])) {
-      const rawId = pago.id_alumno_tarjeta || pago.id_pago || pago.id_forma_pago || pago.id;
-      const esTemp = String(rawId || '').includes('temp');
-      const tieneIdBDReal = Boolean(rawId) && !esTemp && !pago.esNuevo;
-
-      if (tieneIdBDReal) {
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify({ ...pago, id_alumno: Number(idAlumnoFinal) })
-        });
-       // if (!res.ok) throw new Error("Error en PUT pago");
-       if (!res.ok) {
-          // 🛑 Imprimimos exactamente qué error devolvió el backend
-          const errData = await res.json().catch(() => ({}));
-          console.error(`Error en PUT ${rawId}: HTTP Status ${res.status}`, errData);
-          throw new Error(`Error en PUT pago (${res.status})`);
+          await fetch(`${process.env.REACT_APP_API_URL}/api/pagos`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify(payloadPost)
+          });
         }
-        
-      } else {
-        const payloadPost = { ...pago, id_alumno: Number(idAlumnoFinal) };
-        delete payloadPost.esNuevo;
-        delete payloadPost.id;
-        delete payloadPost.id_pago;
-        delete payloadPost.id_alumno_tarjeta;
-        delete payloadPost.id_forma_pago;
-
-        const res = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-          body: JSON.stringify(payloadPost)
-        });
-        if (!res.ok) throw new Error("Error en POST pago");
-      }
-    }
       }
 
-      avisar.exito("¡Los datos se han guardado con éxito!");
+      avisar.exito(esPersonaExistente 
+        ? "¡Alumno matriculado con éxito en este establecimiento!" 
+        : "¡Los datos se han guardado con éxito!"
+      );
       navigate('/personas/abm'); 
     } catch (error) {
       avisar.error("❌ ERROR EN EL PROCESO DE GUARDADO: " + error.message);
@@ -803,17 +801,15 @@ useEffect(() => {
     }
   };
 
-
   if (isLoading) return <Spinner />;
 
   return (
     <div style={{ padding: '20px' }}>
       
-      {/* Botones de Navegación de Pestañas locales */}
-<div className="flex flex-wrap gap-2 p-3 bg-gray-100/60 border-b border-gray-200">
-
+      {/* Pestañas locales */}
+      <div className="flex flex-wrap gap-2 p-3 bg-gray-100/60 border-b border-gray-200">
         <button onClick={() => setSubSolapaActiva('alta')} style={subSolapaActiva === 'alta' ? styles.activeSubTab : styles.subTab}>
-          {isEditMode ? 'Editar Persona' : 'Alta de Persona'}
+          {isEditMode ? 'Editar Persona' : (esPersonaExistente ? 'Persona Encontrada' : 'Alta de Persona')}
         </button>
         <button onClick={() => setSubSolapaActiva('documentos')} style={subSolapaActiva === 'documentos' ? styles.activeSubTab : styles.subTab}>
           Documentos {pers.documentos.length > 0 && `(${pers.documentos.length})`}
@@ -861,7 +857,6 @@ useEffect(() => {
             Formas de Pago {pers.formasPago.length > 0 && `(${pers.formasPago.length})`}
           </button>
         )}  
-     
       </div>
 
       <div className="contenido-subsolapa">
@@ -873,8 +868,14 @@ useEffect(() => {
             onEliminarBackend={eliminarDocumentoBackend}
           />
         )} 
+
         {subSolapaActiva === 'alumnos' && (pers.es_alumno === 'S' || pers.es_alumno === 's' || pers.es_alumno === true || pers.es_alumno === 1) && (
           <div style={{ padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px' }}>
+            {esPersonaExistente && (
+              <div className="mb-4 p-3 bg-blue-100 border border-blue-300 text-blue-900 rounded-md text-sm">
+                ℹ️ <strong>Matriculando a persona existente:</strong> Complete los datos a continuación para dar de alta la matrícula en este establecimiento.
+              </div>
+            )}
             <ItemPersonaAlumnoDetailAlta 
               formData={pers} 
               handleChange={handleChange} 
@@ -900,10 +901,7 @@ useEffect(() => {
         )}
 
         <div style={{ 
-          padding: '20px', 
-          background: '#f9f9f9', 
-          border: '1px dashed #ccc', 
-          borderRadius: '4px',
+          padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px',
           display: subSolapaActiva === 'alumnoAcademica' ? 'block' : 'none'
         }}>
           <ItemListAlumnoAcademica 
@@ -915,10 +913,7 @@ useEffect(() => {
         </div>
 
         <div style={{ 
-          padding: '20px', 
-          background: '#f9f9f9', 
-          border: '1px dashed #ccc', 
-          borderRadius: '4px',
+          padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px',
           display: subSolapaActiva === 'alumnoFormaPago' ? 'block' : 'none'
         }}>
           <ItemListAlumnoFormaPago
@@ -930,19 +925,82 @@ useEffect(() => {
             onRecargar={() => obtenerFormasPago(pers.id_alumno)}
           />   
         </div>
-
       </div>  
   
       {subSolapaActiva === 'alta' && (
         <div className="max-w-4xl mx-auto my-10 p-8 bg-white rounded-xl shadow-lg border border-gray-100">
-          <fieldset disabled={esSoloLectura}>
+          
+          {/* 🔍 SECCIÓN DE BÚSQUEDA PREVIA POR DOCUMENTO (Solo en Alta) */}
+          {!isEditMode && (
+            <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg text-left">
+              <h3 className="font-bold text-blue-900 mb-1">🔍 Verificación previa por Documento</h3>
+              <p className="text-xs text-blue-700 mb-3">
+                Verifique si la persona ya existe en el sistema global antes de cargar un nuevo registro:
+              </p>
+              <div className="flex gap-2 max-w-md">
+                <input
+                  type="text"
+                  placeholder="Ingrese N° de Documento / DNI..."
+                  value={dniBusqueda}
+                  onChange={(e) => setDniBusqueda(e.target.value)}
+                  className="input input-bordered w-full text-sm bg-white"
+                  onKeyDown={(e) => e.key === 'Enter' && buscarPersonaPorDni()}
+                />
+                <button
+                  type="button"
+                  onClick={buscarPersonaPorDni}
+                  disabled={buscandoDni}
+                  className="px-4 py-2 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors text-sm"
+                >
+                  {buscandoDni ? "Buscando..." : "Buscar"}
+                </button>
+              </div>
+
+              {/* 🛑 TARJETA DE BLOQUEO: Si YA ES ALUMNO en esta misma escuela */}
+              {yaEsAlumnoEnEstaEscuela && (
+                <div className="mt-3 p-4 bg-red-50 border border-red-300 text-red-900 rounded-lg text-sm flex flex-col gap-2">
+                  <div>
+                    ⚠️ <strong>Acción no permitida:</strong> <span>{yaEsAlumnoEnEstaEscuela.nombreCompleto}</span> ya se encuentra registrado como alumno en este establecimiento (Legajo: <strong>{yaEsAlumnoEnEstaEscuela.legajo}</strong>).
+                  </div>
+                  <div className="flex gap-3 mt-1">
+                    <Link to={`/personas/${yaEsAlumnoEnEstaEscuela.id_persona}`}>
+                      <button type="button" className="px-3 py-1 bg-red-700 text-white font-semibold rounded text-xs hover:bg-red-800 transition-colors">
+                        Ver / Editar Perfil de este Alumno
+                      </button>
+                    </Link>
+                    <button type="button" onClick={limpiarBusquedaExistente} className="text-xs text-gray-600 hover:underline">
+                      Limpiar Búsqueda
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* 🟢 TARJETA DE CONFIRMACIÓN: Si EXISTE pero NO es alumno en esta escuela */}
+              {esPersonaExistente && !yaEsAlumnoEnEstaEscuela && (
+                <div className="mt-3 p-3 bg-green-100 border border-green-300 text-green-800 rounded text-sm flex justify-between items-center">
+                  <span>
+                    ✅ <strong>Persona encontrada:</strong> {pers.apellidos} {pers.nombres}. Se autocompletaron sus datos filiatorios. Complete la pestaña <strong>Datos Alumno</strong> para matricularlo.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={limpiarBusquedaExistente}
+                    className="text-xs text-red-600 hover:underline font-semibold ml-3"
+                  >
+                    Limpiar / Nueva Persona
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <fieldset disabled={esSoloLectura || Boolean(yaEsAlumnoEnEstaEscuela)}>
             <div className="mb-8 border-b pb-4">
-              <h2 className="text-2xl font-bold text-gray-800">
+              <h2 className="text-2xl font-bold text-gray-800 text-left">
                 {esSoloLectura
                   ? 'Ver Perfil de Persona'
                   : isEditMode
                   ? 'Editar Perfil de Persona'
-                  : 'Alta de Persona'}
+                  : (esPersonaExistente ? 'Vincular Persona Existente' : 'Alta de Persona')}
               </h2>
             </div>
             
@@ -959,22 +1017,18 @@ useEffect(() => {
                 </label>
 
                 <label className="form-control w-full">
-                  <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>
-                    Sexo:
-                  </span>
-                    <select 
-                      name="id_sexo" 
-                      value={pers.id_sexo || ''} 
-                      onChange={handleChange} 
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-700"
-                    >
-                      <option value="" disabled>Seleccione una opción</option>
-                      {Array.isArray(sexos) && sexos.map((s) => (
-                        <option key={s.id_sexo} value={s.id_sexo}>
-                          {s.nombre}
-                        </option>
-                      ))}
-                    </select>
+                  <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Sexo:</span>
+                  <select 
+                    name="id_sexo" 
+                    value={pers.id_sexo || ''} 
+                    onChange={handleChange} 
+                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-700"
+                  >
+                    <option value="" disabled>Seleccione una opción</option>
+                    {Array.isArray(sexos) && sexos.map((s) => (
+                      <option key={s.id_sexo} value={s.id_sexo}>{s.nombre}</option>
+                    ))}
+                  </select>
                 </label>
 
                 <label className="form-control w-full">
@@ -1044,80 +1098,48 @@ useEffect(() => {
                     <option value="N">No</option>
                   </select>
                 </label>
-
-  {/*              <label className="form-control w-full">
-                  <span className="label-text font-bold" style={{ display: 'block', textAlign: 'left' }}>Usuario:</span>
-                  <input 
-                    type="text" name="usuario" value={pers.usuario || ''} onChange={handleChange} className="input input-bordered w-full" 
-                    disabled={pers.es_alumno === 'S'} 
-                    style={{ 
-                      border: '1px solid #ccc', padding: '8px', borderRadius: '4px',
-                      backgroundColor: pers.es_alumno === 'S' ? '#e9ecef' : '#ffffff',
-                      cursor: pers.es_alumno === 'S' ? 'not-allowed' : 'text'
-                    }} 
-                  />
-                </label>*/} 
-
               </div>
             </div>
-            </fieldset>
+          </fieldset>
         </div>
       )}
 
-      {/* BOTONES GLOBALES CENTRALES */}
+      {/* BOTONES GLOBALES */}
       <div className="max-w-4xl mx-auto flex justify-end mt-4 gap-4 px-8">
         {!esSoloLectura && (
-        <Link to={'/personas/abm'}>
-          <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
-        </Link>
+          <Link to={'/personas/abm'}>
+            <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cancelar</button>
+          </Link>
         )}
         {esSoloLectura && (
-        <Link to={'/tutor'}>
-          <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cerrar</button>
-        </Link>
+          <Link to={'/tutor'}>
+            <button type="button" style={{ padding: '10px 20px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Cerrar</button>
+          </Link>
         )}
-        {!esSoloLectura && (
-        <button onClick={grabar} type="button" className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-          {isEditMode ? 'Guardar Cambios Totales' : 'Registrar Persona Completa'}
-        </button>
+        {!esSoloLectura && !yaEsAlumnoEnEstaEscuela && (
+          <button onClick={grabar} type="button" className="btn btn-primary" style={{ padding: '10px 20px', backgroundColor: '#007bff', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
+            {isEditMode 
+              ? 'Guardar Cambios Totales' 
+              : (esPersonaExistente ? 'Vincular y Matricular Alumno' : 'Registrar Persona Completa')
+            }
+          </button>
         )}
-        
       </div>
 
     </div>  
   );
 };
 
-/*const styles = {
-  subTab: { flex: 1, backgroundColor: '#e0e0e0', color: '#555555', padding: '12px 0', border: 'none', borderRight: '1px solid #cccccc', cursor: 'pointer', fontSize: '14px', textAlign: 'center' },
-  activeSubTab: { flex: 1, backgroundColor: '#ffffff', color: '#000000', fontWeight: 'bold', padding: '12px 0', border: 'none', borderRight: '1px solid #cccccc', cursor: 'pointer', fontSize: '14px', textAlign: 'center' }
-};*/
 const styles = {
   subTab: { 
-    flex: '1 1 0%',
-    minWidth: 'max-content',
-    padding: '10px 14px', 
-    borderRadius: '6px',
-    backgroundColor: '#e5e7eb', 
-    color: '#374151', 
-    fontSize: '13px', 
-    fontWeight: '500',
-    border: 'none',
-    cursor: 'pointer',
-    textAlign: 'center'
+    flex: '1 1 0%', minWidth: 'max-content', padding: '10px 14px', borderRadius: '6px',
+    backgroundColor: '#e5e7eb', color: '#374151', fontSize: '13px', fontWeight: '500',
+    border: 'none', cursor: 'pointer', textAlign: 'center'
   },
   activeSubTab: { 
-    flex: '1 1 0%',
-    minWidth: 'max-content',
-    padding: '10px 14px', 
-    borderRadius: '6px',
-    backgroundColor: '#2563eb', 
-    color: '#ffffff', 
-    fontSize: '13px', 
-    fontWeight: '600',
-    border: 'none',
-    cursor: 'pointer',
-    textAlign: 'center'
+    flex: '1 1 0%', minWidth: 'max-content', padding: '10px 14px', borderRadius: '6px',
+    backgroundColor: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: '600',
+    border: 'none', cursor: 'pointer', textAlign: 'center'
   }
 };
 
