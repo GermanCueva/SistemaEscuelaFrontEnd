@@ -105,10 +105,10 @@ const ItemDetailPersona = () => {
     cargarCatalogos();
   }, [isEditMode]);
 
-  const obtenerAllegados = useCallback(async (idAlumno) => {
+  const obtenerAllegados = useCallback(async (idPersona) => {
     const token = localStorage.getItem('token');
     try {
-      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${idAlumno}`, {
+      const res = await fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${idPersona}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (res.ok) {
@@ -141,7 +141,7 @@ const ItemDetailPersona = () => {
       setIsLoading(true);
       const token = localStorage.getItem('token'); 
 
-      Promise.all([
+Promise.all([
         fetch(`${process.env.REACT_APP_API_URL}/api/personsconfiltro/${id}`, { 
           headers: { 'Authorization': `Bearer ${token}` }
         }).then(res => res.json()),
@@ -150,26 +150,26 @@ const ItemDetailPersona = () => {
         }).then(res => res.json()).catch(() => []),
         fetch(`${process.env.REACT_APP_API_URL}/api/alumnos/${id}`, {
           headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.ok ? res.json() : null).catch(() => null),
-        fetch(`${process.env.REACT_APP_API_URL}/api/persons/AlumnoTutoresId/${id}`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }).then(res => res.json()).catch(() => [])
+        }).then(res => res.ok ? res.json() : null).catch(() => null)
       ])
-      .then(([dataPersona, dataDocs, dataAlumno, dataAllegados]) => {
+      .then(([dataPersona, dataDocs, dataAlumno]) => {
         if (dataPersona && dataPersona.length > 0) {
           const misDocs = Array.isArray(dataDocs) ? dataDocs : dataDocs.docs || dataDocs.data || [];
-          const misAllegados = Array.isArray(dataAllegados) ? dataAllegados : [];
 
           let datosAlumno = {};
           let idAlumnoReal = null;
 
           if (dataAlumno) {
             const alumnoObj = Array.isArray(dataAlumno) ? dataAlumno[0] : dataAlumno.data || dataAlumno;
-            if (alumnoObj) {
+            if (alumnoObj && (alumnoObj.id_alumno || alumnoObj.id)) {
               datosAlumno = alumnoObj;
               idAlumnoReal = alumnoObj.id_alumno || alumnoObj.id;
               setHasAlumnoRecord(true);
+            } else {
+              setHasAlumnoRecord(false);
             }
+          } else {
+            setHasAlumnoRecord(false);
           }
 
           setPers(prev => ({
@@ -177,22 +177,21 @@ const ItemDetailPersona = () => {
             ...dataPersona[0],
             ...datosAlumno,
             documentos: misDocs,
-            allegados: misAllegados,
-            academica: prev.academica
+            allegados: [], // Inicia vacío si no hay alumno en este establecimiento
+            academica: prev.academica,
+            formasPago: []
           }));
 
+          // Solo si la persona ya es alumno en ESTA escuela, busca sus allegados y cuotas reales
           if (idAlumnoReal) {
-            obtenerFormasPago(idAlumnoReal);
+            obtenerAllegados(id);            // <--- 'id' es el id_persona
+            obtenerFormasPago(idAlumnoReal); // <--- 'idAlumnoReal' es el id_alumno
           }
         }
         setIsLoading(false);
       })
-      .catch((err) => {
-        console.error("Error obteniendo datos completos de la persona:", err);
-        setIsLoading(false);
-      });
     }
-  }, [id, isEditMode, obtenerFormasPago]);
+  }, [id, isEditMode, obtenerAllegados, obtenerFormasPago]);
 
   // 🔍 BÚSQUEDA Y VALIDACIÓN DE DUPLICADOS EN ESTA ESCUELA
   const buscarPersonaPorDni = async () => {
@@ -344,10 +343,10 @@ const ItemDetailPersona = () => {
     setEmailError(v !== "" && !regexEmail.test(v) ? "Formato de correo inválido." : ""); 
   };
 
-  const handleChangePhone = (e) => {
+const handleChangePhone = (e) => {
     handleChange(e); 
     const v = e.target.value.trim(); 
-    const regexPhone = /^\+?[0-9\s()-]{7,15}\$/; 
+    const regexPhone = /^\+?[0-9\s()-]{7,15}$/; 
     setPhoneError(v !== "" && !regexPhone.test(v) ? "Formato de teléfono inválido." : ""); 
   };
 
@@ -681,7 +680,7 @@ const ItemDetailPersona = () => {
 
       let idAlumnoFinal = null;
       if (esAlumno) {
-        const esNuevoAlumno = !isEditMode || !hasAlumnoRecord;
+        const esNuevoAlumno = !hasAlumnoRecord;
         const urlAlumno = esNuevoAlumno 
           ? `${process.env.REACT_APP_API_URL}/api/alumnos`
           : `${process.env.REACT_APP_API_URL}/api/alumnos/${idPersonaFinal}`;

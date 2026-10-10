@@ -6,10 +6,8 @@ import { saveAs } from 'file-saver';
 import { avisar } from '../utils/notificaciones';
 import { useAuth } from '../context/AuthContext';
 
-
 // Función helper para consultar AFIP/ARCA y construir la URL oficial del QR
 const obtenerDatosAfipYQr = async (row) => {
-    
   const token = localStorage.getItem("token");
   const ptoVta = row.punto_venta || row.puntoVenta || 3;
   const tipoCmp = row.comprobante_tipo || row.tipoComprobanteCode;
@@ -77,7 +75,6 @@ const obtenerDatosAfipYQr = async (row) => {
   };
 };
 
-
 const obtenerTipoUsuario = () => {
   // 1. Leer primero del objeto "usuario" en localStorage
   const usuarioStorage = localStorage.getItem("usuario");
@@ -108,7 +105,6 @@ const obtenerTipoUsuario = () => {
   return null;
 };
 
-
 const ItemPagos = () => {
   const { user } = useAuth();
   const [movimientos, setMovimientos] = useState([]);
@@ -120,54 +116,45 @@ const ItemPagos = () => {
 
   // Visibilidad del formulario de pago
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
-
   const [permitePagosParciales, setPermitePagosParciales] = useState(true);
-
   const [nombreLegajo, setNombreLegajo] = useState(true);
-
   const [valorPuntoVenta, setValorPuntoVenta] = useState(null);
 
   const tipoUsuario = obtenerTipoUsuario();
 
+  useEffect(() => {
+    const obtenerParametros = async () => {
+      try {
+        const token = localStorage.getItem('token'); 
 
-useEffect(() => {
-  const obtenerParametros = async () => {
-    try {
-      // Recuperas el token guardado al iniciar sesión (ej. localStorage)
-      const token = localStorage.getItem('token'); 
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/parametros`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/parametros`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Revisa cómo espera el token tu backend
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const data = await response.json();
+        const listaParametros = Array.isArray(data) ? data : (data.data || []);
+        const puntoVentaObj = listaParametros.find((item) => item.parametro === 'punto_venta');
+        const permiteParcialesObj = listaParametros.find((item) => item.parametro === 'permite_pagos_parciales');
+        const nombreLegajoObj = listaParametros.find((item) => item.parametro === 'muestra_nombre_con_legajo');
+
+        setPermitePagosParciales(permiteParcialesObj?.valor === 'SI');
+        setNombreLegajo(nombreLegajoObj?.valor === 'SI');
+        setValorPuntoVenta(puntoVentaObj?.valor);
+      } catch (error) {
+        console.error('Error al obtener parametros:', error);
       }
+    };
 
-      const data = await response.json();
-      const listaParametros = Array.isArray(data) ? data : (data.data || []);
-      const puntoVentaObj = listaParametros.find((item) => item.parametro === 'punto_venta');
-      const permiteParcialesObj = listaParametros.find((item) => item.parametro === 'permite_pagos_parciales');
-      const nombreLegajoObj = listaParametros.find((item) => item.parametro === 'muestra_nombre_con_legajo');
-
-      setPermitePagosParciales(permiteParcialesObj?.valor === 'SI');
-
-      setNombreLegajo(nombreLegajoObj?.valor === 'SI');
-
-
-      setValorPuntoVenta(puntoVentaObj?.valor);
-    } catch (error) {
-      console.error('Error al obtener parametros:', error);
-    }
-  };
-
-  obtenerParametros();
-}, [user?.identidadeducativa]);
-
+    obtenerParametros();
+  }, [user?.identidadeducativa]);
 
   // Estado inicial del formulario de pago
   const initialPagoForm = {
@@ -240,8 +227,6 @@ useEffect(() => {
         if (resMedios.ok) {
           const dataMedios = await resMedios.json();
 
-        // Si la entidad educativa es 1, omitir los medios con id_medio_pago 1, 3 y 4
-        
           if (Number(idEntidad) === 1) {
             const omitidos = [1, 3, 4];
             const mediosFiltrados = Array.isArray(dataMedios)
@@ -249,7 +234,6 @@ useEffect(() => {
               : [];
             setMediosPago(mediosFiltrados);
           } else {
-            // Si es otra entidad educativa, cargar todos los medios
             setMediosPago(Array.isArray(dataMedios) ? dataMedios : []);
           }
         }
@@ -282,6 +266,10 @@ useEffect(() => {
     }, {});
   }, [movimientos]);
 
+  // Determina si el registro devuelto posee transacciones o cargos reales
+  const tieneCargos = useMemo(() => {
+    return movimientos.length > 0 && Boolean(movimientos[0]?.id_alumno_cc || movimientos[0]?.id_transaccion_cc);
+  }, [movimientos]);
 
   // Acción al presionar la lupa: Carga los datos y muestra el formulario
   const handlePagarOEditar = (row) => {
@@ -314,171 +302,146 @@ useEffect(() => {
   const esPosnet = pagoForm.medioPago.toLowerCase().includes('posnet') || 
                    pagoForm.medioPago.toLowerCase().includes('postnet');
 
- // 🔹 Guardar/Registrar el pago con validaciones completas
-const handleSubmitPago = async (e) => {
-  e.preventDefault();
+  // Guardar/Registrar el pago con validaciones completas
+  const handleSubmitPago = async (e) => {
+    e.preventDefault();
 
-  // 1. Validar que se haya seleccionado una cuota desde la lupa
-  if (!pagoForm.id_alumno_cc) {
-    avisar.advertencia("Por favor, seleccione una cuota pendiente haciendo clic en el icono de búsqueda (lupa).");
-    return;
-  }
-
-  // 2. Validaciones de campos generales
-  if (!pagoForm.concepto || !pagoForm.concepto.trim()) {
-    avisar.advertencia("El campo Concepto no puede estar vacío.");
-    return;
-  }
-
-  if (!pagoForm.medioPago || !pagoForm.medioPago.trim()) {
-    avisar.advertencia("Debe seleccionar un Medio de Pago.");
-    return;
-  }
-
-  if (!pagoForm.fechaPago) {
-    avisar.advertencia("Debe ingresar la Fecha del pago.");
-    return;
-  }
-
-  if (!pagoForm.nroComprobante || !pagoForm.nroComprobante.trim()) {
-    avisar.advertencia("Debe ingresar el Número de comprobante.");
-    return;
-  }
-
-  if (!pagoForm.importe || Number(pagoForm.importe) <= 0) {
-    avisar.advertencia("Debe ingresar un Importe válido mayor a 0.");
-    return;
-  }
-
-  // 3. Validaciones específicas cuando el medio de pago es Posnet
-  if (esPosnet) {
-    if (!pagoForm.tarjeta || !pagoForm.tarjeta.trim()) {
-      avisar.advertencia("Debe seleccionar una Tarjeta para pagos con Posnet.");
+    if (!pagoForm.id_alumno_cc) {
+      avisar.advertencia("Por favor, seleccione una cuota pendiente haciendo clic en el icono de búsqueda (lupa).");
       return;
     }
 
-    if (!pagoForm.nroLote || !pagoForm.nroLote.trim()) {
-      avisar.advertencia("Debe ingresar el Número de lote.");
+    if (!pagoForm.concepto || !pagoForm.concepto.trim()) {
+      avisar.advertencia("El campo Concepto no puede estar vacío.");
       return;
     }
 
-    if (!pagoForm.nroAutorizacion || !pagoForm.nroAutorizacion.trim()) {
-      avisar.advertencia("Debe ingresar el Número de autorización.");
+    if (!pagoForm.medioPago || !pagoForm.medioPago.trim()) {
+      avisar.advertencia("Debe seleccionar un Medio de Pago.");
       return;
     }
-  }
 
+    if (!pagoForm.fechaPago) {
+      avisar.advertencia("Debe ingresar la Fecha del pago.");
+      return;
+    }
 
-  // Si todas las validaciones pasan, se procesa el pago
-  const token = localStorage.getItem("token");
+    if (!pagoForm.nroComprobante || !pagoForm.nroComprobante.trim()) {
+      avisar.advertencia("Debe ingresar el Número de comprobante.");
+      return;
+    }
 
-  const id_estado_cuota = 3
-  const now = new Date();
-  const fecha_transaccion = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
-  const fecha_ultima_modificacion = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    if (!pagoForm.importe || Number(pagoForm.importe) <= 0) {
+      avisar.advertencia("Debe ingresar un Importe válido mayor a 0.");
+      return;
+    }
 
-  // Diccionario de equivalencias
-const MAP_DOC_AFIP = {
-  1: 90, // LC
-  2: 89, // LE
-  3: 94, // Pasaporte
-  4: 0,  // CI
-  6: 80, // CUIT
-  7: 86, // CUIL
-  8: 96, // DNI
-  9: 91, // NIF
-  10: 96 // DNI Temporario
-};
+    // Validar si el sistema no permite pagos parciales
+    const filaSeleccionada = movimientos.find(m => m.id_alumno_cc === pagoForm.id_alumno_cc) || movimientos[0];
+    if (!permitePagosParciales) {
+      const importeOriginal = Math.abs(Number(filaSeleccionada?.importe || 0));
+      if (Number(pagoForm.importe) !== importeOriginal) {
+        avisar.advertencia(`El sistema no permite pagos parciales. Debe abonar la cuota completa ($ ${importeOriginal}).`);
+        return;
+      }
+    }
 
+    if (esPosnet) {
+      if (!pagoForm.tarjeta || !pagoForm.tarjeta.trim()) {
+        avisar.advertencia("Debe seleccionar una Tarjeta para pagos con Posnet.");
+        return;
+      }
 
-// Función para obtener el código antes de enviar a AFIP
-const obtenerDocTipoAfip = (idTipoDocumentoLocal) => {
-  // Retorna el código asignado o 99 (Doc. Sin Identificar/Varios) por defecto
-  return MAP_DOC_AFIP[idTipoDocumentoLocal] ?? 99; 
-};
+      if (!pagoForm.nroLote || !pagoForm.nroLote.trim()) {
+        avisar.advertencia("Debe ingresar el Número de lote.");
+        return;
+      }
 
+      if (!pagoForm.nroAutorizacion || !pagoForm.nroAutorizacion.trim()) {
+        avisar.advertencia("Debe ingresar el Número de autorización.");
+        return;
+      }
+    }
 
-// 1. Obtener la fila seleccionada de la lista de movimientos
-const filaSeleccionada = movimientos.find(m => m.id_alumno_cc === pagoForm.id_alumno_cc) || movimientos[0];
+    const token = localStorage.getItem("token");
+    const id_estado_cuota = 3;
+    const now = new Date();
+    const fecha_transaccion = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const fecha_ultima_modificacion = fecha_transaccion;
 
-// 2. Extraer número de documento numérico (limpiando guiones o puntos)
-const rawDoc = filaSeleccionada?.cuil_tutor || '';
-const nroDocLimpio = Number(String(rawDoc).replace(/\D/g, '')) || 0;
+    const MAP_DOC_AFIP = {
+      1: 90, 2: 89, 3: 94, 4: 0, 6: 80, 7: 86, 8: 96, 9: 91, 10: 96
+    };
 
-// 3. Obtener el id_tipo_documento local devuelto por la SQL (ej: 7 para CUIL, 8 para DNI, 6 para CUIT)
-const idTipoDocBD = filaSeleccionada?.id_tipo_documento_tutor;
+    const obtenerDocTipoAfip = (idTipoDocumentoLocal) => {
+      return MAP_DOC_AFIP[idTipoDocumentoLocal] ?? 99; 
+    };
 
-// 4. Mapear directamente al código AFIP
-const docTipoAfip = obtenerDocTipoAfip(idTipoDocBD); // Si idTipoDocBD es 7 -> devuelve 86; si es 8 -> 96; etc.
+    const rawDoc = filaSeleccionada?.cuil_tutor || '';
+    const nroDocLimpio = Number(String(rawDoc).replace(/\D/g, '')) || 0;
+    const idTipoDocBD = filaSeleccionada?.id_tipo_documento_tutor;
+    const docTipoAfip = obtenerDocTipoAfip(idTipoDocBD);
 
-// 5. Armar el payload
-const payloadCompleto = {
-  ...pagoForm,
-  importe: -Math.abs(Number(pagoForm.importe)),
-  fecha_transaccion: fecha_transaccion,
-  fecha_ultima_modificacion: fecha_ultima_modificacion,
-  id_estado_cuota: id_estado_cuota,
-  punto_venta: valorPuntoVenta,
-  comprobante_tipo: null,
-  comprobante_numero: null,
-  cae: null,
-  docTipo: docTipoAfip, // Código AFIP (86, 96, 80, etc.)
-  nroDoc: nroDocLimpio,   // Número entero sin caracteres
-  id_motivo_rechazo1: null,
-  id_motivo_rechazo2: null,
-  codigo_error_debito: null,
-  descripcion_error_debito: null,
-  fecha_respuesta_prisma: null
-};
+    const payloadCompleto = {
+      ...pagoForm,
+      importe: -Math.abs(Number(pagoForm.importe)),
+      fecha_transaccion: fecha_transaccion,
+      fecha_ultima_modificacion: fecha_ultima_modificacion,
+      id_estado_cuota: id_estado_cuota,
+      punto_venta: valorPuntoVenta,
+      comprobante_tipo: null,
+      comprobante_numero: null,
+      cae: null,
+      docTipo: docTipoAfip,
+      nroDoc: nroDocLimpio,
+      id_motivo_rechazo1: null,
+      id_motivo_rechazo2: null,
+      codigo_error_debito: null,
+      descripcion_error_debito: null,
+      fecha_respuesta_prisma: null
+    };
 
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/guardarpago`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id_alumno: Number(id_alumno),
+          ...payloadCompleto
+        })
+      });
 
+      if (!response.ok) throw new Error(`Error al registrar el pago: ${response.status}`);
 
-  try {
-    const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/guardarpago`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        id_alumno: Number(id_alumno),
-        ...payloadCompleto
-      })
-    });
+      avisar.exito("Pago registrado correctamente");
+      handleCancelar();
+      fetchMovimientos();
 
-    if (!response.ok) throw new Error(`Error al registrar el pago: ${response.status}`);
-
-    avisar.exito("Pago registrado correctamente");
-
-    handleCancelar();
-    fetchMovimientos();
-
-  } catch (error) {
-    console.error('Error guardando pago:', error);
-    avisar.advertencia('Error al registrar el pago en el servidor.');
-  }
-};
-
+    } catch (error) {
+      console.error('Error guardando pago:', error);
+      avisar.advertencia('Error al registrar el pago en el servidor.');
+    }
+  };
 
   const handleDescargarPDF = async (row) => {
+    console.log(row)
     const token = localStorage.getItem("token");
     const afipResult = await obtenerDatosAfipYQr(row);
-//console.log(afipResult)
-// Aseguramos conversión a número entero
-const codigoCbte = Number(afipResult.datosArca.CbteTipo);
+    const codigoCbte = Number(afipResult.datosArca.CbteTipo);
 
-// Mapeo tolerante a tipos
-const MAPEO_LETRAS_AFIP = {
-  1: 'A', 2: 'A', 3: 'A', 4: 'A', 201: 'A', 202: 'A', 203: 'A',
-  6: 'B', 7: 'B', 8: 'B', 9: 'B', 206: 'B', 207: 'B', 208: 'B',
-  11: 'C', 12: 'C', 13: 'C', 15: 'C', 211: 'C', 212: 'C', 213: 'C',
-  51: 'M', 52: 'M', 53: 'M', 54: 'M',
-  19: 'E', 20: 'E', 21: 'E',
-  195: 'T', 196: 'T', 197: 'T'
-};
+    const MAPEO_LETRAS_AFIP = {
+      1: 'A', 2: 'A', 3: 'A', 4: 'A', 201: 'A', 202: 'A', 203: 'A',
+      6: 'B', 7: 'B', 8: 'B', 9: 'B', 206: 'B', 207: 'B', 208: 'B',
+      11: 'C', 12: 'C', 13: 'C', 15: 'C', 211: 'C', 212: 'C', 213: 'C',
+      51: 'M', 52: 'M', 53: 'M', 54: 'M',
+      19: 'E', 20: 'E', 21: 'E',
+      195: 'T', 196: 'T', 197: 'T'
+    };
 
-// Asignación garantizada
-afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
+    afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
 
     const payloadFactura = {
       emisor: {
@@ -487,8 +450,8 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
         domicilio: (row.direccion || '') + ' ' + (row.numero || ''), 
         localidad_provincia: (row.localidad_nombre || '') + ' - ' + (row.provincia_nombre || ''), 
         condicionIva: row.condicion_iva,
-        tipoComprobante: afipResult.letraComprobante,  //'C',
-        codigoComprobante: afipResult.CbteTipo,   //11
+        tipoComprobante: afipResult.letraComprobante,
+        codigoComprobante: afipResult.CbteTipo,
         puntoVenta: String(row.punto_venta || 1).padStart(5, '0'),
         numeroComprobante: String(row.comprobante_numero).padStart(8, '0'),
         fechaEmision: row.fecha_transaccion 
@@ -585,7 +548,6 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
     }
   };
 
-  
   if (loading) return <div className="p-4 text-center">Cargando estado de cuenta...</div>;
 
   return (
@@ -594,11 +556,13 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
       {/* Título con el nombre del alumno */}
       <div className="p-3 bg-gray-50 border-b border-gray-300">
         <h2 className="text-sm font-bold text-gray-800">
-          Alumno: {movimientos[0] && 
-          nombreLegajo 
-            ? `${movimientos[0].nombrealumno} - Legajo: ${movimientos[0].legajo}`
-            : movimientos[0].nombrealumno
-          }
+          Alumno: {movimientos[0]?.nombrealumno ? (
+            nombreLegajo 
+              ? `${movimientos[0].nombrealumno} - Legajo: ${movimientos[0].legajo || ''}`
+              : movimientos[0].nombrealumno
+          ) : (
+            'Sin datos del alumno'
+          )}
         </h2>
       </div>
 
@@ -618,7 +582,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 text-sm">
-            {movimientos.length > 0 ? (
+            {tieneCargos ? (
               movimientos.map((row, index) => {
                 const esCuotaGenerada = Number(row.importe) > 0;
                 const claveCuota = row.anio_cuota || row.concepto || row.cuota;
@@ -679,8 +643,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
                             <span title="Cuota Saldada" className="text-green-600 flex items-center justify-center p-1">
                               <Check className="w-5 h-5 font-bold" />
                             </span>
-                          ): tipoUsuario === 3 ? (
-                            /* 🔹 Para Tipo 3 (Tutor): Muestra solo la cruz roja */
+                          ) : tipoUsuario === 3 ? (
                             <span title="Falta pagar" className="text-red-600 flex items-center justify-center p-1">
                               <X className="w-5 h-5 font-bold" />
                             </span>
@@ -727,7 +690,7 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
         </table>
       </div>
 
-      {movimientos.length > 0 && (
+      {tieneCargos && (
         <>
           {/* Fila del Total */}
           <div className="flex justify-end items-center p-2 bg-gray-200 font-bold border-t border-gray-300">
@@ -744,188 +707,178 @@ afipResult.letraComprobante = MAPEO_LETRAS_AFIP[codigoCbte] || 'N/A';
                 Datos del pago
               </div>
 
-          <form onSubmit={handleSubmitPago} className="p-4 bg-gray-100 text-gray-800 flex flex-col gap-3">
-            {/* Concepto (No editable) */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <label className="w-44 font-semibold text-xs text-gray-700">Concepto:</label>
-              <input
-                type="text"
-                value={pagoForm.concepto}
-                readOnly
-                required
-                className="flex-1 sm:max-w-md border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-gray-200 text-gray-700 cursor-not-allowed focus:outline-none"
-              />
-            </div>
-
-            {/* Medio de Pago */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <label className="w-44 font-semibold text-xs text-gray-700">Medio de pago:</label>
-                <select
-                  value={pagoForm.id_medio_pago || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-                    
-                    // Busca el objeto completo del medio de pago seleccionado
-                    const seleccionado = mediosPago.find(
-                      (m, index) => String(m.id_medio_pago || m.id || index) === String(selectedId)
-                    );
-
-                    const texto = seleccionado 
-                      ? (seleccionado.nombre || seleccionado.medio_pago || seleccionado.descripcion) 
-                      : '';
-
-                    setPagoForm({
-                      ...pagoForm,
-                      id_medio_pago: selectedId,
-                      medioPago: texto,
-                      tarjeta: ''
-                    });
-                  }}
-                  className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
-                  required
-                >
-                  <option value="">-- SELECCIONE --</option>
-                  {mediosPago.map((medio, index) => {
-                    const id = medio.id_medio_pago || medio.id || index;
-                    const texto = medio.nombre || medio.medio_pago || medio.descripcion;
-
-                    return (
-                      <option key={id} value={id}>
-                        {texto}
-                      </option>
-                    );
-                  })}
-                </select>
-            </div>
-
-            {/* Tarjeta (Solo Posnet) */}
-            {esPosnet && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                <label className="w-44 font-semibold text-xs text-gray-700">Tarjeta:</label>
-                <select
-                  value={pagoForm.id_marca_tarjeta || ''}
-                  onChange={(e) => {
-                    const selectedId = e.target.value;
-
-                    // Busca la tarjeta seleccionada por id_marca_tarjeta
-                    const seleccionada = tarjetas.find(
-                      (t) => String(t.id_marca_tarjeta) === String(selectedId)
-                    );
-
-                    setPagoForm({
-                      ...pagoForm,
-                      id_marca_tarjeta: selectedId,
-                      tarjeta: seleccionada ? seleccionada.nombre : ''
-                    });
-                  }}
-                  className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
-                  required
-                >
-                  <option value="">-- SELECCIONE TARJETA --</option>
-                  {tarjetas.map((t) => (
-                    <option key={t.id_marca_tarjeta} value={t.id_marca_tarjeta}>
-                      {t.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* Fecha del Pago */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <label className="w-44 font-semibold text-xs text-gray-700">Fecha del pago:</label>
-              <input
-                type="date"
-                value={pagoForm.fechaPago}
-                onChange={(e) => setPagoForm({ ...pagoForm, fechaPago: e.target.value })}
-                className="border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                required
-              />
-            </div>
-
-            {/* Número de Comprobante */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <label className="w-44 font-semibold text-xs text-gray-700">Número de comprobante:</label>
-              <input
-                type="text"
-                value={pagoForm.nroComprobante}
-                onChange={(e) => setPagoForm({ ...pagoForm, nroComprobante: e.target.value })}
-                placeholder="Ej: 0001-00001234"
-                className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                required
-              />
-            </div>
-
-            {/* Campos adicionales de Posnet */}
-            {esPosnet && (
-              <>
+              <form onSubmit={handleSubmitPago} className="p-4 bg-gray-100 text-gray-800 flex flex-col gap-3">
+                {/* Concepto (No editable) */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <label className="w-44 font-semibold text-xs text-gray-700">Número de lote:</label>
+                  <label className="w-44 font-semibold text-xs text-gray-700">Concepto:</label>
                   <input
                     type="text"
-                    value={pagoForm.nroLote}
-                    onChange={(e) => setPagoForm({ ...pagoForm, nroLote: e.target.value })}
-                    className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    required={esPosnet}
+                    value={pagoForm.concepto}
+                    readOnly
+                    required
+                    className="flex-1 sm:max-w-md border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-gray-200 text-gray-700 cursor-not-allowed focus:outline-none"
                   />
                 </div>
 
+                {/* Medio de Pago */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <label className="w-44 font-semibold text-xs text-gray-700">Número de autorización:</label>
+                  <label className="w-44 font-semibold text-xs text-gray-700">Medio de pago:</label>
+                  <select
+                    value={pagoForm.id_medio_pago || ''}
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      const seleccionado = mediosPago.find(
+                        (m, index) => String(m.id_medio_pago || m.id || index) === String(selectedId)
+                      );
+                      const texto = seleccionado 
+                        ? (seleccionado.nombre || seleccionado.medio_pago || seleccionado.descripcion) 
+                        : '';
+
+                      setPagoForm({
+                        ...pagoForm,
+                        id_medio_pago: selectedId,
+                        medioPago: texto,
+                        tarjeta: ''
+                      });
+                    }}
+                    className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
+                    required
+                  >
+                    <option value="">-- SELECCIONE --</option>
+                    {mediosPago.map((medio, index) => {
+                      const id = medio.id_medio_pago || medio.id || index;
+                      const texto = medio.nombre || medio.medio_pago || medio.descripcion;
+
+                      return (
+                        <option key={id} value={id}>
+                          {texto}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                {/* Tarjeta (Solo Posnet) */}
+                {esPosnet && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="w-44 font-semibold text-xs text-gray-700">Tarjeta:</label>
+                    <select
+                      value={pagoForm.id_marca_tarjeta || ''}
+                      onChange={(e) => {
+                        const selectedId = e.target.value;
+                        const seleccionada = tarjetas.find(
+                          (t) => String(t.id_marca_tarjeta) === String(selectedId)
+                        );
+
+                        setPagoForm({
+                          ...pagoForm,
+                          id_marca_tarjeta: selectedId,
+                          tarjeta: seleccionada ? seleccionada.nombre : ''
+                        });
+                      }}
+                      className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
+                      required
+                    >
+                      <option value="">-- SELECCIONE TARJETA --</option>
+                      {tarjetas.map((t) => (
+                        <option key={t.id_marca_tarjeta} value={t.id_marca_tarjeta}>
+                          {t.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* Fecha del Pago */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label className="w-44 font-semibold text-xs text-gray-700">Fecha del pago:</label>
                   <input
-                    type="text"
-                    value={pagoForm.nroAutorizacion}
-                    onChange={(e) => setPagoForm({ ...pagoForm, nroAutorizacion: e.target.value })}
-                    className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    required={esPosnet}
+                    type="date"
+                    value={pagoForm.fechaPago}
+                    onChange={(e) => setPagoForm({ ...pagoForm, fechaPago: e.target.value })}
+                    className="border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
+                    required
                   />
                 </div>
-              </>
-            )}
 
-            {/* Importe con signo $ y decimales automáticos */}
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-              <label className="w-44 font-semibold text-xs text-gray-700">Importe:</label>
-              <div className="relative flex items-center w-full sm:w-44">
-                <span className="absolute left-2.5 text-xs text-gray-500 font-mono pointer-events-none">
-                  $
-                </span>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={pagoForm.importe}
-                  onChange={(e) => setPagoForm({ ...pagoForm, importe: e.target.value })}
-                  readOnly={!permitePagosParciales} // 👈 Si no permite parciales, no se puede editar
-                  onBlur={(e) => {
-                    const val = parseFloat(e.target.value);
-                    if (!isNaN(val)) {
-                      setPagoForm((prev) => ({ ...prev, importe: val.toFixed(2) }));
-                    }
-                  }}
-                  placeholder="0.00"
-                  className="w-full border border-gray-300 rounded pl-6 pr-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 font-mono"
-                  required
-                />
-              </div>
-            </div>
+                {/* Nº Comprobante */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label className="w-44 font-semibold text-xs text-gray-700">Nº Comprobante:</label>
+                  <input
+                    type="text"
+                    value={pagoForm.nroComprobante}
+                    onChange={(e) => setPagoForm({ ...pagoForm, nroComprobante: e.target.value })}
+                    className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
+                    required
+                  />
+                </div>
 
-            {/* Botones Cancelar / Guardar */}
-            <div className="mt-4 flex justify-between items-center pt-2 border-t border-gray-300">
-              <button
-                type="button"
-                onClick={handleCancelar}
-                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold text-xs rounded border border-gray-400 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white font-semibold text-xs rounded transition-colors shadow-sm"
-              >
-                Guardar
-              </button>
-            </div>
-          </form>
+                {/* Campos de Lote y Autorización para Posnet */}
+                {esPosnet && (
+                  <>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label className="w-44 font-semibold text-xs text-gray-700">Nº Lote:</label>
+                      <input
+                        type="text"
+                        value={pagoForm.nroLote}
+                        onChange={(e) => setPagoForm({ ...pagoForm, nroLote: e.target.value })}
+                        className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label className="w-44 font-semibold text-xs text-gray-700">Nº Autorización:</label>
+                      <input
+                        type="text"
+                        value={pagoForm.nroAutorizacion}
+                        onChange={(e) => setPagoForm({ ...pagoForm, nroAutorizacion: e.target.value })}
+                        className="flex-1 sm:max-w-xs border border-gray-300 rounded px-2.5 py-1.5 text-xs bg-white focus:outline-none"
+                        required
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Importe (Controlado por permitePagosParciales) */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                  <label className="w-44 font-semibold text-xs text-gray-700">Importe:</label>
+                  <div className="relative flex items-center flex-1 sm:max-w-xs">
+                    <span className="absolute left-3 text-gray-500 font-bold text-xs pointer-events-none select-none z-10">                             
+                      $ 
+                    </span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={pagoForm.importe}
+                    onChange={(e) => setPagoForm({ ...pagoForm, importe: e.target.value })}
+                    readOnly={!permitePagosParciales}
+                    className={`w-full pl-8 pr-2.5 py-1.5 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 ${                      !permitePagosParciales 
+                        ? 'bg-gray-200 text-gray-700 cursor-not-allowed' 
+                        : 'bg-white'
+                    }`}
+                    required
+                  />
+                  </div>
+                </div>
+
+                {/* Botones de acción */}
+                <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-gray-200">
+                  <button
+                    type="button"
+                    onClick={handleCancelar}
+                    className="px-3 py-1.5 bg-gray-500 hover:bg-gray-600 text-white rounded text-xs transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 bg-indigo-900 hover:bg-indigo-950 text-white rounded text-xs transition-colors font-medium"
+                  >
+                    Guardar Pago
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </>
