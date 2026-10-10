@@ -358,9 +358,12 @@ const handleChangePhone = (e) => {
     setPers(prev => ({ ...prev, academica: nuevosDatosAcademicos }));
   }, []);
 
-  const setFormasPagoGlobal = useCallback((nuevasFormas) => {
-    setPers(prev => ({ ...prev, formasPago: nuevasFormas }));
-  }, []);
+const setFormasPagoGlobal = (nuevasFormas) => {
+  setPers(prev => ({
+    ...prev,
+    formasPago: nuevasFormas // ✅ Reemplaza el array por el nuevo estado
+  }));
+};
 
   const setAllegadosGlobal = (nuevaListaOFunction) => {
     setPers(prev => {
@@ -777,7 +780,7 @@ const handleChangePhone = (e) => {
           delete payloadPost.esNuevo;
           delete payloadPost.id;
           delete payloadPost.id_pago;
-          delete payloadPost.id_alumno_tarjeta;
+          //delete payloadPost.id_alumno_tarjeta;
           delete payloadPost.id_forma_pago;
 
           await fetch(`${process.env.REACT_APP_API_URL}/api/pagos`, {
@@ -915,14 +918,14 @@ const handleChangePhone = (e) => {
           padding: '20px', background: '#f9f9f9', border: '1px dashed #ccc', borderRadius: '4px',
           display: subSolapaActiva === 'alumnoFormaPago' ? 'block' : 'none'
         }}>
-          <ItemListAlumnoFormaPago
-            idAlumno={pers.id_alumno}
-            idPersona={id || pers.id_persona}
-            formasPago={pers.formasPago || []}
-            onCambioDatos={setFormasPagoGlobal}
-            onEliminarBackend={eliminarFormaPagoBackend}
-            onRecargar={() => obtenerFormasPago(pers.id_alumno)}
-          />   
+        <ItemListAlumnoFormaPago
+          idAlumno={pers.id_alumno}
+          idPersona={id || pers.id_persona}
+          formasPago={pers.formasPago || []}
+          onCambioDatos={setFormasPagoGlobal}
+          onEliminarBackend={eliminarFormaPagoBackend}
+          onRecargar={() => obtenerFormasPago(id || pers.id_persona)} // <--- Corregido a id_persona
+        />
         </div>
       </div>  
   
