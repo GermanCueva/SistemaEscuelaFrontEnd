@@ -1,24 +1,27 @@
-import { useEffect, useState, useMemo } from "react"
-import ItemListPersonas from './ItemListPersonas'
-import CustomToggle from "../utils/CustomToggle"
+import { useEffect, useState, useMemo } from "react";
+import ItemListPersonas from './ItemListPersonas';
+import CustomToggle from "../utils/CustomToggle";
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useAuth } from "../context/AuthContext";
 
+// Criterio único y binario (Cero solapamientos, cero faltantes)
+const esAlumno = (persona) => persona.es_alumno === 'S';
+const esTutor = (persona) => persona.es_alumno !== 'S'; // Incluye 'N', null y undefined
 
 const ItemListContainerPersona = () => {
   const { user } = useAuth();
-  const [todasLasPersonas, setTodasLasPersonas] = useState([])
-  const [cargando, setCargando] = useState(true)
-  const [descargando, setDescargando] = useState(false)
-  const [tipoDescarga, setTipoDescarga] = useState('')
+  const [todasLasPersonas, setTodasLasPersonas] = useState([]);
+  const [cargando, setCargando] = useState(true);
+  const [descargando, setDescargando] = useState(false);
+  const [tipoDescarga, setTipoDescarga] = useState('');
 
-  const [niveles, setNiveles] = useState([])
-  const [grados, setGrados] = useState([])
-  const [divisiones, setDivisiones] = useState([])
+  const [niveles, setNiveles] = useState([]);
+  const [grados, setGrados] = useState([]);
+  const [divisiones, setDivisiones] = useState([]);
 
-  const [textoBusqueda, setTextoBusqueda] = useState('')
+  const [textoBusqueda, setTextoBusqueda] = useState('');
 
   const [filtros, setFiltros] = useState({
     esAlumno: false,
@@ -27,15 +30,15 @@ const ItemListContainerPersona = () => {
     idNivel: '',
     idGrado: '',
     idDivision: ''
-  })
+  });
 
   useEffect(() => {
-    setCargando(true)
-    const token = localStorage.getItem('token')
+    setCargando(true);
+    const token = localStorage.getItem('token');
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`
-    }
+    };
 
     Promise.all([
       fetch(`${process.env.REACT_APP_API_URL}/api/persons`, { headers }).then(res => res.json()),
@@ -44,21 +47,21 @@ const ItemListContainerPersona = () => {
       fetch(`${process.env.REACT_APP_API_URL}/api/academica/division`, { headers }).then(res => res.json()).catch(() => [])
     ])
       .then(([dataPersonas, dataNiveles, dataGrados, dataDivisiones]) => {
-        setTodasLasPersonas(Array.isArray(dataPersonas) ? dataPersonas : [])
-        setNiveles(Array.isArray(dataNiveles) ? dataNiveles : [])
-        setGrados(Array.isArray(dataGrados) ? dataGrados : [])
-        setDivisiones(Array.isArray(dataDivisiones) ? dataDivisiones : [])
-        setCargando(false)
+        setTodasLasPersonas(Array.isArray(dataPersonas) ? dataPersonas : []);
+        setNiveles(Array.isArray(dataNiveles) ? dataNiveles : []);
+        setGrados(Array.isArray(dataGrados) ? dataGrados : []);
+        setDivisiones(Array.isArray(dataDivisiones) ? dataDivisiones : []);
+        setCargando(false);
       })
       .catch(error => {
-        console.error("Error al cargar datos iniciales:", error)
-        setTodasLasPersonas([])
-        setNiveles([])
-        setGrados([])
-        setDivisiones([])
-        setCargando(false)
-      })
-  }, [user?.identidadeducativa])
+        console.error("Error al cargar datos iniciales:", error);
+        setTodasLasPersonas([]);
+        setNiveles([]);
+        setGrados([]);
+        setDivisiones([]);
+        setCargando(false);
+      });
+  }, [user?.identidadeducativa]);
 
   const gradosFiltrados = useMemo(() => {
     if (!filtros.idNivel) return grados;
@@ -74,31 +77,34 @@ const ItemListContainerPersona = () => {
     );
 
     return todasLasPersonas.filter(persona => {
+      // 1. Buscador por texto libre
       if (textoBusqueda.trim() !== '') {
-        const query = textoBusqueda.toLowerCase().trim()
-        const coincideApellido = persona.apellidos?.toLowerCase().includes(query)
-        const coincideNombre = persona.nombres?.toLowerCase().includes(query)
-        const coincideDni = persona.numero?.toString().toLowerCase().includes(query)
+        const query = textoBusqueda.toLowerCase().trim();
+        const coincideApellido = persona.apellidos?.toLowerCase().includes(query);
+        const coincideNombre = persona.nombres?.toLowerCase().includes(query);
+        const coincideDni = persona.numero?.toString().toLowerCase().includes(query);
 
-        if (!coincideApellido && !coincideNombre && !coincideDni) return false
+        if (!coincideApellido && !coincideNombre && !coincideDni) return false;
       }
 
-      const esAlumnoReg = Boolean(persona.id_alumno) || persona.es_alumno === 'S' 
-      const esTutorReg = !persona.id_alumno && persona.es_alumno === 'N'
+      const esAlumnoReg = esAlumno(persona);
+      const esTutorReg = esTutor(persona);
 
-      if (filtros.esAlumno && !esAlumnoReg) return false
-      if (filtros.esTutor && !esTutorReg) return false
+      // 2. Filtro por Switches de Rol (Alumno / Tutor)
+      if (filtros.esAlumno && !filtros.esTutor && !esAlumnoReg) return false;
+      if (filtros.esTutor && !filtros.esAlumno && !esTutorReg) return false;
 
+      // 3. Estado Activo / Pasivo (Aplica únicamente a Alumnos)
       if (esAlumnoReg) {
-        if (filtros.esActivo && persona.regular !== 'S') return false
-        if (!filtros.esActivo && persona.regular !== 'N') return false
+        if (filtros.esActivo && persona.regular !== 'S') return false;
+        if (!filtros.esActivo && persona.regular === 'S') return false;
       }
 
+      // 4. Filtros académicos para Alumnos (Nivel, Grado, División)
       if (filtros.esAlumno) {
         if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) return false;
         if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) return false;
 
-        // 🟢 Filtro flexible por ID y por Nombre de División
         if (filtros.idDivision) {
           const idBuscado = String(filtros.idDivision);
           const nombreBuscado = divObjetoSeleccionado 
@@ -115,15 +121,15 @@ const ItemListContainerPersona = () => {
         }
       }
 
-      return true
-    })
-  }, [todasLasPersonas, textoBusqueda, filtros, divisiones])
+      return true;
+    });
+  }, [todasLasPersonas, textoBusqueda, filtros, divisiones]);
 
-  const handleTextChange = (e) => setTextoBusqueda(e.target.value)
-  const handleClearSearch = () => setTextoBusqueda('')
+  const handleTextChange = (e) => setTextoBusqueda(e.target.value);
+  const handleClearSearch = () => setTextoBusqueda('');
 
   const handleToggleChange = (e) => {
-    const { name, checked } = e.target
+    const { name, checked } = e.target;
     setFiltros(prev => {
       const next = { ...prev, [name]: checked };
       if (name === 'esAlumno' && !checked) {
@@ -132,16 +138,18 @@ const ItemListContainerPersona = () => {
         next.idDivision = '';
       }
       return next;
-    })
-  }
+    });
+  };
 
   const datosParaEnviar = personasFiltradas.map(p => ({
     apellidos: p.apellidos,
     nombres: p.nombres,
     nombre_corto: p.nombre_corto,
     numero: p.numero,
-    es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor',
-    nivel: p.nombre_nivel && p.nombre_grado && p.division ? `${p.nombre_nivel} - ${p.nombre_grado} - ${p.division}` : '',
+    es_alumno: esAlumno(p) ? 'Alumno' : 'Tutor',
+    nivel: p.nombre_nivel && p.nombre_grado && p.division 
+      ? `${p.nombre_nivel} ${p.nombre_grado} ${p.division}` 
+      : '',
     tieneSaldoTotal: false,
     titulo: 'Reporte de Personas'
   }));
@@ -210,8 +218,9 @@ const ItemListContainerPersona = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h2 className="text-xl font-bold mb-4 text-center">Listado de Personas</h2>
-
+      <h2 className="text-xl font-bold mb-4 text-center flex items-center justify-center gap-2">
+        <span>Listado de Personas</span>
+      </h2>
       <div className="flex flex-wrap items-center justify-center gap-4 mb-6 bg-gray-100 p-4 rounded-xl shadow-sm">
         <div className="flex items-end gap-2">
           <div className="flex flex-col gap-1">
@@ -221,8 +230,8 @@ const ItemListContainerPersona = () => {
               value={textoBusqueda} 
               onChange={handleTextChange}
               placeholder="Buscar por Apellido, Nombre o DNI..." 
-              className="input input-bordered input-sm w-60 bg-white"
-              style={{ width: '280px' }} /* Forzado directo */
+              className="input input-bordered input-sm bg-white"
+              style={{ width: '280px' }}
             />
           </div>
           
@@ -310,6 +319,14 @@ const ItemListContainerPersona = () => {
 
       </div>
 
+      <div className="flex justify-between items-center mb-2 px-1 text-xs font-medium text-gray-500">
+        <span>
+          Mostrando <strong className="text-gray-800 font-bold">{personasFiltradas.length}</strong> 
+          {personasFiltradas.length === 1 ? ' persona' : ' personas'}
+          {personasFiltradas.length !== todasLasPersonas.length && ` (filtradas de ${todasLasPersonas.length} en total)`}
+        </span>
+      </div>
+
       {cargando ? (
         <p className="text-center font-semibold my-4">Cargando datos iniciales...</p>
       ) : (
@@ -323,8 +340,7 @@ const ItemListContainerPersona = () => {
         </div>
       )}
     </div>
-  )
-  
-}
+  );
+};
 
-export default ItemListContainerPersona
+export default ItemListContainerPersona;
