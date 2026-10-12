@@ -64,16 +64,16 @@ const Home = () => {
     location.pathname === path || (path !== "/" && location.pathname.startsWith(path));
 
   return (
-    <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 my-4 min-w-0">
+    <div className="w-full max-w-[1600px] mx-auto px-2 sm:px-6 my-4">
       {/* 🔹 Tabs principales */}
-      <div className="flex overflow-x-auto whitespace-nowrap rounded-t-lg border border-gray-300 bg-gray-100 divide-x divide-gray-300 scrollbar-thin">
-        {Object.keys(tabs).map((path) => {
-          const active = isTabActive(path);
+      <div className="flex overflow-x-auto whitespace-nowrap rounded-t-lg border border-gray-300 bg-gray-100 divide-x divide-gray-300">
+        {tabsVisibles.map((tab) => {
+          const active = isTabActive(tab.path);
           return (
             <button
-              key={path}
-              onClick={() => navigate(path)}
-              className={`flex-1 min-w-max px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-semibold transition-colors text-center ${
+              key={tab.path}
+              onClick={() => navigate(tab.path)}
+              className={`shrink-0 md:flex-1 px-1.5 sm:px-3 md:px-4 py-2.5 sm:py-3 text-[11px] sm:text-xs md:text-sm font-semibold transition-colors text-center ${
                 active
                   ? "bg-blue-600 text-white shadow-sm"
                   : "text-gray-700 hover:bg-gray-200"
@@ -86,8 +86,8 @@ const Home = () => {
       </div>
 
       {/* 🔹 Subtabs Personas */}
-      {location.pathname.startsWith("/personas") && (
-        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300 scrollbar-thin">
+      {location.pathname.startsWith("/personas") && tipoUsuario !== 3 && (
+        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
           {[
             { path: "/personas/abm", label: "ABM Personas" },
             { path: "/personas/alumnos", label: "Alumnos" },
@@ -98,9 +98,9 @@ const Home = () => {
               <button
                 key={sub.path}
                 onClick={() => navigate(sub.path)}
-                className={`flex-1 min-w-max px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
                   active
-                    ? "bg-emerald-600 text-white font-semibold"
+                    ? "bg-emerald-600 text-white"
                     : "text-gray-700 hover:bg-gray-300"
                 }`}
               >
@@ -111,9 +111,9 @@ const Home = () => {
         </div>
       )}
 
-      {/* 🔹 Subtabs Gestión */}
-      {location.pathname.startsWith("/gestion") && (
-        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300 scrollbar-thin">
+      {/* 🔹 Subtabs Gestión de Pagos */}
+      {location.pathname.startsWith("/gestion") && tipoUsuario !== 3 && (
+        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
           {[
             { path: "/gestion/cargos", label: "Generar Cargos a Alumnos" },
             { path: "/gestion/pagosmanual", label: "Alta manual de Pagos" },
@@ -126,9 +126,9 @@ const Home = () => {
               <button
                 key={sub.path}
                 onClick={() => navigate(sub.path)}
-                className={`flex-1 min-w-max px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
                   active
-                    ? "bg-emerald-600 text-white font-semibold"
+                    ? "bg-emerald-600 text-white"
                     : "text-gray-700 hover:bg-gray-300"
                 }`}
               >
@@ -139,9 +139,9 @@ const Home = () => {
         </div>
       )}
 
-      {/* 🔹 Subtabs Administración */}
-      {location.pathname.startsWith("/admin") && (
-        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300 scrollbar-thin">
+      {/* 🔹 Subtabs Administración (Coincidiendo con /administracion) */}
+      {location.pathname.startsWith("/administracion") && tipoUsuario === 1 && (
+        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
           {[
             { path: "/administracion/instituciones", label: "ABM de Instituciones" },
             { path: "/administracion/usuarios", label: "Gestión de Usuarios" },
@@ -152,9 +152,9 @@ const Home = () => {
               <button
                 key={sub.path}
                 onClick={() => navigate(sub.path)}
-                className={`flex-1 min-w-max px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors text-center ${
+                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
                   active
-                    ? "bg-emerald-600 text-white font-semibold"
+                    ? "bg-emerald-600 text-white"
                     : "text-gray-700 hover:bg-gray-300"
                 }`}
               >
@@ -166,7 +166,7 @@ const Home = () => {
       )}
 
       {/* 🔥 Contenido dinámico */}
-      <div className="p-4 sm:p-6 border-x border-b border-gray-300 rounded-b-lg bg-white shadow-sm min-w-0">
+      <div className="p-4 sm:p-6 border-x border-b border-gray-300 rounded-b-lg bg-white shadow-sm">
         <Outlet />
       </div>
     </div>
