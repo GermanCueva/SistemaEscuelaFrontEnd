@@ -56,6 +56,9 @@ const MAPA_MESES = {
 };
 
 const GenerarCargosAlumnos = () => {
+
+
+
   const { user } = useAuth();
   const [formData, setFormData] = useState(initialFormData);
 
@@ -81,6 +84,8 @@ const GenerarCargosAlumnos = () => {
   const [cobra_inscripcion_en_cuotas_primario, setValor_cobra_inscripcion_en_cuotas_primario] = useState(null);
   const [ingresa_importe_en_generacion_cargos, setValor_ingresa_importe_en_generacion_cargos] = useState(null);
   const [importe_mensual_cuota_x_grado, setValor_importe_mensual_cuota_x_grado] = useState(null);
+
+
 
   useEffect(() => {
     const fetchData = async () => {
@@ -167,6 +172,17 @@ const GenerarCargosAlumnos = () => {
 
     obtenerParametros();
   }, [user?.identidadeducativa, user?.id_establecimiento]);
+
+
+const alumnosFiltrados = useMemo(() => {
+  if (!Array.isArray(alumnos)) return [];
+  return alumnos.filter((alumno) => 
+    alumno.es_alumno === 'S' && 
+    alumno.regular === 'S' && 
+    alumno.activo !== 'B'
+  );
+}, [alumnos]);
+
 
   const gradosDisponibles = useMemo(() => {
     const mapa = new Map();
@@ -267,10 +283,11 @@ const GenerarCargosAlumnos = () => {
       }
     });
 
-    const listadoAlumnos = Array.isArray(alumnos) ? alumnos : [];
+    /*const listadoAlumnos = Array.isArray(alumnos) ? alumnos : [];
     const alumnosValidos = listadoAlumnos.filter(
       (alumno) => alumno.es_alumno === 'S' && alumno.activo === 'S' && alumno.regular === 'S'
-    );
+    );*/
+    const alumnosValidos = alumnosFiltrados;
 
     let alumnosAProcesar = [];
     if (formData.forma === 'Grupal') {
@@ -490,6 +507,9 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar
 
   if (loading) return <div className="p-4">Cargando formulario...</div>;
 
+
+
+
   return (
     <div className="max-w-4xl mx-auto my-6 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
       <div className="bg-emerald-700 text-white px-5 py-3 font-bold text-base">
@@ -545,15 +565,12 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar
               required
               className="col-span-6 p-1 border border-gray-400 rounded bg-white text-sm"
             >
-              <option value="">-- SELECCIONE --</option>
-              {Array.isArray(alumnos) &&
-                alumnos
-                  .filter((alumno) => alumno.es_alumno === 'S' && alumno.activo === 'S' && alumno.regular === 'S')
-                  .map((alumno) => (
-                    <option key={alumno.id_alumno} value={alumno.id_alumno}>
-                      {alumno.apellidos}, {alumno.nombres} ({alumno.grado} - {alumno.nivel})
-                    </option>
-                  ))}
+            <option value="">-- SELECCIONE ({alumnosFiltrados.length}) --</option>
+              {alumnosFiltrados.map((alumno) => (
+                <option key={alumno.id_alumno} value={alumno.id_alumno}>
+                  {alumno.apellidos}, {alumno.nombres} ({alumno.grado} - {alumno.nivel})
+                </option>
+              ))}
             </select>
           </div>
         )}

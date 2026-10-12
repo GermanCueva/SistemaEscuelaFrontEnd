@@ -761,6 +761,16 @@ const handleDelete = async (id_usuario) => {
         </div>
       </div>
 
+{!modoTutores && (
+        <div className="flex justify-between items-center mb-2 px-1 text-xs font-medium text-gray-500">
+        <span>
+          Mostrando <strong className="text-gray-800 font-bold">{usuariosFiltrados.length}</strong>
+          {usuariosFiltrados.length === 1 ? ' usuario' : ' usuarios'}
+          {usuariosFiltrados.length !== usuarios.length && ` (filtrados de ${usuarios.length} usuarios en total)`}
+        </span>
+      </div>
+ )}
+
       {/* TABLA DE USUARIOS */}
       {!modoTutores ? (
         <div className="bg-white shadow-sm rounded-xl border border-gray-100 overflow-x-auto">
@@ -779,6 +789,8 @@ const handleDelete = async (id_usuario) => {
                 <th className="w-[6%] px-2 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Acción</th>
               </tr>
             </thead>
+
+
             <tbody className="bg-white divide-y divide-gray-100 text-sm">
               {loading ? (
                 <tr><td colSpan="10" className="text-center py-8 text-gray-500">Cargando usuarios...</td></tr>
