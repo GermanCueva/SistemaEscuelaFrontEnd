@@ -547,6 +547,7 @@ const ItemPagos = () => {
       avisar.advertencia('Ocurrió un error al intentar generar la factura.');
     }
   };
+  
 
   if (loading) return <div className="p-4 text-center">Cargando estado de cuenta...</div>;
 

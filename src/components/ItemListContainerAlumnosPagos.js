@@ -4,6 +4,9 @@ import CustomToggle from "../utils/CustomToggle"
 import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
 import { useAuth } from "../context/AuthContext";
 
+// Helper de validación unificado
+const esAlumno = (persona) => persona.es_alumno === 'S';
+
 const ItemListContainerAlumnosPagos = () => {
   const { user } = useAuth();
   const [todasLasPersonas, setTodasLasPersonas] = useState([])
@@ -86,50 +89,51 @@ const ItemListContainerAlumnosPagos = () => {
     });
   }, [grados, filtros.idNivel, idEntidad]);
 
-
-
   const personasFiltradas = useMemo(() => {
-  const divObjetoSeleccionado = divisiones.find(
-    d => String(d.id_division || d.id) === String(filtros.idDivision)
-  );
+    const divObjetoSeleccionado = divisiones.find(
+      d => String(d.id_division || d.id) === String(filtros.idDivision)
+    );
 
-  return todasLasPersonas.filter(persona => {
-    if (persona.es_alumno !== 'S') return false;
+    return todasLasPersonas.filter(persona => {
+      // 1. Filtrar únicamente alumnos
+      if (!esAlumno(persona)) return false;
 
-    if (textoBusqueda.trim() !== '') {
-      const query = textoBusqueda.toLowerCase().trim()
-      const coincideApellido = persona.apellidos?.toLowerCase().includes(query)
-      const coincideNombre = persona.nombres?.toLowerCase().includes(query)
-      const coincideDni = persona.numero?.toString().toLowerCase().includes(query)
+      // 2. Buscador por texto libre
+      if (textoBusqueda.trim() !== '') {
+        const query = textoBusqueda.toLowerCase().trim()
+        const coincideApellido = persona.apellidos?.toLowerCase().includes(query)
+        const coincideNombre = persona.nombres?.toLowerCase().includes(query)
+        const coincideDni = persona.numero?.toString().toLowerCase().includes(query)
 
-      if (!coincideApellido && !coincideNombre && !coincideDni) return false
-    }
+        if (!coincideApellido && !coincideNombre && !coincideDni) return false
+      }
 
-    if (filtros.esActivo && persona.regular !== 'S') return false
-    if (!filtros.esActivo && persona.regular !== 'N') return false
+      // 3. Estado Activo / Pasivo (incluye 'N', null y vacíos en pasivos)
+      if (filtros.esActivo && persona.regular !== 'S') return false;
+      if (!filtros.esActivo && persona.regular === 'S') return false;
 
-    if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) return false
-    if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) return false
+      // 4. Filtros académicos
+      if (filtros.idNivel && String(persona.id_nivel) !== String(filtros.idNivel)) return false
+      if (filtros.idGrado && String(persona.id_grado) !== String(filtros.idGrado)) return false
 
-    if (filtros.idDivision) {
-      const idBuscado = String(filtros.idDivision);
-      const nombreBuscado = divObjetoSeleccionado 
-        ? String(divObjetoSeleccionado.division || divObjetoSeleccionado.nombre).toLowerCase().trim() 
-        : '';
+      if (filtros.idDivision) {
+        const idBuscado = String(filtros.idDivision);
+        const nombreBuscado = divObjetoSeleccionado 
+          ? String(divObjetoSeleccionado.division || divObjetoSeleccionado.nombre).toLowerCase().trim() 
+          : '';
 
-      const idAlumno = persona.id_division ? String(persona.id_division) : '';
-      const nombreAlumno = persona.division ? String(persona.division).toLowerCase().trim() : '';
+        const idAlumno = persona.id_division ? String(persona.id_division) : '';
+        const nombreAlumno = persona.division ? String(persona.division).toLowerCase().trim() : '';
 
-      const coincidePorId = idAlumno === idBuscado;
-      const coincidePorNombre = nombreBuscado !== '' && nombreAlumno === nombreBuscado;
+        const coincidePorId = idAlumno === idBuscado;
+        const coincidePorNombre = nombreBuscado !== '' && nombreAlumno === nombreBuscado;
 
-      if (!coincidePorId && !coincidePorNombre) return false;
-    }
+        if (!coincidePorId && !coincidePorNombre) return false;
+      }
 
-    return true
-  })
-}, [todasLasPersonas, textoBusqueda, filtros, divisiones])
-
+      return true
+    })
+  }, [todasLasPersonas, textoBusqueda, filtros, divisiones])
 
   const handleTextChange = (e) => setTextoBusqueda(e.target.value)
   const handleClearSearch = () => setTextoBusqueda('')
@@ -144,8 +148,10 @@ const ItemListContainerAlumnosPagos = () => {
     nombres: p.nombres,
     nombre_corto: p.nombre_corto,
     numero: p.numero,
-    es_alumno: p.es_alumno === 'S' ? 'Alumno' : 'Tutor',
-    nivel: p.nombre_nivel && p.nombre_grado && p.division ? `${p.nombre_nivel} - ${p.nombre_grado} - ${p.division}` : (p.nombre_nivel || ''),
+    es_alumno: 'Alumno',
+    nivel: p.nombre_nivel && p.nombre_grado && p.division 
+      ? `${p.nombre_nivel} ${p.nombre_grado} ${p.division}` 
+      : (p.nombre_nivel || ''),
     saldo_total: p.saldo_total,
     tieneSaldoTotal: true,
     titulo: 'Reporte de Alumnos - Estado de Cuenta'
@@ -215,6 +221,9 @@ const ItemListContainerAlumnosPagos = () => {
     }
   };
 
+  // Conteo unificado
+  const totalAlumnos = todasLasPersonas.filter(esAlumno).length;
+
   return (
     <div className="container mx-auto p-4">
       <h2 className="text-xl font-bold mb-4 text-center">Listado de Alumnos - Pagos</h2>
@@ -228,8 +237,8 @@ const ItemListContainerAlumnosPagos = () => {
               value={textoBusqueda} 
               onChange={handleTextChange}
               placeholder="Buscar por Apellido, Nombre o DNI..." 
-              className="input input-bordered input-sm w-60 bg-white"
-              style={{ width: '280px' }} /* Forzado directo */
+              className="input input-bordered input-sm bg-white"
+              style={{ width: '280px' }}
             />
           </div>
           
@@ -320,6 +329,14 @@ const ItemListContainerAlumnosPagos = () => {
         </div>
       </div>
 
+      <div className="flex justify-between items-center mb-2 px-1 text-xs font-medium text-gray-500">
+        <span>
+          Mostrando <strong className="text-gray-800 font-bold">{personasFiltradas.length}</strong>
+          {personasFiltradas.length === 1 ? ' alumno' : ' alumnos'}
+          {personasFiltradas.length !== totalAlumnos && ` (filtrados de ${totalAlumnos} alumnos en total)`}
+        </span>
+      </div>
+
       {cargando ? (
         <p className="text-center font-semibold my-4">Cargando datos iniciales...</p>
       ) : (
@@ -340,4 +357,4 @@ const ItemListContainerAlumnosPagos = () => {
   )
 }
 
-export default ItemListContainerAlumnosPagos
+export default ItemListContainerAlumnosPagos;
