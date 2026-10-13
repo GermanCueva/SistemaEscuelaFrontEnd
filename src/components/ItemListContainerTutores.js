@@ -4,7 +4,16 @@ import { FaFileExcel, FaFilePdf } from 'react-icons/fa';
 import { useAuth } from "../context/AuthContext";
 
 // Helper para verificar si la persona es un Tutor (incluye 'N' y valores null/undefined)
-const esTutor = (persona) => persona.es_alumno === 'N' || persona.es_alumno == null;
+//const esTutor = (persona) => persona.es_alumno === 'N' || persona.es_alumno == null;
+// Helper mejorado para verificar si la persona es Tutor
+const esTutor = (persona) => {
+  // Si la API devuelve un flag explícito de allegado/tutor, priorizarlo
+  if (persona.es_allegado === 'S' || persona.tipo_persona === 'Tutor') {
+    return true;
+  }
+  // De lo contrario, incluir todo lo que no sea estrictamente alumno activo
+  return persona.es_alumno !== 'S';
+};
 
 const ItemListContainerTutores = () => {
   const { user } = useAuth();
@@ -31,6 +40,8 @@ const ItemListContainerTutores = () => {
     })
       .then(response => response.json())
       .then(data => {
+        console.log("Total personas devueltas por API:", data.length);
+    console.log("Valores de es_alumno en la API:", [...new Set(data.map(p => p.es_alumno))]);
         setTodasLasPersonas(Array.isArray(data) ? data : []);
         setCargando(false);
       })
