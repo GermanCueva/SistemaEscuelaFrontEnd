@@ -8,7 +8,11 @@ import { useAuth } from '../context/AuthContext';
 
 const MySwal = withReactContent(Swal);
 
-const esSi = (val) => String(val).toUpperCase() === 'S' || String(val).toUpperCase() === 'SI';
+// Helper flexible para detectar valores afirmativos ('SI', 'S', etc.)
+const esSi = (val) => {
+  const v = String(val || '').trim().toUpperCase();
+  return v === 'SI' || v === 'S' || v === 'TRUE' || v === '1';
+};
 
 const formatFecha = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
@@ -21,9 +25,10 @@ const formatFecha = (date) => {
   return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
 };
 
-const calcularFechaCuota2 = (fechaBase) => {
+// Helper flexible para calcular la fecha de vencimiento según la cuota (0 = actual, 1 = +1 mes, 2 = +2 meses)
+const calcularFechaCuota = (fechaBase, mesesASumar = 0) => {
   const d = new Date(fechaBase);
-  d.setMonth(d.getMonth() + 1);
+  d.setMonth(d.getMonth() + mesesASumar);
 
   if (d.getDay() === 6) {
     d.setDate(d.getDate() + 2);
@@ -56,9 +61,6 @@ const MAPA_MESES = {
 };
 
 const GenerarCargosAlumnos = () => {
-
-
-
   const { user } = useAuth();
   const [formData, setFormData] = useState(initialFormData);
 
@@ -76,16 +78,21 @@ const GenerarCargosAlumnos = () => {
   const [importe_inscripcion_primario, setValor_importe_inscripcion_primario] = useState(null);
   const [importe_mensual_cuota, setValor_importe_mensual_cuota] = useState(null);
   const [importe_materiales, setValor_importe_materiales] = useState(null);
+  
+  // Parámetros de cuotas Nivel Inicial
   const [importe_cuota_uno_nivel_inicial, setValor_importe_cuota_uno_nivel_inicial] = useState(null);
   const [importe_cuota_dos_nivel_inicial, setValor_importe_cuota_dos_nivel_inicial] = useState(null);
+  const [importe_cuota_tres_nivel_inicial, setValor_importe_cuota_tres_nivel_inicial] = useState(null);
+  
+  // Parámetros de cuotas Nivel Primario
   const [importe_cuota_uno_nivel_primario, setValor_importe_cuota_uno_nivel_primario] = useState(null);
   const [importe_cuota_dos_nivel_primario, setValor_importe_cuota_dos_nivel_primario] = useState(null);
+  const [importe_cuota_tres_nivel_primario, setValor_importe_cuota_tres_nivel_primario] = useState(null);
+
   const [cobra_inscripcion_en_cuotas_inicial, setValor_cobra_inscripcion_en_cuotas_inicial] = useState(null);
   const [cobra_inscripcion_en_cuotas_primario, setValor_cobra_inscripcion_en_cuotas_primario] = useState(null);
   const [ingresa_importe_en_generacion_cargos, setValor_ingresa_importe_en_generacion_cargos] = useState(null);
   const [importe_mensual_cuota_x_grado, setValor_importe_mensual_cuota_x_grado] = useState(null);
-
-
 
   useEffect(() => {
     const fetchData = async () => {
@@ -149,7 +156,26 @@ const GenerarCargosAlumnos = () => {
 
         const data = await response.json();
         const listaParametros = Array.isArray(data) ? data : data.data || [];
-        const getParam = (nombre) => listaParametros.find((item) => item?.parametro === nombre)?.valor;
+        
+        // Helper que busca con prioridad absoluta la fila del id_establecimiento actual
+        const getParam = (nombre) => {
+          const paramSede = listaParametros.find(
+            (item) => item?.parametro === nombre && Number(item?.id_establecimiento) === idEstablecimientoActual
+          );
+          if (paramSede && paramSede.valor !== undefined && paramSede.valor !== null) {
+            return String(paramSede.valor).trim();
+          }
+
+          const paramGeneral = listaParametros.find(
+            (item) => item?.parametro === nombre && (!item?.id_establecimiento || Number(item?.id_establecimiento) === 0)
+          );
+          if (paramGeneral && paramGeneral.valor !== undefined && paramGeneral.valor !== null) {
+            return String(paramGeneral.valor).trim();
+          }
+
+          const paramCualquiera = listaParametros.find((item) => item?.parametro === nombre);
+          return paramCualquiera && paramCualquiera.valor !== undefined ? String(paramCualquiera.valor).trim() : null;
+        };
 
         setValorCantidadCuotasMateriales(getParam('cantidad_cuotas_materiales'));
         setValor_cant_cuotas_cobro_inscripcion(getParam('cant_cuotas_cobro_inscripcion'));
@@ -157,10 +183,15 @@ const GenerarCargosAlumnos = () => {
         setValor_importe_inscripcion_primario(getParam('importe_inscripcion_primario'));
         setValor_importe_mensual_cuota(getParam('importe_mensual_cuota'));
         setValor_importe_materiales(getParam('importe_materiales'));
+        
         setValor_importe_cuota_uno_nivel_inicial(getParam('importe_cuota_uno_nivel_inicial'));
         setValor_importe_cuota_dos_nivel_inicial(getParam('importe_cuota_dos_nivel_inicial'));
+        setValor_importe_cuota_tres_nivel_inicial(getParam('importe_cuota_tres_nivel_inicial'));
+        
         setValor_importe_cuota_uno_nivel_primario(getParam('importe_cuota_uno_nivel_primario'));
         setValor_importe_cuota_dos_nivel_primario(getParam('importe_cuota_dos_nivel_primario'));
+        setValor_importe_cuota_tres_nivel_primario(getParam('importe_cuota_tres_nivel_primario'));
+
         setValor_cobra_inscripcion_en_cuotas_inicial(getParam('cobra_inscripcion_en_cuotas_inicial'));
         setValor_cobra_inscripcion_en_cuotas_primario(getParam('cobra_inscripcion_en_cuotas_primario'));
         setValor_ingresa_importe_en_generacion_cargos(getParam('ingresa_importe_en_generacion_cargos'));
@@ -171,18 +202,16 @@ const GenerarCargosAlumnos = () => {
     };
 
     obtenerParametros();
-  }, [user?.identidadeducativa, user?.id_establecimiento]);
+  }, [user?.identidadeducativa, user?.id_establecimiento, idEstablecimientoActual]);
 
-
-const alumnosFiltrados = useMemo(() => {
-  if (!Array.isArray(alumnos)) return [];
-  return alumnos.filter((alumno) => 
-    alumno.es_alumno === 'S' && 
-    alumno.regular === 'S' && 
-    alumno.activo !== 'B'
-  );
-}, [alumnos]);
-
+  const alumnosFiltrados = useMemo(() => {
+    if (!Array.isArray(alumnos)) return [];
+    return alumnos.filter((alumno) => 
+      alumno.es_alumno === 'S' && 
+      alumno.regular === 'S' && 
+      alumno.activo !== 'B'
+    );
+  }, [alumnos]);
 
   const gradosDisponibles = useMemo(() => {
     const mapa = new Map();
@@ -195,10 +224,6 @@ const alumnosFiltrados = useMemo(() => {
     return Array.from(mapa.values()).sort((a, b) => Number(a.id_grado) - Number(b.id_grado));
   }, [alumnos]);
 
-/**
-   * PROYECCIÓN DE NIVEL 100% DINÁMICA
-   * Consulta `id_grado_siguiente` en `listaGrados` recuperados del Backend.
-   */
   const obtenerProyeccionAlumno = (alumno) => {
     if (!alumno) return { id_nivel_proximo: 1, egresa: false };
 
@@ -208,12 +233,10 @@ const alumnosFiltrados = useMemo(() => {
       const infoGradoActual = listaGrados.find((g) => Number(g.id_grado) === idGradoActual);
 
       if (infoGradoActual) {
-        // Si no tiene grado siguiente (NULL o 0), es egresado
         if (!infoGradoActual.id_grado_siguiente || Number(infoGradoActual.id_grado_siguiente) === 0) {
           return { id_nivel_proximo: null, egresa: true };
         }
 
-        // Buscamos el objeto del grado siguiente para obtener su id_nivel
         const infoGradoSiguiente = listaGrados.find(
           (g) => Number(g.id_grado) === Number(infoGradoActual.id_grado_siguiente)
         );
@@ -227,7 +250,6 @@ const alumnosFiltrados = useMemo(() => {
       }
     }
 
-    // Fallback conservador si los grados aún no cargaron
     return { id_nivel_proximo: Number(alumno.id_nivel) || 1, egresa: false };
   };
 
@@ -283,10 +305,6 @@ const alumnosFiltrados = useMemo(() => {
       }
     });
 
-    /*const listadoAlumnos = Array.isArray(alumnos) ? alumnos : [];
-    const alumnosValidos = listadoAlumnos.filter(
-      (alumno) => alumno.es_alumno === 'S' && alumno.activo === 'S' && alumno.regular === 'S'
-    );*/
     const alumnosValidos = alumnosFiltrados;
 
     let alumnosAProcesar = [];
@@ -326,7 +344,6 @@ const alumnosFiltrados = useMemo(() => {
 
     const ahora = new Date();
     const fechaActualStr = formatFecha(ahora);
-    const fechaCuota2Str = calcularFechaCuota2(ahora);
 
     try {
       const payload = [];
@@ -367,6 +384,7 @@ const alumnosFiltrados = useMemo(() => {
         else if (esMateriales) {
           payload.push({
             id_alumno: alumno.id_alumno,
+            id_establecimiento: idEstablecimientoActual,
             ...datosAcademicos,
             id_cargo_cuenta_corriente: formData.id_cargo_cuenta_corriente,
             id_anio: formData.id_anio,
@@ -379,53 +397,50 @@ const alumnosFiltrados = useMemo(() => {
             fecha: fechaActualStr,
           });
         } 
-        // CASO 3: INSCRIPCIÓN ANUAL (ASIGNA IMPORTE SEGÚN EL NIVEL DEL PRÓXIMO AÑO)
+        // CASO 3: INSCRIPCIÓN ANUAL (DESGLOSE HASTA EN 3 CUOTAS)
         else if (esInscripcion) {
           const proyeccion = obtenerProyeccionAlumno(alumno);
-          const idNivelProximo = Number(proyeccion.id_nivel_proximo || 1);
+          const idNivelProximo = Number(proyeccion.id_nivel_proximo || alumno.id_nivel || 1);
           const numCuotasInscripcion = Number(cant_cuotas_cobro_inscripcion || 1);
 
-          const permiteEnCuotas =
-            numCuotasInscripcion > 1 &&
-            ((idNivelProximo === 1 && esSi(cobra_inscripcion_en_cuotas_inicial)) ||
-             (idNivelProximo === 2 && esSi(cobra_inscripcion_en_cuotas_primario)));
+          // Evalúa si la sede habilita cuotas para el nivel entrante
+          const habilitaCuotas = 
+            idNivelProximo === 2 
+              ? esSi(cobra_inscripcion_en_cuotas_primario)
+              : esSi(cobra_inscripcion_en_cuotas_inicial);
+
+          const permiteEnCuotas = numCuotasInscripcion > 1 && habilitaCuotas;
 
           if (permiteEnCuotas) {
-            let impCuota1 = idNivelProximo === 1 ? importe_cuota_uno_nivel_inicial : importe_cuota_uno_nivel_primario;
-            let impCuota2 = idNivelProximo === 1 ? importe_cuota_dos_nivel_inicial : importe_cuota_dos_nivel_primario;
+            // Mapeo de importes por cuota (1, 2 y 3) según el nivel próximo
+            const importesCuotas = idNivelProximo === 2
+              ? [importe_cuota_uno_nivel_primario, importe_cuota_dos_nivel_primario, importe_cuota_tres_nivel_primario]
+              : [importe_cuota_uno_nivel_inicial, importe_cuota_dos_nivel_inicial, importe_cuota_tres_nivel_inicial];
 
-            payload.push({
-              id_alumno: alumno.id_alumno,
-              ...datosAcademicos,
-              id_cargo_cuenta_corriente: formData.id_cargo_cuenta_corriente,
-              id_anio: formData.id_anio,
-              anio: anioValor,
-              forma: formData.forma,
-              cuota: `${anioValor}`,
-              descripcion: `Inscripción anual del Año ${anioValor} Cuota 1/2`,
-              importe: obtenerImporteFinal(impCuota1),
-              fecha: fechaActualStr,
-            });
+            const totalCuotasGenerar = Math.min(numCuotasInscripcion, 3);
 
-            payload.push({
-              id_alumno: alumno.id_alumno,
-              ...datosAcademicos,
-              id_cargo_cuenta_corriente: formData.id_cargo_cuenta_corriente,
-              id_anio: formData.id_anio,
-              anio: anioValor,
-              forma: formData.forma,
-              cuota: `${anioValor}`,
-              descripcion: `Inscripción anual del Año ${anioValor} Cuota 2/2`,
-              importe: obtenerImporteFinal(impCuota2),
-              fecha: fechaCuota2Str,
-            });
+            for (let i = 1; i <= totalCuotasGenerar; i++) {
+              payload.push({
+                id_alumno: alumno.id_alumno,
+                id_establecimiento: idEstablecimientoActual,
+                ...datosAcademicos,
+                id_cargo_cuenta_corriente: formData.id_cargo_cuenta_corriente,
+                id_anio: formData.id_anio,
+                anio: anioValor,
+                forma: formData.forma,
+                cuota: `${anioValor}`,
+                descripcion: `Inscripción anual del Año ${anioValor} Cuota ${i}/${totalCuotasGenerar}`,
+                importe: obtenerImporteFinal(importesCuotas[i - 1]),
+                fecha: calcularFechaCuota(ahora, i - 1),
+              });
+            }
           } else {
-            let montoInscripcion = 0;
-            if (idNivelProximo === 1) montoInscripcion = importe_inscripcion_inicial;
-            else if (idNivelProximo === 2) montoInscripcion = importe_inscripcion_primario;
+            // Caso de 1 sola cuota
+            let montoInscripcion = idNivelProximo === 2 ? importe_inscripcion_primario : importe_inscripcion_inicial;
 
             payload.push({
               id_alumno: alumno.id_alumno,
+              id_establecimiento: idEstablecimientoActual,
               ...datosAcademicos,
               id_cargo_cuenta_corriente: formData.id_cargo_cuenta_corriente,
               id_anio: formData.id_anio,
@@ -446,7 +461,7 @@ const alumnosFiltrados = useMemo(() => {
         return;
       }
 
-const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar-cargos`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar-cargos`, {
         method: 'POST',
         headers,
         body: JSON.stringify(payload),
@@ -454,7 +469,6 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar
 
       const jsonRaw = await response.json().catch(() => ({}));
 
-      // Si la respuesta no fue exitosa o no trajo estructura válida
       if (!response.ok || !jsonRaw || (jsonRaw.exito === false)) {
         throw new Error(jsonRaw?.message || jsonRaw?.error || `Error ${response.status}: No se pudo procesar la solicitud`);
       }
@@ -471,7 +485,13 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar
         avisar.exito(mensaje);
       }
 
-      const tituloAlert = `RESUMEN DE GENERACIÓN DE:<br><strong style="font-size: 1.1rem;">${(payload[0]?.descripcion || '').toUpperCase()}</strong>`;
+      // Reemplaza el título alert actual por este:
+      const descLimpia = (payload[0]?.descripcion || '')
+        .replace(/\s+cuota\s+\d+\/\d+/i, '')
+        .replace(/\s+cuota\s+\d+/i, '')
+        .trim();
+
+const tituloAlert = `RESUMEN DE GENERACIÓN DE:<br><strong style="font-size: 1.1rem;">${descLimpia.toUpperCase()}</strong>`;
 
       await MySwal.fire({
         title: <span dangerouslySetInnerHTML={{ __html: tituloAlert }} />,
@@ -506,9 +526,6 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar
   const esMateriales = cargoSeleccionado && /materiales/i.test(cargoSeleccionado.nombre);
 
   if (loading) return <div className="p-4">Cargando formulario...</div>;
-
-
-
 
   return (
     <div className="max-w-4xl mx-auto my-6 bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
@@ -565,10 +582,10 @@ const response = await fetch(`${process.env.REACT_APP_API_URL}/api/pagos/generar
               required
               className="col-span-6 p-1 border border-gray-400 rounded bg-white text-sm"
             >
-            <option value="">-- SELECCIONE ({alumnosFiltrados.length}) --</option>
+              <option value="">-- SELECCIONE ({alumnosFiltrados.length}) --</option>
               {alumnosFiltrados.map((alumno) => (
                 <option key={alumno.id_alumno} value={alumno.id_alumno}>
-                  {alumno.apellidos}, {alumno.nombres} ({alumno.grado} - {alumno.nivel})
+                  {alumno.apellidos}, {alumno.nombres} ({alumno.grado} {alumno.nivel})
                 </option>
               ))}
             </select>
