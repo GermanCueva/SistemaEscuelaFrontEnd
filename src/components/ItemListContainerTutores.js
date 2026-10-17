@@ -23,6 +23,10 @@ const ItemListContainerTutores = () => {
     esActivo: true
   })
 
+
+  const token = localStorage.getItem('token')
+
+  // --- CARGA INICIAL (Solo se ejecuta 1 vez al montar el componente) ---
   // --- CARGA INICIAL ---
   useEffect(() => {
     setCargando(true)
@@ -46,6 +50,7 @@ const ItemListContainerTutores = () => {
         setTodasLasPersonas([])
         setCargando(false)
       })
+  }, [token])
   }, [user?.identidadeducativa])
 
 

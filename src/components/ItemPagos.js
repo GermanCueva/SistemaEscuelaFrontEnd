@@ -166,6 +166,7 @@ useEffect(() => {
   };
 
   obtenerParametros();
+}, []);
 }, [user?.identidadeducativa]);
 
 
@@ -227,6 +228,7 @@ useEffect(() => {
   useEffect(() => {
     const fetchCatalogos = async () => {
       const token = localStorage.getItem("token");
+      let idEntidad = null;
       const idEntidad = user?.identidadeducativa;
 
       const headers = { 'Authorization': `Bearer ${token}` };
@@ -236,6 +238,16 @@ useEffect(() => {
           fetch(`${process.env.REACT_APP_API_URL}/api/pagos/medios`, { headers }),
           fetch(`${process.env.REACT_APP_API_URL}/api/pagos/marcas`, { headers })
         ]);
+
+        if (token) {
+          try {
+            const payloadBase64 = token.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payloadBase64));
+            idEntidad = decodedPayload.user?.identidadeducativa;
+          } catch (error) {
+            console.error("Error al decodificar el token", error);
+          }
+        }
 
         if (resMedios.ok) {
           const dataMedios = await resMedios.json();
@@ -264,6 +276,7 @@ useEffect(() => {
     };
 
     fetchCatalogos();
+  }, []);
   }, [user?.identidadeducativa]);
 
   useEffect(() => {

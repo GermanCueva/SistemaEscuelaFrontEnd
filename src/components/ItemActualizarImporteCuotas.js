@@ -72,6 +72,7 @@ export default function ItemActualizarImporteCuotas() {
     };
 
     obtenerParametros();
+  }, []);
   }, [user?.identidadeducativa]);
 
   // Obtener lista de años desde el endpoint
@@ -103,6 +104,7 @@ export default function ItemActualizarImporteCuotas() {
     };
 
     obtenerAnios();
+  }, []);
   }, [user?.identidadeducativa]);
 
   // Filtrado de alumnos (Aplica para cualquier combinación de combos)

@@ -124,6 +124,7 @@ const GenerarCargosAlumnos = () => {
     };
 
     fetchData();
+  }, []);
   }, [user?.identidadeducativa]);
 
   useEffect(() => {
@@ -165,6 +166,7 @@ const GenerarCargosAlumnos = () => {
     };
 
     obtenerParametros();
+  }, []);
   }, [user?.identidadeducativa]);
 
   // Extrae lista única de grados desde la respuesta de alumnos

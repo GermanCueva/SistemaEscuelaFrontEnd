@@ -29,6 +29,9 @@ const ItemListContainerPersona = () => {
     idDivision: ''
   })
 
+
+  const token = localStorage.getItem('token')
+
   useEffect(() => {
     setCargando(true)
     const token = localStorage.getItem('token')
@@ -58,6 +61,7 @@ const ItemListContainerPersona = () => {
         setDivisiones([])
         setCargando(false)
       })
+  }, [token])
   }, [user?.identidadeducativa])
 
   const gradosFiltrados = useMemo(() => {

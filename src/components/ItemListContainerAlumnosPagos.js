@@ -17,6 +17,7 @@ const ItemListContainerAlumnosPagos = () => {
   const [niveles, setNiveles] = useState([])
   const [grados, setGrados] = useState([])
   const [divisiones, setDivisiones] = useState([])
+  const [idEntidad, setIdEntidad] = useState(null)
   const idEntidad = user?.identidadeducativa;
 
   const [textoBusqueda, setTextoBusqueda] = useState('')
@@ -28,9 +29,21 @@ const ItemListContainerAlumnosPagos = () => {
     idDivision: ''
   })
 
+  const token = localStorage.getItem('token')
+
   useEffect(() => {
     setCargando(true)
     const token = localStorage.getItem('token')
+
+    if (token) {
+      try {
+        const payloadBase64 = token.split('.')[1];
+        const decodedPayload = JSON.parse(atob(payloadBase64));
+        setIdEntidad(decodedPayload.user?.identidadeducativa);
+      } catch (error) {
+        console.error("Error al decodificar el token", error);
+      }
+    }
 
     const headers = {
       'Content-Type': 'application/json',
@@ -58,6 +71,7 @@ const ItemListContainerAlumnosPagos = () => {
         setDivisiones([])
         setCargando(false)
       })
+  }, [token])
   }, [user?.identidadeducativa])
 
   const handleSaldoCargado = useCallback((id_alumno, saldo) => {
