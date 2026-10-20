@@ -21,7 +21,9 @@ import ABMUsuarios from  "./components/ItemABMUsuarios";
 import ItemTutorMisAlumnos from "./components/ItemTutorMisAlumnos";
 import ItemPerfilUsuario from "./components/ItemPerfilUsuario";
 import ItemSeleccionInstitucion from "./components/ItemSeleccionInstitucion";
-
+import { ABMEntidadesEducativas } from "./components/ItemABMInstituciones";
+import { ABMParametros } from "./components/ItemABMParametros";
+import { InstitutionProvider } from './context/InstitutionContext';
 import { useAuth } from "./context/AuthContext";
 
 import "./App.css";
@@ -29,7 +31,7 @@ import "./App.css";
 import { LogOut } from "lucide-react";
 
 const GestionPagos = () => <div>Gestión de Pagos</div>;
-const Administracion = () => <div>Administracion</div>;
+//const Administracion = () => <div>Administracion</div>;
 
 const logo = "logoEscuelaTransparente.ico";
 
@@ -282,7 +284,7 @@ function App() {
             )}
           </div>
         </header>
-
+<InstitutionProvider>
         {/* CONTENIDO PRINCIPAL */}
 {/* El fondo (w-full) ocupa el 100%, pero el contenido interno se reduce al 92% gracias al 4% de margen interno a cada lado */}
         <main className="flex-1 w-full px-[4%] py-4">            
@@ -340,9 +342,9 @@ function App() {
               </Route>
 
               <Route path="administracion">
-                <Route path="instituciones" element={<Administracion />} />
+                <Route path="instituciones" element={<ABMEntidadesEducativas />} />
                 <Route path="usuarios" element={<ABMUsuarios />} />
-                <Route path="parametros" element={<Administracion />} />
+                <Route path="parametros" element={<ABMParametros />} />
                 <Route path="cargos" element={<GestionPagos />} />
                 <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
                 <Route path="pagosmasiva" element={<ItemGestionPagoMasivo />} />
@@ -359,7 +361,7 @@ function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
-
+</InstitutionProvider>
         <ToastContainer />
       </div>
     </div>
