@@ -46,10 +46,17 @@ export const ReporteTabs = ({
               <div key={index} style={{ marginBottom: '6px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
                 • {a.apellidos}, {a.nombres} ({a.tipo_documento || 'DNI'}: {a.numero_documento || a.documento})
                 
+                {/* Muestra la descripción / cuota individual de cada renglón */}
+                {a.descripcion && (
+                  <span style={{ color: '#047857', fontWeight: '600', marginLeft: '6px' }}>
+                    — {a.descripcion}
+                  </span>
+                )}
+
                 {/* Muestra los montos solo si estamos en modo actualización y existen los datos */}
                 {tipo === 'actualizacion' && a.importeAnterior !== undefined && (
                   <span style={{ color: '#059669', fontWeight: '600', marginLeft: '6px' }}>
-                    [${Number(a.importeAnterior).toFixed(2)} ➔ ${Number(a.nuevoImporte).toFixed(2)}]
+                    [${Number(a.importeAnterior).toFixed(2)} ➔${Number(a.nuevoImporte).toFixed(2)}]
                   </span>
                 )}
               </div>
@@ -78,7 +85,7 @@ export const ReporteTabs = ({
           {detallesNoGenerados.length > 0 ? (
             detallesNoGenerados.map((a, index) => (
               <div key={index} style={{ marginBottom: '6px', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
-                • {a.apellidos}, {a.nombres} ({a.tipo_documento}: {a.numero_documento}) — <em>Motivo: {a.motivo}</em>
+                • {a.apellidos}, {a.nombres} ({a.tipo_documento || 'DNI'}: {a.numero_documento || a.documento}) — <em>Motivo: {a.motivo}</em>
               </div>
             ))
           ) : (
