@@ -23,6 +23,7 @@ import ItemPerfilUsuario from "./components/ItemPerfilUsuario";
 import ItemSeleccionInstitucion from "./components/ItemSeleccionInstitucion";
 import { ABMEntidadesEducativas } from "./components/ItemABMInstituciones";
 import { ABMParametros } from "./components/ItemABMParametros";
+import ItemReportes from "./components/ItemReportes";
 import { InstitutionProvider } from './context/InstitutionContext';
 import { useAuth } from "./context/AuthContext";
 
@@ -354,7 +355,7 @@ function App() {
 
               <Route path="perfil" element={<ItemPerfilUsuario />} />
               <Route path="tutor" element={<ItemTutorMisAlumnos />} />
-              <Route path="reportes" element={<div>Contenido Reportes</div>} />
+              <Route path="reportes" element={<ItemReportes />} />
               <Route path="admin" element={<div>Contenido Admin</div>} />
             </Route>
 
