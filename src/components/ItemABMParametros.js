@@ -9,15 +9,15 @@ export const ABMParametros = () => {
 
   const safeInstitutions = Array.isArray(institutions) ? institutions : [];
 
-  // Cargar parámetros según la institución activa seleccionada
+  // Cargar parámetros en tiempo real cuando cambia la institución elegida
   useEffect(() => {
+    if (!activeInstitutionId) return;
+
+    setParams([]); // Limpia la lista previa mientras carga
     const token = localStorage.getItem('token');
     const baseUrl = process.env.REACT_APP_API_URL || '';
     
-    // Si hay activeInstitutionId lo enviamos por query param, o llamamos a /api/parametros directamente
-    const url = activeInstitutionId 
-      ? `${baseUrl}/api/parametros?id_establecimiento=${activeInstitutionId}`
-      : `${baseUrl}/api/parametros`;
+    const url = `${baseUrl}/api/parametros?id_establecimiento=${activeInstitutionId}&identidadeducativa=${activeInstitutionId}`;
 
     fetch(url, {
       method: 'GET',
@@ -45,6 +45,11 @@ export const ABMParametros = () => {
     const baseUrl = process.env.REACT_APP_API_URL || '';
     const paramId = editingParam.id_parametro || editingParam.parametro;
 
+    const payload = {
+      ...editingParam,
+      id_establecimiento: activeInstitutionId
+    };
+
     try {
       const res = await fetch(`${baseUrl}/api/parametros/${paramId}`, {
         method: 'PUT',
@@ -52,7 +57,7 @@ export const ABMParametros = () => {
           'Content-Type': 'application/json',
           ...(token ? { 'Authorization': `Bearer ${token}` } : {})
         },
-        body: JSON.stringify(editingParam)
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
@@ -80,7 +85,7 @@ export const ABMParametros = () => {
           </p>
         </div>
 
-        {/* SELECTOR DE INSTITUCIÓN SIEMPRE VISIBLE */}
+        {/* SELECTOR DE INSTITUCIÓN */}
         <div className="flex items-center gap-2 bg-white border p-2 rounded-lg shadow-sm">
           <Building2 className="w-4 h-4 text-indigo-600" />
           <span className="text-xs font-semibold text-slate-600">Escuela:</span>

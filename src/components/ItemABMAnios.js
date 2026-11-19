@@ -117,8 +117,8 @@ export const ItemABMAnios = () => {
     e.preventDefault();
     try {
       const url = editMode
-        ? `${API_URL}/api/academica/anos/${currentId}`
-        : `${API_URL}/api/academica/anos`;
+        ? `${API_URL}/api/academica/aniocursado/${currentId}`
+        : `${API_URL}/api/academica/aniocursado`;
 
       const method = editMode ? "PUT" : "POST";
 
@@ -143,7 +143,7 @@ export const ItemABMAnios = () => {
     if (!window.confirm("¿Está seguro de eliminar este año lectivo?")) return;
 
     try {
-      const res = await fetch(`${API_URL}/api/academica/anos/${id}`, {
+      const res = await fetch(`${API_URL}/api/academica/aniocursado/${id}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });

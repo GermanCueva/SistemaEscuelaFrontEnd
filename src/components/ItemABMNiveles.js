@@ -2,6 +2,10 @@ import React, { useState, useEffect, useCallback } from "react";
 import { toast } from "react-toastify";
 import { useInstitution } from "../context/InstitutionContext";
 import { Layers, Plus, Pencil, Trash2, Building2 } from "lucide-react";
+import { showConfirm, 
+  //showSuccess, showError 
+} from '../utils/alerts'; // o la ruta donde esté tu alerts.js
+
 
 export const ItemABMNiveles = () => {
   const { activeInstitutionId, setActiveInstitutionId } = useInstitution();
@@ -146,7 +150,15 @@ export const ItemABMNiveles = () => {
 
   // Eliminar nivel
   const handleDelete = async (id) => {
-    if (!window.confirm("¿Está seguro de que desea eliminar este nivel educativo?")) return;
+const result = await showConfirm({
+    title: '¿Eliminar nivel educativo?',
+    text: '¿Está seguro de que desea eliminar este nivel educativo?',
+    confirmButtonText: 'Sí, eliminar',
+    cancelButtonText: 'Cancelar'
+  });
+
+  // Si no se confirma, cancelamos la ejecución
+  if (!result.isConfirmed) return;
 
     try {
       const res = await fetch(`${API_URL}/api/academica/nivel/${id}`, {

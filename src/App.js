@@ -26,6 +26,11 @@ import { ABMParametros } from "./components/ItemABMParametros";
 import ItemReportes from "./components/ItemReportes";
 import { InstitutionProvider } from './context/InstitutionContext';
 import { useAuth } from "./context/AuthContext";
+import { ItemABMAnios } from "./components/ItemABMAnios";
+import { ABMDivisiones } from "./components/ItemABMDivisiones";
+import { ABMGrados } from "./components/ItemABMGrados";
+import { ItemABMNiveles } from "./components/ItemABMNiveles";
+
 
 import "./App.css";
 
@@ -346,6 +351,15 @@ function App() {
                 <Route path="instituciones" element={<ABMEntidadesEducativas />} />
                 <Route path="usuarios" element={<ABMUsuarios />} />
                 <Route path="parametros" element={<ABMParametros />} />
+
+                {/* 🔹 Rutas de Académica */}
+                <Route path="academica">
+                  <Route path="niveles" element={<ItemABMNiveles />} />
+                  <Route path="grados" element={<ABMGrados />} />
+                  <Route path="divisiones" element={<ABMDivisiones />} />
+                  <Route path="anios" element={<ItemABMAnios />} />
+                </Route>
+
                 <Route path="cargos" element={<GestionPagos />} />
                 <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
                 <Route path="pagosmasiva" element={<ItemGestionPagoMasivo />} />
