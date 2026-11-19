@@ -1,9 +1,13 @@
 import { useState } from "react";
 import { FolderDown } from "lucide-react";
 import axios from "axios";
+import { useInstitution } from "../context/InstitutionContext";
+import { useAuth } from "../context/AuthContext";
 
 const ItemGeneracionDebito = () => {
   const [generando, setGenerando] = useState(false);
+  const { activeInstitutionId } = useInstitution();
+  const { user } = useAuth();
 
   // ==========================================
   // Descargar archivo
@@ -69,12 +73,23 @@ const ItemGeneracionDebito = () => {
         return;
       }
 
+      const idEstablecimiento =
+        activeInstitutionId ||
+        user?.identidadeducativa ||
+        user?.id_establecimiento ||
+        null;
+
+      console.log("idEstablecimiento:", idEstablecimiento);
+
       // ==========================================
       // Llamada al backend
       // ==========================================
       const response = await axios.put(
         `${process.env.REACT_APP_API_URL}/api/pagos/archivoDebito`,
-        {},
+        {
+          idEstablecimiento,
+          id_establecimiento: idEstablecimiento,
+        },
         {
           headers: {
             Authorization: `Bearer ${token}`,

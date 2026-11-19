@@ -13,6 +13,8 @@
     "exceljs": "^4.4.0",
     "file-saver": "^2.0.5",
     "formik": "^2.4.9",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.9",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^1.16.0",
     "numero-a-letras": "^1.0.6",

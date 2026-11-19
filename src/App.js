@@ -23,8 +23,14 @@ import ItemPerfilUsuario from "./components/ItemPerfilUsuario";
 import ItemSeleccionInstitucion from "./components/ItemSeleccionInstitucion";
 import { ABMEntidadesEducativas } from "./components/ItemABMInstituciones";
 import { ABMParametros } from "./components/ItemABMParametros";
+import ItemReportes from "./components/ItemReportes";
 import { InstitutionProvider } from './context/InstitutionContext';
 import { useAuth } from "./context/AuthContext";
+import { ItemABMAnios } from "./components/ItemABMAnios";
+import { ABMDivisiones } from "./components/ItemABMDivisiones";
+import { ABMGrados } from "./components/ItemABMGrados";
+import { ItemABMNiveles } from "./components/ItemABMNiveles";
+
 
 import "./App.css";
 
@@ -345,6 +351,15 @@ function App() {
                 <Route path="instituciones" element={<ABMEntidadesEducativas />} />
                 <Route path="usuarios" element={<ABMUsuarios />} />
                 <Route path="parametros" element={<ABMParametros />} />
+
+                {/* 🔹 Rutas de Académica */}
+                <Route path="academica">
+                  <Route path="niveles" element={<ItemABMNiveles />} />
+                  <Route path="grados" element={<ABMGrados />} />
+                  <Route path="divisiones" element={<ABMDivisiones />} />
+                  <Route path="anios" element={<ItemABMAnios />} />
+                </Route>
+
                 <Route path="cargos" element={<GestionPagos />} />
                 <Route path="pagosmanual" element={<ItemListContainerAlumnosPagos />} />
                 <Route path="pagosmasiva" element={<ItemGestionPagoMasivo />} />
@@ -354,7 +369,7 @@ function App() {
 
               <Route path="perfil" element={<ItemPerfilUsuario />} />
               <Route path="tutor" element={<ItemTutorMisAlumnos />} />
-              <Route path="reportes" element={<div>Contenido Reportes</div>} />
+              <Route path="reportes" element={<ItemReportes />} />
               <Route path="admin" element={<div>Contenido Admin</div>} />
             </Route>
 

@@ -35,6 +35,7 @@ const ItemListContainerAlumnosPagos = () => {
     setCargando(true)
     const token = localStorage.getItem('token')
 
+
     const headers = {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${token}`

@@ -139,29 +139,61 @@ const Home = () => {
         </div>
       )}
 
-      {/* 🔹 Subtabs Administración (Coincidiendo con /administracion) */}
+{/* 🔹 Subtabs Administración */}
       {location.pathname.startsWith("/administracion") && tipoUsuario === 1 && (
-        <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
-          {[
-            { path: "/administracion/instituciones", label: "ABM de Instituciones" },
-            { path: "/administracion/usuarios", label: "Gestión de Usuarios" },
-            { path: "/administracion/parametros", label: "Parámetros" },
-          ].map((sub) => {
-            const active = location.pathname === sub.path;
-            return (
-              <button
-                key={sub.path}
-                onClick={() => navigate(sub.path)}
-                className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
-                  active
-                    ? "bg-emerald-600 text-white"
-                    : "text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                {sub.label}
-              </button>
-            );
-          })}
+        <div className="flex flex-col">
+          {/* Nivel 1 de Administración */}
+          <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-gray-200 divide-x divide-gray-300">
+            {[
+              { path: "/administracion/instituciones", label: "ABM de Instituciones" },
+              { path: "/administracion/usuarios", label: "Gestión de Usuarios" },
+              { path: "/administracion/parametros", label: "Parámetros" },
+              { path: "/administracion/academica/niveles", label: "Académica" }, // 👈 Redirige por defecto a Niveles
+            ].map((sub) => {
+              const active = location.pathname.startsWith(sub.path) || 
+                (sub.label === "Académica" && location.pathname.startsWith("/administracion/academica"));
+              return (
+                <button
+                  key={sub.path}
+                  onClick={() => navigate(sub.path)}
+                  className={`shrink-0 md:flex-1 px-2 sm:px-4 py-2 text-[11px] sm:text-xs md:text-sm font-medium transition-colors text-center ${
+                    active
+                      ? "bg-emerald-600 text-white"
+                      : "text-gray-700 hover:bg-gray-300"
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 🔹 Subtabs específicos de Académica */}
+          {location.pathname.startsWith("/administracion/academica") && (
+            <div className="flex overflow-x-auto whitespace-nowrap border-x border-b border-gray-300 bg-emerald-50 divide-x divide-gray-300">
+              {[
+                { path: "/administracion/academica/niveles", label: "ABM Niveles" },
+                { path: "/administracion/academica/grados", label: "ABM Grados" },
+                { path: "/administracion/academica/divisiones", label: "ABM Divisiones" },
+                { path: "/administracion/academica/anios", label: "ABM Años" },
+              ].map((sub) => {
+                const active = location.pathname === sub.path;
+                return (
+                  <button
+                    key={sub.path}
+                    onClick={() => navigate(sub.path)}
+                    className={`shrink-0 md:flex-1 px-2 sm:px-4 py-1.5 text-[11px] sm:text-xs font-medium transition-colors text-center ${
+                      active
+                        ? "bg-emerald-700 text-white font-semibold"
+                        : "text-emerald-900 hover:bg-emerald-100"
+                    }`}
+                  >
+                    {sub.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
