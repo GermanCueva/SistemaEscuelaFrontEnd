@@ -4,6 +4,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useInstitution } from '../context/InstitutionContext';
 import { Building2, Plus, Pencil, Trash2, GraduationCap } from 'lucide-react';
+import { toast } from 'react-toastify';
+
 
 export const ABMGrados = () => {
   const { activeInstitutionId, setActiveInstitutionId, institutions = [] } = useInstitution();
@@ -166,43 +168,64 @@ export const ABMGrados = () => {
     setIsModalOpen(true);
   };
 
-  const handleSave = async (e) => {
+const handleSave = async (e) => {
     e.preventDefault();
     if (!formData.id_establecimiento) return;
 
+    const nombreLimpio = formData.nombre.trim();
+    const cortoLimpio = formData.nombre_corto.trim();
+
+    if (Number(formData.id_establecimiento) === Number(activeInstitutionId)) {
+      const duplicado = grados.some(
+        (g) =>
+          g.id_grado !== formData.id_grado &&
+          g.nombre?.trim().toLowerCase() === nombreLimpio.toLowerCase()
+      );
+      if (duplicado) {
+        toast.error(`Ya existe el grado "${nombreLimpio}" en esta escuela.`);
+        return;
+      }
+    }
+
     const token = localStorage.getItem('token');
     const baseUrl = process.env.REACT_APP_API_URL || '';
-    
-    const payload = { 
-      ...formData, 
+
+    const payload = {
+      ...formData,
+      nombre: nombreLimpio,
+      nombre_corto: cortoLimpio,
       id_establecimiento: Number(formData.id_establecimiento),
       id_nivel: Number(formData.id_nivel),
       jerarquia: Number(formData.jerarquia || 0),
       id_grado_siguiente: formData.id_grado_siguiente ? Number(formData.id_grado_siguiente) : null,
-      observaciones: formData.observaciones ? formData.observaciones.trim() : null
+      observaciones: formData.observaciones ? formData.observaciones.trim() : null,
     };
 
     const method = formData.id_grado ? 'PUT' : 'POST';
-    
-    let endpoint = formData.id_grado 
-      ? `${baseUrl}/api/academica/grado/${formData.id_grado}` 
+    const endpoint = formData.id_grado
+      ? `${baseUrl}/api/academica/grado/${formData.id_grado}`
       : `${baseUrl}/api/academica/grado`;
 
-    const headers = { 
+    const headers = {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
     try {
-      let res = await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });
-      if (res.status === 404) {
-        endpoint = formData.id_grado ? `${baseUrl}/api/academica/grado/${formData.id_grado}` : `${baseUrl}/api/academica/grado`;
-        await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });
+      const res = await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(data.message || data.error || 'No se pudo guardar el grado.');
+        return;
       }
+
+      toast.success(formData.id_grado ? 'Grado actualizado correctamente' : 'Grado creado correctamente');
       setIsModalOpen(false);
       fetchGrados();
     } catch (err) {
       console.error('Error al guardar grado:', err);
+      toast.error('Error de conexión al guardar el grado.');
     }
   };
 
@@ -213,17 +236,26 @@ export const ABMGrados = () => {
     const baseUrl = process.env.REACT_APP_API_URL || '';
     const headers = {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
     try {
-      let res = await fetch(`${baseUrl}/api/academica/grado/${id_grado}`, { method: 'DELETE', headers });
-      if (res.status === 404) {
-        await fetch(`${baseUrl}/api/academica/grado/${id_grado}`, { method: 'DELETE', headers });
+      const res = await fetch(`${baseUrl}/api/academica/grado/${id_grado}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        toast.error(data.message || data.error || 'No se puede eliminar el grado.');
+        return;
       }
+
+      toast.success('Grado eliminado correctamente');
       fetchGrados();
     } catch (err) {
       console.error('Error eliminando grado:', err);
+      toast.error('Error de conexión al eliminar el grado.');
     }
   };
 

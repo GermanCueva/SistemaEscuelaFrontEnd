@@ -4,9 +4,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useInstitution } from '../context/InstitutionContext';
 import { Building2, Plus, Pencil, Trash2, Grid } from 'lucide-react';
-import { showConfirm, 
-  //showSuccess, showError 
-  } from '../utils/alerts'; // o la ruta donde esté tu alerts.js
+import { showConfirm, showSuccess, showError } from '../utils/alerts';
+
 
 export const ABMDivisiones = () => {
   const { activeInstitutionId, setActiveInstitutionId, institutions = [] } = useInstitution();
@@ -49,67 +48,114 @@ useEffect(() => {
     fetchDivisiones();
   }, [fetchDivisiones]);
 
-  const handleSave = async (e) => {
+const handleSave = async (e) => {
     e.preventDefault();
-    if (!formData.division || !formData.id_establecimiento) return;
+    const divisionLimpia = formData.division.trim();
+    if (!divisionLimpia || !formData.id_establecimiento) return;
+
+    if (Number(formData.id_establecimiento) === Number(activeInstitutionId)) {
+      const duplicada = divisiones.some(
+        (d) =>
+          d.id_division !== formData.id_division &&
+          d.division.trim().toLowerCase() === divisionLimpia.toLowerCase()
+      );
+      if (duplicada) {
+        showError({
+          title: 'División duplicada',
+          text: `Ya existe la división "${divisionLimpia}" en esta escuela.`,
+        });
+        return;
+      }
+    }
 
     const token = localStorage.getItem('token');
     const baseUrl = process.env.REACT_APP_API_URL || '';
-    const payload = { 
-      division: formData.division, 
-      id_establecimiento: Number(formData.id_establecimiento) 
+    const payload = {
+      division: divisionLimpia,
+      id_establecimiento: Number(formData.id_establecimiento),
     };
     const method = formData.id_division ? 'PUT' : 'POST';
-    
-    let endpoint = formData.id_division 
-      ? `${baseUrl}/api/academica/division/${formData.id_division}` 
+    const endpoint = formData.id_division
+      ? `${baseUrl}/api/academica/division/${formData.id_division}`
       : `${baseUrl}/api/academica/division`;
 
-    const headers = { 
+    const headers = {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
-    let res = await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });
-    if (res.status === 404) {
-      endpoint = formData.id_division ? `${baseUrl}/api/academica/division/${formData.id_division}` : `${baseUrl}/api/academica/division`;
-      await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });
-    }
+    try {
+      const res = await fetch(endpoint, { method, headers, body: JSON.stringify(payload) });
+      const data = await res.json().catch(() => ({}));
 
-    setIsModalOpen(false);
-    setFormData({ id_division: null, division: '', id_establecimiento: activeInstitutionId });
-    fetchDivisiones();
+      if (!res.ok) {
+        showError({
+          title: 'No se pudo guardar',
+          text: data.message || data.error || 'Error al guardar la división.',
+        });
+        return;
+      }
+
+      showSuccess({
+        title: 'Guardado',
+        text: formData.id_division
+          ? 'División actualizada correctamente.'
+          : 'División creada correctamente.',
+      });
+
+      setIsModalOpen(false);
+      setFormData({ id_division: null, division: '', id_establecimiento: activeInstitutionId });
+      fetchDivisiones();
+    } catch (err) {
+      console.error('Error guardando división:', err);
+      showError({ title: 'Error', text: 'Error de conexión con el servidor.' });
+    }
   };
 
-  const handleDelete = async (id_division) => {
-const result = await showConfirm({
-    title: '¿Eliminar nivel educativo?',
-    text: '¿Está seguro de que desea eliminar este nivel educativo?',
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar'
-  });
+const handleDelete = async (id_division) => {
+    const result = await showConfirm({
+      title: '¿Eliminar división?',
+      text: '¿Está seguro de que desea eliminar esta división?',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
 
-  // Si no se confirma, cancelamos la ejecución
-  if (!result.isConfirmed) return;
+    if (!result.isConfirmed) return;
 
     const token = localStorage.getItem('token');
     const baseUrl = process.env.REACT_APP_API_URL || '';
     const headers = {
       'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
 
     try {
-      let res = await fetch(`${baseUrl}/api/academica/division/${id_division}`, { method: 'DELETE', headers });
-      if (res.status === 404) {
-        await fetch(`${baseUrl}/api/academica/division/${id_division}`, { method: 'DELETE', headers });
+      const res = await fetch(`${baseUrl}/api/academica/division/${id_division}`, {
+        method: 'DELETE',
+        headers,
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        showError({
+          title: 'No se puede eliminar',
+          text: data.message || data.error || 'No se pudo eliminar la división.',
+        });
+        return;
       }
+
+      showSuccess({
+        title: 'Eliminada',
+        text: 'La división fue eliminada correctamente.',
+      });
       fetchDivisiones();
     } catch (err) {
       console.error('Error eliminando división:', err);
+      showError({ title: 'Error', text: 'Error de conexión con el servidor.' });
     }
   };
 
+  
   return (
     <div className="p-6 bg-slate-50 min-h-screen">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
