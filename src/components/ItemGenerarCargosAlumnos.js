@@ -14,6 +14,15 @@ const esSi = (val) => {
   return v === 'SI' || v === 'S' || v === 'TRUE' || v === '1';
 };
 
+// Clasifica un nombre de nivel sin depender de id_nivel fijos por establecimiento
+const clasificarNivelPorNombre = (nombreNivel = '') => {
+  const texto = String(nombreNivel).toLowerCase().trim();
+  if (texto.includes('primar')) return 'primario';
+  if (texto.includes('secundar')) return 'secundario';
+  if (texto.includes('inicial') || texto.includes('jard')) return 'inicial';
+  return 'otro';
+};
+
 const formatFecha = (date) => {
   const pad = (n) => String(n).padStart(2, '0');
   const yyyy = date.getFullYear();
@@ -36,6 +45,98 @@ const calcularFechaCuota = (fechaBase, mesesASumar = 0) => {
     d.setDate(d.getDate() + 1);
   }
   return formatFecha(d);
+};
+
+// Extrae o formatea la etiqueta de cuota (ej: "Cuota 1/3" o "Cuota 2") desde un objeto detalle o payload
+const obtenerEtiquetaCuotaDetalle = (detalle = {}, payloadReferencia = []) => {
+  const nroCuota =
+    detalle?.numero_cuota ??
+    detalle?.cuota_numero ??
+    detalle?.nro_cuota ??
+    detalle?.cuota;
+
+  if (nroCuota !== undefined && nroCuota !== null && String(nroCuota).trim() !== '') {
+    const texto = String(nroCuota).trim();
+    const coincideEnPayload = payloadReferencia.find((item) => {
+      const mismoAlumno =
+        detalle?.id_alumno && item?.id_alumno && Number(detalle.id_alumno) === Number(item.id_alumno);
+      const mismoNumero = String(item?.numero_cuota) === texto;
+      return mismoAlumno && mismoNumero;
+    });
+
+    if (coincideEnPayload?.descripcion) {
+      const matchDesc = coincideEnPayload.descripcion.match(/cuota\s+\d+(?:\/\d+)?/i);
+      if (matchDesc) return matchDesc[0];
+    }
+
+    return /cuota/i.test(texto) ? texto : `Cuota ${texto}`;
+  }
+
+  const descFuente = detalle?.descripcion || detalle?.concepto || detalle?.detalle || '';
+  const matchEnTexto = String(descFuente).match(/cuota\s+\d+(?:\/\d+)?/i);
+  if (matchEnTexto) return matchEnTexto[0];
+
+  return null;
+};
+
+// Enriquece cada registro del detalle (string u objeto) con el número de cuota correspondiente
+const enriquecerDetallesConCuota = (detalles = [], payloadReferencia = []) => {
+  if (!Array.isArray(detalles)) return [];
+
+  return detalles.map((item, idx) => {
+    if (typeof item === 'string') {
+      const etiqueta =
+        obtenerEtiquetaCuotaDetalle({ descripcion: item }, payloadReferencia) ||
+        (payloadReferencia[idx]?.descripcion?.match(/cuota\s+\d+(?:\/\d+)?/i)?.[0] ?? null);
+
+      return etiqueta && !item.toLowerCase().includes(etiqueta.toLowerCase())
+        ? `${item} [${etiqueta}]`
+        : item;
+    }
+
+    if (item && typeof item === 'object') {
+      const etiqueta =
+        obtenerEtiquetaCuotaDetalle(item, payloadReferencia) ||
+        (payloadReferencia[idx]?.descripcion?.match(/cuota\s+\d+(?:\/\d+)?/i)?.[0] ?? null);
+
+      const numeroExtraido =
+        item?.numero_cuota ??
+        item?.nro_cuota ??
+        item?.cuota ??
+        etiqueta?.match(/\d+/)?.[0] ??
+        null;
+
+      const textoBase =
+        item?.motivo ||
+        item?.mensaje ||
+        item?.descripcion ||
+        item?.detalle ||
+        item?.observacion ||
+        '';
+
+      const textoConCuota =
+        etiqueta && textoBase && !String(textoBase).toLowerCase().includes(etiqueta.toLowerCase())
+          ? `${textoBase} (${etiqueta})`
+          : textoBase || (etiqueta ? `Detalle - ${etiqueta}` : undefined);
+
+      return {
+        ...item,
+        ...(numeroExtraido !== null && item?.numero_cuota === undefined
+          ? { numero_cuota: numeroExtraido }
+          : {}),
+        ...(etiqueta && !item?.etiqueta_cuota ? { etiqueta_cuota: etiqueta } : {}),
+        ...(item?.motivo !== undefined
+          ? { motivo: textoConCuota }
+          : item?.mensaje !== undefined
+          ? { mensaje: textoConCuota }
+          : item?.descripcion !== undefined
+          ? { descripcion: textoConCuota }
+          : { detalle: textoConCuota }),
+      };
+    }
+
+    return item;
+  });
 };
 
 const initialFormData = {
@@ -78,12 +179,12 @@ const GenerarCargosAlumnos = () => {
   const [importe_inscripcion_primario, setValor_importe_inscripcion_primario] = useState(null);
   const [importe_mensual_cuota, setValor_importe_mensual_cuota] = useState(null);
   const [importe_materiales, setValor_importe_materiales] = useState(null);
-  
+
   // Parámetros de cuotas Nivel Inicial
   const [importe_cuota_uno_nivel_inicial, setValor_importe_cuota_uno_nivel_inicial] = useState(null);
   const [importe_cuota_dos_nivel_inicial, setValor_importe_cuota_dos_nivel_inicial] = useState(null);
   const [importe_cuota_tres_nivel_inicial, setValor_importe_cuota_tres_nivel_inicial] = useState(null);
-  
+
   // Parámetros de cuotas Nivel Primario
   const [importe_cuota_uno_nivel_primario, setValor_importe_cuota_uno_nivel_primario] = useState(null);
   const [importe_cuota_dos_nivel_primario, setValor_importe_cuota_dos_nivel_primario] = useState(null);
@@ -156,7 +257,7 @@ const GenerarCargosAlumnos = () => {
 
         const data = await response.json();
         const listaParametros = Array.isArray(data) ? data : data.data || [];
-        
+
         // Helper que busca con prioridad absoluta la fila del id_establecimiento actual
         const getParam = (nombre) => {
           const paramSede = listaParametros.find(
@@ -183,11 +284,11 @@ const GenerarCargosAlumnos = () => {
         setValor_importe_inscripcion_primario(getParam('importe_inscripcion_primario'));
         setValor_importe_mensual_cuota(getParam('importe_mensual_cuota'));
         setValor_importe_materiales(getParam('importe_materiales'));
-        
+
         setValor_importe_cuota_uno_nivel_inicial(getParam('importe_cuota_uno_nivel_inicial'));
         setValor_importe_cuota_dos_nivel_inicial(getParam('importe_cuota_dos_nivel_inicial'));
         setValor_importe_cuota_tres_nivel_inicial(getParam('importe_cuota_tres_nivel_inicial'));
-        
+
         setValor_importe_cuota_uno_nivel_primario(getParam('importe_cuota_uno_nivel_primario'));
         setValor_importe_cuota_dos_nivel_primario(getParam('importe_cuota_dos_nivel_primario'));
         setValor_importe_cuota_tres_nivel_primario(getParam('importe_cuota_tres_nivel_primario'));
@@ -206,9 +307,9 @@ const GenerarCargosAlumnos = () => {
 
   const alumnosFiltrados = useMemo(() => {
     if (!Array.isArray(alumnos)) return [];
-    return alumnos.filter((alumno) => 
-      alumno.es_alumno === 'S' && 
-      alumno.regular === 'S' && 
+    return alumnos.filter((alumno) =>
+      alumno.es_alumno === 'S' &&
+      alumno.regular === 'S' &&
       alumno.activo !== 'B'
     );
   }, [alumnos]);
@@ -225,7 +326,7 @@ const GenerarCargosAlumnos = () => {
   }, [alumnos]);
 
   const obtenerProyeccionAlumno = (alumno) => {
-    if (!alumno) return { id_nivel_proximo: 1, egresa: false };
+    if (!alumno) return { id_nivel_proximo: null, nivel_proximo_nombre: null, egresa: false };
 
     const idGradoActual = Number(alumno.id_grado);
 
@@ -234,23 +335,52 @@ const GenerarCargosAlumnos = () => {
 
       if (infoGradoActual) {
         if (!infoGradoActual.id_grado_siguiente || Number(infoGradoActual.id_grado_siguiente) === 0) {
-          return { id_nivel_proximo: null, egresa: true };
+          return { id_nivel_proximo: null, nivel_proximo_nombre: null, egresa: true };
         }
 
         const infoGradoSiguiente = listaGrados.find(
           (g) => Number(g.id_grado) === Number(infoGradoActual.id_grado_siguiente)
         );
 
-        if (infoGradoSiguiente && infoGradoSiguiente.id_nivel) {
+        if (infoGradoSiguiente) {
           return {
-            id_nivel_proximo: Number(infoGradoSiguiente.id_nivel),
+            id_nivel_proximo: infoGradoSiguiente.id_nivel ? Number(infoGradoSiguiente.id_nivel) : null,
+            nivel_proximo_nombre: infoGradoSiguiente.nivel || infoGradoSiguiente.nombre_nivel || null,
             egresa: false,
           };
         }
       }
     }
 
-    return { id_nivel_proximo: Number(alumno.id_nivel) || 1, egresa: false };
+    return {
+      id_nivel_proximo: alumno.id_nivel ? Number(alumno.id_nivel) : null,
+      nivel_proximo_nombre: alumno.nivel || null,
+      egresa: false,
+    };
+  };
+
+  // Resuelve si el nivel próximo es 'primario', 'inicial', 'secundario' u 'otro' sin depender de IDs fijos
+  const obtenerTipoNivelProximo = (alumno) => {
+    const proyeccion = obtenerProyeccionAlumno(alumno);
+
+    if (proyeccion.nivel_proximo_nombre) {
+      return clasificarNivelPorNombre(proyeccion.nivel_proximo_nombre);
+    }
+
+    if (proyeccion.id_nivel_proximo && Array.isArray(listaGrados)) {
+      const gradoConNivel = listaGrados.find(
+        (g) => Number(g.id_nivel) === Number(proyeccion.id_nivel_proximo) && (g.nivel || g.nombre_nivel)
+      );
+      if (gradoConNivel) {
+        return clasificarNivelPorNombre(gradoConNivel.nivel || gradoConNivel.nombre_nivel);
+      }
+    }
+
+    if (alumno?.nivel) {
+      return clasificarNivelPorNombre(alumno.nivel);
+    }
+
+    return 'inicial';
   };
 
   const requiereGrado = esSi(importe_mensual_cuota_x_grado) && formData.forma === 'Grupal';
@@ -379,7 +509,7 @@ const GenerarCargosAlumnos = () => {
             importe: obtenerImporteFinal(importe_mensual_cuota),
             fecha: fechaActualStr,
           });
-        } 
+        }
         // CASO 2: MATERIALES
         else if (esMateriales) {
           payload.push({
@@ -396,26 +526,33 @@ const GenerarCargosAlumnos = () => {
             importe: obtenerImporteFinal(importe_materiales),
             fecha: fechaActualStr,
           });
-        } 
+        }
         // CASO 3: INSCRIPCIÓN ANUAL (DESGLOSE HASTA EN 3 CUOTAS)
         else if (esInscripcion) {
-          const proyeccion = obtenerProyeccionAlumno(alumno);
-          const idNivelProximo = Number(proyeccion.id_nivel_proximo || alumno.id_nivel || 1);
+          const tipoNivel = obtenerTipoNivelProximo(alumno);
+          const esPrimario = tipoNivel === 'primario';
           const numCuotasInscripcion = Number(cant_cuotas_cobro_inscripcion || 1);
 
           // Evalúa si la sede habilita cuotas para el nivel entrante
-          const habilitaCuotas = 
-            idNivelProximo === 2 
-              ? esSi(cobra_inscripcion_en_cuotas_primario)
-              : esSi(cobra_inscripcion_en_cuotas_inicial);
+          const habilitaCuotas = esPrimario
+            ? esSi(cobra_inscripcion_en_cuotas_primario)
+            : esSi(cobra_inscripcion_en_cuotas_inicial);
 
           const permiteEnCuotas = numCuotasInscripcion > 1 && habilitaCuotas;
 
           if (permiteEnCuotas) {
             // Mapeo de importes por cuota (1, 2 y 3) según el nivel próximo
-            const importesCuotas = idNivelProximo === 2
-              ? [importe_cuota_uno_nivel_primario, importe_cuota_dos_nivel_primario, importe_cuota_tres_nivel_primario]
-              : [importe_cuota_uno_nivel_inicial, importe_cuota_dos_nivel_inicial, importe_cuota_tres_nivel_inicial];
+            const importesCuotas = esPrimario
+              ? [
+                  importe_cuota_uno_nivel_primario,
+                  importe_cuota_dos_nivel_primario,
+                  importe_cuota_tres_nivel_primario,
+                ]
+              : [
+                  importe_cuota_uno_nivel_inicial,
+                  importe_cuota_dos_nivel_inicial,
+                  importe_cuota_tres_nivel_inicial,
+                ];
 
             const totalCuotasGenerar = Math.min(numCuotasInscripcion, 3);
 
@@ -428,6 +565,7 @@ const GenerarCargosAlumnos = () => {
                 id_anio: formData.id_anio,
                 anio: anioValor,
                 forma: formData.forma,
+                numero_cuota: i,
                 cuota: `${anioValor}`,
                 descripcion: `Inscripción anual del Año ${anioValor} Cuota ${i}/${totalCuotasGenerar}`,
                 importe: obtenerImporteFinal(importesCuotas[i - 1]),
@@ -436,7 +574,9 @@ const GenerarCargosAlumnos = () => {
             }
           } else {
             // Caso de 1 sola cuota
-            let montoInscripcion = idNivelProximo === 2 ? importe_inscripcion_primario : importe_inscripcion_inicial;
+            const montoInscripcion = esPrimario
+              ? importe_inscripcion_primario
+              : importe_inscripcion_inicial;
 
             payload.push({
               id_alumno: alumno.id_alumno,
@@ -446,6 +586,7 @@ const GenerarCargosAlumnos = () => {
               id_anio: formData.id_anio,
               anio: anioValor,
               forma: formData.forma,
+              numero_cuota: 1,
               cuota: anioValor,
               descripcion: `Inscripción anual del Año ${anioValor} Cuota 1/1`,
               importe: obtenerImporteFinal(montoInscripcion),
@@ -476,8 +617,14 @@ const GenerarCargosAlumnos = () => {
       const data = jsonRaw.data || jsonRaw.resultado || jsonRaw;
       const generados = data?.resumen?.generados ?? data?.generados ?? 0;
       const noGenerados = data?.resumen?.noGenerados ?? data?.noGenerados ?? 0;
-      const detallesGenerados = data?.detallesGenerados || [];
-      const detallesNoGenerados = data?.detallesNoGenerados || [];
+      const detallesGenerados = enriquecerDetallesConCuota(
+        data?.detallesGenerados || [],
+        payload
+      );
+      const detallesNoGenerados = enriquecerDetallesConCuota(
+        data?.detallesNoGenerados || [],
+        payload
+      );
 
       const mensaje = `Proceso completado. Generados: ${generados} | No generados: ${noGenerados}`;
 
@@ -485,18 +632,17 @@ const GenerarCargosAlumnos = () => {
         avisar.exito(mensaje);
       }
 
-      // Reemplaza el título alert actual por este:
       const descLimpia = (payload[0]?.descripcion || '')
         .replace(/\s+cuota\s+\d+\/\d+/i, '')
         .replace(/\s+cuota\s+\d+/i, '')
         .trim();
 
-const tituloAlert = `RESUMEN DE GENERACIÓN DE:<br><strong style="font-size: 1.1rem;">${descLimpia.toUpperCase()}</strong>`;
+      const tituloAlert = `RESUMEN DE GENERACIÓN DE:<br><strong style="font-size: 1.1rem;">${descLimpia.toUpperCase()}</strong>`;
 
       await MySwal.fire({
         title: <span dangerouslySetInnerHTML={{ __html: tituloAlert }} />,
         html: (
-          <ReporteTabs 
+          <ReporteTabs
             generados={generados}
             noGenerados={noGenerados}
             detallesGenerados={detallesGenerados}

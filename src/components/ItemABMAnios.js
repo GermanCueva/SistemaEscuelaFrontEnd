@@ -113,8 +113,37 @@ export const ItemABMAnios = () => {
     setShowModal(true);
   };
 
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (formData.fecha_inicio > formData.fecha_fin) {
+      toast.error("La fecha de inicio no puede ser posterior a la fecha de fin.");
+      return;
+    }
+
+    // Validación rápida en cliente si se guarda sobre la institución actualmente visible
+    if (Number(formData.id_establecimiento) === Number(selectedInstId)) {
+      const duplicado = anios.some(
+        (a) => a.id_anio !== currentId && Number(a.anio) === Number(formData.anio)
+      );
+      if (duplicado) {
+        toast.error(`El año lectivo ${formData.anio} ya existe en esta escuela.`);
+        return;
+      }
+
+      if (formData.estado === "A") {
+        const otroActivo = anios.find(
+          (a) => a.id_anio !== currentId && (a.estado === "A" || a.estado === true)
+        );
+        if (otroActivo) {
+          toast.error(
+            `Ya existe un año lectivo Activo (${otroActivo.anio}) en esta escuela. Desactívelo primero.`
+          );
+          return;
+        }
+      }
+    }
+
     try {
       const url = editMode
         ? `${API_URL}/api/academica/aniocursado/${currentId}`
@@ -125,10 +154,17 @@ export const ItemABMAnios = () => {
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          anio: Number(formData.anio),
+          id_establecimiento: Number(formData.id_establecimiento),
+        }),
       });
 
-      if (!res.ok) throw new Error("Error al guardar el año lectivo");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Error al guardar el año lectivo");
+      }
 
       toast.success(editMode ? "Año lectivo actualizado" : "Año lectivo registrado");
       setShowModal(false);
@@ -148,13 +184,16 @@ export const ItemABMAnios = () => {
         headers: getAuthHeaders(),
       });
 
-      if (!res.ok) throw new Error("Error al eliminar");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Error al eliminar el año lectivo");
+      }
 
       toast.success("Año lectivo eliminado");
       fetchAnios();
     } catch (error) {
       console.error(error);
-      toast.error("No se pudo eliminar el registro");
+      toast.error(error.message || "No se pudo eliminar el registro");
     }
   };
 

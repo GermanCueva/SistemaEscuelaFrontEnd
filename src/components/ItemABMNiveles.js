@@ -117,11 +117,27 @@ export const ItemABMNiveles = () => {
   };
 
   // Guardar cambios (POST o PUT)
-  const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.nombre || !formData.nombre_corto) {
+    const nombreLimpio = formData.nombre.trim();
+    const cortoLimpio = formData.nombre_corto.trim();
+
+    if (!nombreLimpio || !cortoLimpio) {
       toast.warning("Complete los campos obligatorios (*)");
       return;
+    }
+
+    if (Number(formData.id_establecimiento) === Number(selectedInstId)) {
+      const duplicado = niveles.some(
+        (n) =>
+          n.id_nivel !== currentId &&
+          (n.nombre?.trim().toLowerCase() === nombreLimpio.toLowerCase() ||
+            n.nombre_corto?.trim().toLowerCase() === cortoLimpio.toLowerCase())
+      );
+      if (duplicado) {
+        toast.error("Ya existe un nivel con ese nombre o nombre corto en esta escuela.");
+        return;
+      }
     }
 
     try {
@@ -134,10 +150,18 @@ export const ItemABMNiveles = () => {
       const res = await fetch(url, {
         method,
         headers: getAuthHeaders(),
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          nombre: nombreLimpio,
+          nombre_corto: cortoLimpio,
+          id_establecimiento: Number(formData.id_establecimiento),
+        }),
       });
 
-      if (!res.ok) throw new Error("Error al procesar la solicitud");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Error al procesar la solicitud");
+      }
 
       toast.success(editMode ? "Nivel actualizado" : "Nivel registrado con éxito");
       setShowModal(false);
@@ -148,17 +172,15 @@ export const ItemABMNiveles = () => {
     }
   };
 
-  // Eliminar nivel
   const handleDelete = async (id) => {
-const result = await showConfirm({
-    title: '¿Eliminar nivel educativo?',
-    text: '¿Está seguro de que desea eliminar este nivel educativo?',
-    confirmButtonText: 'Sí, eliminar',
-    cancelButtonText: 'Cancelar'
-  });
+    const result = await showConfirm({
+      title: '¿Eliminar nivel educativo?',
+      text: '¿Está seguro de que desea eliminar este nivel educativo?',
+      confirmButtonText: 'Sí, eliminar',
+      cancelButtonText: 'Cancelar',
+    });
 
-  // Si no se confirma, cancelamos la ejecución
-  if (!result.isConfirmed) return;
+    if (!result.isConfirmed) return;
 
     try {
       const res = await fetch(`${API_URL}/api/academica/nivel/${id}`, {
@@ -166,13 +188,16 @@ const result = await showConfirm({
         headers: getAuthHeaders(),
       });
 
-      if (!res.ok) throw new Error("Error al eliminar el nivel");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data.message || data.error || "Error al eliminar el nivel");
+      }
 
       toast.success("Nivel eliminado correctamente");
       fetchNiveles();
     } catch (error) {
       console.error(error);
-      toast.error("No se pudo eliminar el nivel");
+      toast.error(error.message || "No se pudo eliminar el nivel");
     }
   };
 
