@@ -96,12 +96,12 @@ const handleSave = async (e) => {
         return;
       }
 
-      showSuccess({
-        title: 'Guardado',
-        text: formData.id_division
+      // Al guardar (línea 98):
+      showSuccess(
+        formData.id_division
           ? 'División actualizada correctamente.'
-          : 'División creada correctamente.',
-      });
+          : 'División creada correctamente.'
+      );
 
       setIsModalOpen(false);
       setFormData({ id_division: null, division: '', id_establecimiento: activeInstitutionId });
